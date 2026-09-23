@@ -1,0 +1,41 @@
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local environments, dependencies, and generated builds
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+node_modules/
+build/
+dist/
+.cache/
+*.log
+
+# Downloaded assets and generated media
+models/
+downloads/
+sdk/
+sdks/
+outputs/
+temp/
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.webm
+*.onnx
+*.engine
+*.pth
+*.pt
+*.zip
+*.7z
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store
