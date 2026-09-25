@@ -15,8 +15,12 @@ build/
 dist/
 .cache/
 *.log
+target/
 
 # Downloaded assets and generated media
+tools/
+sample-videos/
+.tmp-*/
 models/
 downloads/
 sdk/

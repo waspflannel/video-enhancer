@@ -1,8 +1,8 @@
 # Local NVIDIA video enhancement pipeline
 
-Updated: 2026-09-22
+Updated: 2026-09-23
 
-Status: agreed design direction; planning only. No NVIDIA integration has been installed, implemented, or benchmarked in this project.
+Status: Rust parser uses in-process FFmpeg NVIDIA decoding and owned GPU frame storage; verified on RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. Enhancement and export remain unimplemented.
 
 ## Product and scope
 
@@ -16,9 +16,9 @@ This design replaces the earlier open-source enhancement/interpolation stack for
 
 ## Workspace locations
 
-- New application workspace: `C:\video-enhancement-projects\video-enhancer-fast\app` (planning only; no application implementation).
+- New application workspace: `C:\video-enhancer-fast\app` (Rust/Cargo parser; GPU decoding verified on synthetic fixtures).
 - Original application: `C:\video-enhancement-projects\video-enhancer-original`.
-- Shared assets: `C:\video-enhancement-projects\shared` contains models, tools, download caches, and sample videos. Keep new NVIDIA packages in separate versioned locations.
+- Project-local assets: `C:\video-enhancer-fast\tools`, `sdk`, and `sample-videos` contain independent copies. The original shared assets remain untouched.
 - `C:\video-enhancer` is a compatibility directory containing junctions and file hard links to the original application.
 
 ## Selected responsibilities
@@ -36,13 +36,15 @@ VSR and VFG are separate features. VSR changes spatial resolution; VFG estimates
 
 ## Local models and setup
 
+Selected existing VFX installation: `C:\video-enhancer-fast\sdk\VFXSDK_windows_1.3.0.0\VideoFX` (1.3.0.0). The core and VSR/VFG feature DLLs and headers were found locally on 2026-09-23. Use this installation for the upcoming effects integration; runtime/model readiness remains unverified. The current Rust parser does not load it and instead uses NVIDIA decoding through FFmpeg.
+
 NVIDIA supplies the pretrained models. Install the VFX SDK Core, then the separate Video Super Resolution and Video Frame Generation feature packages, including their model files and runtime libraries, through NVIDIA NGC. No model training is required.
 
 The core package alone does not contain the enhancement models. Setup requires the appropriate NVIDIA account/access, compatible driver, and feature packages for the target GPU. Processing is intended to run on the local GPU; local video frames are not sent to a hosted inference service.
 
 The current VFG documentation supports Windows on Ada and Blackwell GPUs, covering the target GPU generation. Verify the downloaded release and available feature packages on the actual RTX 5070 before declaring the integration supported.
 
-Pin SDK, feature/model, driver requirements, and media-tool versions after qualification. Keep downloaded assets in the shared workspace under versioned locations; do not overwrite assets required by the original application.
+Pin SDK, feature/model, driver requirements, and media-tool versions after qualification. Keep downloaded assets in this project under ignored, versioned directories; do not overwrite assets required by the original application.
 
 ## Processing flow
 
@@ -82,11 +84,13 @@ The initial processing order is VSR then VFG. This upscales each source frame on
 
 Keep decoded and processed frames in GPU memory wherever the selected interfaces allow. Perform necessary colour/pixel-format conversions on the GPU where practical. Avoid saving individual frame images to disk or repeatedly copying pixels through CPU memory between stages.
 
+Current parser stage: FFmpeg's shared libraries decode in the Rust process using CUVID and require CUDA output. Each returned frame owns a reference-counted GPU buffer and hardware context, retaining NV12/P010 pixels after the decoder closes. No production pixel download to system RAM is performed. The full decoded video is still collected with no configured VRAM cap; long videos can exhaust GPU memory. Bounded progressive processing is the next stage. Parallel enhancement of video chunks is a later optimization and must preserve timestamp order, temporal context at chunk boundaries, and synchronized audio.
+
 Reuse loaded models and a bounded pool of frame buffers. Overlap decoding, inference, and encoding where dependencies and memory permit. These stages still have ordering constraints; parallel work does not make all video frames independent.
 
 Start with NVIDIA modes suitable for clean or lightly degraded footage, including the documented High Bitrate and Streaming VSR modes. Select internal quality settings from measured results instead of adding a large model/technical-options interface.
 
-Choose the integration language/binding after checking the current official interfaces. A native worker is one option; NVIDIA also documents Python bindings for VSR. Do not assume every feature has equivalent Python exposure or require a full C++ application in advance.
+The application uses Rust and Cargo, targeting Windows x64. Choose the desktop UI framework and NVIDIA/media bindings when implementing those components. VSR and VFG remain the selected effects; access to their native API must be integrated from Rust. See `documents/development.md` for the scaffold and toolchain setup.
 
 Measure total export time, startup/model-loading time, processing throughput, peak GPU memory, and motion/detail quality on the RTX 5070. Vendor filter timings are not complete export benchmarks and do not establish performance on this machine. No speed multiplier or quality superiority has been demonstrated yet.
 
