@@ -4,6 +4,8 @@ The Windows x64 console app accepts one video path. Metadata comes from
 ffprobe; decoding calls FFmpeg's shared libraries inside the Rust process.
 NVIDIA CUVID/NVDEC produces owned CUDA frames. There is no desktop UI yet.
 
+Follow [Coding standards](coding-standards.md) for implementation style and scope.
+
 ## Setup
 
 Install stable Rust with the `x86_64-pc-windows-msvc` toolchain and Visual
