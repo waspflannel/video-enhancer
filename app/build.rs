@@ -19,4 +19,20 @@ fn main() {
             }
         }
     }
+
+    let sdk = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../sdk/VFXSDK_windows_1.3.0.0/VideoFX");
+    for file in [
+        "bin/NVVideoEffects.dll",
+        "bin/NVCVImage.dll",
+        "bin/cudart64_12.dll",
+        "bin/nvngxruntime.dll",
+        "features/nvvfxvideosuperres/bin/nvVFXVideoSuperRes.dll",
+        "features/nvvfxvideosuperres/bin/nvngx_vsr.dll",
+    ] {
+        let path = sdk.join(file);
+        println!("cargo:rerun-if-changed={}", path.display());
+        for destination in [profile.to_path_buf(), profile.join("deps")] {
+            fs::copy(&path, destination.join(path.file_name().unwrap())).expect("Copy NVIDIA VSR runtime DLL");
+        }
+    }
 }

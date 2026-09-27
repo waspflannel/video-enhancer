@@ -6,9 +6,6 @@ use serde_json::Value;
 #[path = "commands.rs"]
 mod commands;
 
-mod gpu;
-pub use gpu::DecodedFrame;
-
 #[derive(Debug)]
 pub struct FileData {
     pub path: PathBuf,
@@ -80,12 +77,6 @@ impl Parser {
         })
     }
 
-    /// Decode the complete video into GPU memory. Audio stays in the source.
-    /// Returned frames own their CUDA buffers until dropped; long videos can
-    /// exhaust VRAM. No CPU fallback or pixel download is performed.
-    pub fn decode_frames(&self, video: &FileData) -> io::Result<Vec<DecodedFrame>> {
-        gpu::decode(video)
-    }
 }
 
 fn parse_fps_from_metadata(rate: &str) -> Option<f64> {

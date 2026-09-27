@@ -2,7 +2,7 @@
 
 Updated: 2026-09-23
 
-Status: Rust parser uses in-process FFmpeg NVIDIA decoding and owned GPU frame storage; verified on RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. Enhancement and export remain unimplemented.
+Status: Rust parser uses in-process FFmpeg NVIDIA decoding and owned GPU frame storage; verified on RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. Sequential 8-bit SDR VSR enhancement is implemented and manually verified. P010/HDR enhancement, interpolation, and export remain unimplemented.
 
 ## Product and scope
 
@@ -36,7 +36,7 @@ VSR and VFG are separate features. VSR changes spatial resolution; VFG estimates
 
 ## Local models and setup
 
-Selected existing VFX installation: `C:\video-enhancer-fast\sdk\VFXSDK_windows_1.3.0.0\VideoFX` (1.3.0.0). The core and VSR/VFG feature DLLs and headers were found locally on 2026-09-23. Use this installation for the upcoming effects integration; runtime/model readiness remains unverified. The current Rust parser does not load it and instead uses NVIDIA decoding through FFmpeg.
+Selected existing VFX installation: `C:\video-enhancer-fast\sdk\VFXSDK_windows_1.3.0.0\VideoFX` (1.3.0.0). The core and VSR/VFG feature DLLs and headers were found locally on 2026-09-23. VSR model loading and GPU enhancement now pass manual checks with this installation. VFG readiness remains unverified. Decoding uses FFmpeg; resolution enhancement calls the local VFX SDK directly.
 
 NVIDIA supplies the pretrained models. Install the VFX SDK Core, then the separate Video Super Resolution and Video Frame Generation feature packages, including their model files and runtime libraries, through NVIDIA NGC. No model training is required.
 

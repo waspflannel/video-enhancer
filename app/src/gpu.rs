@@ -3,7 +3,7 @@ use std::{io, ptr};
 
 use ffmpeg_next::{self as ffmpeg, ffi, frame};
 
-use super::FileData;
+use crate::parser::FileData;
 
 /// Owns a CUDA frame and the references keeping its GPU allocation/context alive.
 /// Dropping this value releases its frame; there is no CPU pixel buffer.
@@ -13,14 +13,15 @@ pub struct DecodedFrame {
     pub presentation_timestamp: i64,
     pub time_base: (i32, i32),
     pub pixel_format: &'static str,
-    _frame: frame::Video,
+    pub(crate) frame: frame::Video,
 }
 
 fn failure(stage: &str, error: ffmpeg::Error) -> io::Error {
     io::Error::other(format!("{stage}: {error}"))
 }
 
-pub(super) fn decode(video: &FileData) -> io::Result<Vec<DecodedFrame>> {
+/// Decode the complete video into owned GPU frames. Long videos can exhaust VRAM.
+pub fn decode(video: &FileData) -> io::Result<Vec<DecodedFrame>> {
 
     let mut video_file = open_video_file(video)?;
 
@@ -166,6 +167,6 @@ fn prepare_decoded_frame(decoded: frame::Video, time_base: ffmpeg::Rational) -> 
         presentation_timestamp,
         time_base: (time_base.numerator(), time_base.denominator()),
         pixel_format,
-        _frame: decoded,
+        frame: decoded,
     })
 }

@@ -1,6 +1,6 @@
 # Rust development
 
-The Windows x64 console app accepts one video path. Metadata comes from
+The Windows x64 console app uses the replaceable `test_file` path in `app/src/main.rs`. Metadata comes from
 ffprobe; decoding calls FFmpeg's shared libraries inside the Rust process.
 NVIDIA CUVID/NVDEC produces owned CUDA frames. There is no desktop UI yet.
 
@@ -16,7 +16,7 @@ From `app/`:
 
 ```powershell
 ./scripts/setup-media.ps1
-cargo run -- "C:\path\to\video.mp4"
+cargo run
 cargo build --release
 ```
 
@@ -33,7 +33,7 @@ It does not change machine-wide environment variables or the VFX SDK.
 
 `app/.cargo/config.toml` sets project-relative `FFMPEG_DIR` and `LIBCLANG_PATH`.
 Run Cargo from `app/` so this configuration is loaded. `build.rs` copies the
-FFmpeg DLLs beside the executable and tests. Directly launching the release
+FFmpeg and required VSR DLLs beside the executable and Cargo dependency outputs. Directly launching the release
 executable requires those DLLs alongside it. Metadata inspection also needs
 the existing project-local ffprobe executable. CUDA/NVDEC is supplied by the
 installed NVIDIA driver; no CUDA toolkit or Video Codec SDK download is
@@ -47,10 +47,11 @@ app/
   .cargo/config.toml      Local native dependency paths
   build.rs                Copy runtime DLLs into build outputs
   src/main.rs             Console entry point
-  src/lib.rs              Parser module export
+  src/lib.rs              Application module exports
   src/parser/parser.rs    Metadata and parser API
   src/parser/commands.rs  ffprobe command
-  src/parser/gpu.rs       GPU decoding and frame ownership
+  src/gpu.rs       GPU decoding and frame ownership
+  src/resolution/         Resolution enhancer and direct NVIDIA SDK calls
   scripts/                Local dependency setup and synthetic fixture generator
   target/                 Generated build output, ignored
 ```
@@ -61,11 +62,11 @@ outputs out of Git. Cargo.lock belongs in Git.
 ## Parser
 
 ```rust
-use video_enhancer::parser::Parser;
+use video_enhancer::{gpu, parser::Parser};
 
 let parser = Parser::new("video.mp4");
 let information = parser.get_video_information()?;
-let frames = parser.decode_frames(&information)?;
+let frames = gpu::decode(&information)?;
 // frames[0].timestamp_seconds: presentation time in seconds.
 // frames[0].presentation_timestamp and .time_base: integer timestamp and rational time base.
 // frames[0].pixel_format: "nv12" or "p010le".
@@ -80,7 +81,7 @@ require a GPU. It selects the first video stream that is not cover art.
 Missing FPS/duration remains `None`; average FPS does not imply constant
 frame rate. Rotation, colour, aspect ratio, and stream timing are retained.
 
-`decode_frames(&information)` returns `io::Result<Vec<DecodedFrame>>` after
+`gpu::decode(&information)` returns `io::Result<Vec<DecodedFrame>>` after
 complete decoding. It selects `h264_cuvid`, `hevc_cuvid`, or `av1_cuvid` on
 CUDA device 0 and refuses CPU pixel output. It reads packets until EOF and
 flushes delayed frames. Packet/decode errors are propagated, not treated
@@ -130,17 +131,58 @@ Before removal, the hardware test passed on RTX 5070 with H.264 (120 frames),
 10-bit HEVC (120), AV1 (120), and variable-frame-rate H.264 (72). It checked
 retained GPU frames against software-decoded pixels and timestamps after
 closing the decoder. These are historical results, not an available test suite.
-Enhancement/export and real-world long-video behavior remain unvalidated.
+Export and real-world long-video behavior remain unvalidated.
+
+## Resolution enhancement
+
+Use the existing `sdk/VFXSDK_windows_1.3.0.0/VideoFX` installation for VSR/VFG.
+The resolution enhancer links directly to `NVVideoEffects.dll` using Rust's
+Windows `raw-dylib` support. `build.rs` copies the core, VSR feature, and required
+runtime DLLs beside the executable. Windows loads the linked DLL at startup;
+missing startup dependencies are reported by Windows before Rust can run.
+`ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frame, width, height)`
+is implemented directly in `resolution/resolution.rs`, which owns the effect,
+GPU buffers, and cleanup. `resolution/commands.rs` contains only the native
+function declarations, image layout, and SDK constants. The enhancement call
+returns an owned RGBA GPU frame with the original integer timestamp, time base,
+colour primaries, transfer characteristic, and sample aspect ratio. Requested
+dimensions must preserve the source aspect ratio and must not downscale it.
+The console currently enhances each decoded frame to twice its width and height.
+
+The first call activates the decoder's CUDA context, configures VSR_High (AI
+quality 3), and loads the model. Subsequent calls reuse the model and converted
+input allocation for matching dimensions. Changing dimensions reloads the model.
+Use a new enhancer for a different decoder CUDA context.
+
+NVIDIA's image API converts NV12 to interleaved RGBA entirely on the GPU using
+the actual Y/UV plane strides. Conversion and VSR use the decoder's CUDA stream;
+calls synchronize before returning or releasing buffers. Reference-counted device
+and image owners keep output valid after the decoder and enhancer are dropped.
+The effect retains its last output binding until replaced or destroyed.
+
+This first path supports 8-bit SDR BT.601/BT.709 NV12. P010/10-bit, PQ/HLG HDR,
+other colour matrices, and unsupported chroma locations return errors. Untagged
+colour uses BT.709 for heights >=720 and BT.601 below, limited range unless
+explicitly full-range, and left chroma unless specified. These assumptions are
+not a colour guarantee for untagged footage. Rotation is not applied.
+
+The verification-only preview writer, GPU download helper, temporary check
+programs, and test-fixture generator have been removed.
+Application processing keeps image pixels on the GPU.
+Outputs are RGBA, not encoder-ready NV12/P010; encoding remains a later stage.
+
+Manual RTX 5070 checks passed for two synthetic frames at 320x180 -> 640x360
+and three real-video frames at 640x360 -> 1280x720. Reconfiguration to 1920x1080,
+timestamp preservation, output lifetime after teardown, and rejection of invalid
+dimensions and P010 were checked. Saved previews were visually inspected against
+a bicubic reference. Build and Clippy passed. No automated test suite was added.
+This does not qualify HDR, temporal quality over long videos, or audio export.
 
 ## Next stages
 
-Use the existing `sdk/VFXSDK_windows_1.3.0.0/VideoFX` installation for VSR/VFG.
-Its core and VSR/VFG DLLs/headers were inspected; model/runtime readiness has
-not been validated. The parser does not load these effects yet.
-
-Connect progressive GPU-frame consumption when implementing enhancement,
+Connect progressive GPU-frame consumption to enhancement,
 then encode/mux with synchronized source audio. Parallel video chunks are a
 later optimization: preserve temporal context across boundaries, output
 ordering, timestamps, and audio synchronization. Keeping CUDA frames now
 avoids the previous GPU-to-RAM-to-GPU round trip; it does not by itself
-implement enhancement or parallel scheduling.
+implement progressive processing or parallel scheduling.

@@ -1,27 +1,21 @@
 use std::io;
-use video_enhancer::parser::Parser;
+use video_enhancer::{gpu, parser::Parser, resolution::ResolutionEnhancer};
 
 fn main() -> io::Result<()> {
-    let mut args = std::env::args_os().skip(1);
-    let file = args
-        .next()
-        .ok_or_else(|| io::Error::other("Usage: video-enhancer <video.mp4>"))?;
-    if args.next().is_some() {
-        return Err(io::Error::other("Please provide exactly one video file"));
+    let test_file = r"C:\video-enhancer-fast\sample-videos\replace-me.mp4";
+
+    let parser = Parser::new(test_file);
+    let file_data = parser.get_video_information()?;
+    let frames = gpu::decode(&file_data)?;
+
+    let mut enhancer = ResolutionEnhancer::new()?;
+    let new_resolution_width = file_data.width * 2;
+    let new_resolution_height = file_data.height * 2;
+    let mut enhanced_frames = Vec::with_capacity(frames.len());
+    for frame in &frames {
+        enhanced_frames.push(enhancer.enhance(frame, new_resolution_width, new_resolution_height)?);
     }
 
-    let parser = Parser::new(file);
-    let video = parser.get_video_information()?;
-    println!(
-        "{}x{}, FPS: {:?}, duration: {:?} seconds",
-        video.width, video.height, video.fps, video.duration_seconds
-    );
-
-    let frames = parser.decode_frames(&video)?;
-    println!(
-        "Stored {} frames in GPU memory; {} audio streams",
-        frames.len(),
-        video.audio_streams.len()
-    );
+    println!("Enhanced {} GPU frames to {}x{}", enhanced_frames.len(), new_resolution_width, new_resolution_height);
     Ok(())
 }
