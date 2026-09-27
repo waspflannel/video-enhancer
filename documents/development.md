@@ -141,9 +141,11 @@ Windows `raw-dylib` support. `build.rs` copies the core, VSR feature, and requir
 runtime DLLs beside the executable. Windows loads the linked DLL at startup;
 missing startup dependencies are reported by Windows before Rust can run.
 `ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frame, width, height)`
-is implemented directly in `resolution/resolution.rs`, which owns the effect,
-GPU buffers, and cleanup. `resolution/commands.rs` contains only the native
-function declarations, image layout, and SDK constants. The enhancement call
+is coordinated by `resolution/resolution.rs`, which owns and configures the VSR
+effect. `resolution/cuda.rs` manages the CUDA context and synchronization;
+`resolution/frame.rs` owns image buffers, conversion, and enhanced-frame metadata.
+`resolution/commands.rs` contains only the native function declarations, image
+layout, and SDK constants. The enhancement call
 returns an owned RGBA GPU frame with the original integer timestamp, time base,
 colour primaries, transfer characteristic, and sample aspect ratio. Requested
 dimensions must preserve the source aspect ratio and must not downscale it.
