@@ -52,7 +52,7 @@ app/
   src/parser/commands.rs  ffprobe command
   src/gpu.rs       GPU decoding and frame ownership
   src/resolution/         Resolution enhancer and direct NVIDIA SDK calls
-  scripts/                Local dependency setup and synthetic fixture generator
+  scripts/                Local dependency setup
   target/                 Generated build output, ignored
 ```
 
@@ -66,12 +66,11 @@ use video_enhancer::{gpu, parser::Parser};
 
 let parser = Parser::new("video.mp4");
 let information = parser.get_video_information()?;
-let frames = gpu::decode(&information)?;
-// frames[0].timestamp_seconds: presentation time in seconds.
-// frames[0].presentation_timestamp and .time_base: integer timestamp and rational time base.
-// frames[0].pixel_format: "nv12" or "p010le".
-// Each frame privately owns its GPU allocation; pixels are not exposed.
-// drop(frames) releases the GPU buffers and their hardware-context references.
+gpu::decode(&information, |frame| {
+    // Consume this owned GPU frame here before decoding continues.
+    println!("Frame timestamp: {}", frame.presentation_timestamp);
+    Ok(())
+})?;
 ```
 
 `get_video_information()` runs ffprobe and returns `io::Result<FileData>`:
@@ -81,8 +80,10 @@ require a GPU. It selects the first video stream that is not cover art.
 Missing FPS/duration remains `None`; average FPS does not imply constant
 frame rate. Rotation, colour, aspect ratio, and stream timing are retained.
 
-`gpu::decode(&information)` returns `io::Result<Vec<DecodedFrame>>` after
-complete decoding. It selects `h264_cuvid`, `hevc_cuvid`, or `av1_cuvid` on
+`gpu::decode(&information, consume_frame)` returns `io::Result<()>` after
+calling a fallible consumer for each owned GPU frame. Consumer errors stop
+decoding immediately. No frame vector is collected. It selects
+`h264_cuvid`, `hevc_cuvid`, or `av1_cuvid` on
 CUDA device 0 and refuses CPU pixel output. It reads packets until EOF and
 flushes delayed frames. Packet/decode errors are propagated, not treated
 as successful completion. This personal tool assumes normal local videos;
@@ -107,14 +108,12 @@ Consumers must obey CUDA context/stream ordering and keep the frame alive
 until their GPU work finishes, or take their own native reference. The API
 does not expose the wrapper's CPU pixel accessors for GPU frames.
 
-There is still **no configured VRAM limit**: all frames are retained until
-dropped. Long videos can exhaust GPU memory (Windows may also page GPU
-allocations). Allocation/decode failures return errors and owned resources
-are released during unwinding of the result path. Progressive consumption
-and parallel chunks are deferred. CPU memory contains compressed packets,
-metadata, and handles; production decoding does not download image pixels.
-The console prints its summary and exits, releasing the GPU frames.
-Audio stays in the source file for later muxing. Source files are unchanged.
+The application releases each decoded frame after the consumer returns. Decoder
+references, cached allocations, and model workspace remain internal to their
+libraries; there is no fixed byte budget. The console uses one reusable RGBA
+input and one output instead of retaining whole-video frame arrays. CPU memory
+contains compressed packets, metadata, and handles. Audio stays in the source
+file for later muxing; source files are unchanged.
 
 ## Verification
 
@@ -140,29 +139,27 @@ The resolution enhancer links directly to `NVVideoEffects.dll` using Rust's
 Windows `raw-dylib` support. `build.rs` copies the core, VSR feature, and required
 runtime DLLs beside the executable. Windows loads the linked DLL at startup;
 missing startup dependencies are reported by Windows before Rust can run.
-`ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frames, width, height)`
+`ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frame, width, height)`
 is coordinated by `resolution/resolution.rs`, which owns and configures the VSR
 effect. `resolution/cuda.rs` manages the CUDA context and synchronization;
 `resolution/frame.rs` owns image buffers, conversion, and enhanced-frame metadata.
 `resolution/commands.rs` contains only the native function declarations, image
 layout, and SDK constants. The enhancement call
-returns owned RGBA GPU frames with the original integer timestamps, time bases,
-colour primaries, transfer characteristic, and sample aspect ratio. The caller
-chooses aspect-preserving output dimensions; SDK failures are propagated.
-The console currently enhances each decoded frame to twice its width and height.
+returns a borrowed RGBA GPU frame with original integer timestamps, time base,
+colour primaries, transfer characteristic, and sample aspect ratio. Consume it
+before the next call overwrites its pixels. Output dimensions stay fixed for a
+job. The console chooses an aspect-preserving 2x resolution.
 
-Each enhancement call consumes the enhancer and processes one decoded frame slice.
-It activates the decoder's CUDA context, configures VSR_High (AI quality 3),
-and allocates the reusable input before the loop. Each iteration allocates its
-output, converts the input to RGBA, binds both images, and runs Video Super
-Resolution. The first iteration loads the model after binding. The input
-buffer and model are reused; each returned frame owns a separate output buffer.
-Conversion reads each frame's colour interpretation and rejects unsupported
-pixel layouts or changed frame sizes before passing raw planes to the SDK.
-The effect is destroyed before the call returns, while output buffers stay alive.
-The enhancer owns unfinished and completed outputs during processing. Its Drop
-destroys the effect before releasing buffer fields on failure; success transfers
-completed frames to the caller without copying their GPU pixels.
+Create one mutable enhancer per video. The first call retains the decoder's CUDA
+context, configures VSR_High (AI quality 3), allocates and binds input/output
+buffers, and loads the model. Each call converts the source into the reusable
+RGBA input, runs enhancement synchronously, and refreshes output metadata.
+Initialization completion is recorded separately from partial setup. A failed
+call aborts the job; reuse after processing failure is unsupported.
+
+The enhancer keeps both bound buffers alive for its lifetime. Drop destroys the
+effect before releasing buffers, including after partial initialization. The
+caller borrows the output rather than taking ownership of its allocation.
 
 NVIDIA's image API converts NV12 to interleaved RGBA entirely on the GPU using
 the actual Y/UV plane strides. Conversion and VSR use the decoder's CUDA stream;
@@ -191,9 +188,27 @@ This does not qualify HDR, temporal quality over long videos, or audio export.
 
 ## Next stages
 
-Connect progressive GPU-frame consumption to enhancement,
-then encode/mux with synchronized source audio. Parallel video chunks are a
+Connect the progressive enhanced output to encoding/muxing with synchronized
+source audio. Encoder buffer lifetimes must be respected before output reuse.
+Parallel video chunks are a
 later optimization: preserve temporal context across boundaries, output
 ordering, timestamps, and audio synchronization. Keeping CUDA frames now
-avoids the previous GPU-to-RAM-to-GPU round trip; it does not by itself
-implement progressive processing or parallel scheduling.
+avoids the previous GPU-to-RAM-to-GPU round trip. The progressive pipeline
+is sequential; parallel scheduling remains deferred.
+
+## Progressive refactor verification (2026-09-28)
+
+Clippy with warnings denied and the debug build passed. Manual runs processed
+3 real-video frames, 120 H.264 frames, 120 AV1 frames, and 72 variable-rate frames.
+Every integer timestamp matched ffprobe, including the final delayed output;
+output dimensions and copied time bases matched expectations. The same output
+GPU allocation was reused throughout each job. Sampled CUDA memory usage was
+unchanged from the first completed frame through each clip's last frame. These
+short-clip observations do not establish a maximum memory budget or long-video
+performance. Runs included instrumentation and are not throughput benchmarks.
+
+The real-video 1280x720 preview was visually inspected and matched the previous
+verified preview byte-for-byte. Consumer failure stopped after one callback;
+missing-file and P010 errors propagated. Temporary inspection/download code was
+removed after verification; no automated suite or production download path was
+added. Encoding and audio synchronization remain unverified and unimplemented.
