@@ -20,14 +20,14 @@ fn failure(stage: &str, error: ffmpeg::Error) -> io::Error {
     io::Error::other(format!("{stage}: {error}"))
 }
 
-/// Decode the complete video into owned GPU frames. Long videos can exhaust VRAM.
-pub fn decode(video: &FileData) -> io::Result<Vec<DecodedFrame>> {
+/// Hand each owned GPU frame to the consumer before decoding more output.
+pub fn decode(video: &FileData, mut consume_frame: impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
 
     let mut video_file = open_video_file(video)?;
 
     let (mut decoder, time_base) = open_video_decoder(&video_file, video)?;
 
-    collect_gpu_frames(&mut video_file, &mut decoder, video.video_stream_index as usize, time_base)
+    process_gpu_frames(&mut video_file, &mut decoder, video.video_stream_index as usize, time_base, &mut consume_frame)
 }
 
 fn open_video_file(video: &FileData) -> io::Result<ffmpeg::format::context::Input> {
@@ -90,21 +90,25 @@ unsafe extern "C" fn select_cuda_frame_format(_decoder_context: *mut ffi::AVCode
     ffi::AVPixelFormat::AV_PIX_FMT_NONE
 }
 
-fn collect_gpu_frames(video_reader: &mut ffmpeg::format::context::Input, video_decoder: &mut ffmpeg::decoder::Video, video_stream_index: usize, time_base: ffmpeg::Rational) -> io::Result<Vec<DecodedFrame>> {
-    let mut gpu_frames = Vec::new();
+fn process_gpu_frames(video_reader: &mut ffmpeg::format::context::Input, video_decoder: &mut ffmpeg::decoder::Video, video_stream_index: usize, time_base: ffmpeg::Rational, consume_frame: &mut impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
+    let mut received_frame = false;
+    let mut consume_and_record_frame = |frame| {
+        received_frame = true;
+        consume_frame(frame)
+    };
 
-    // Collect available frames as we send packets so the decoder buffers do not fill up.
+    // Process available frames as we send packets so the decoder buffers do not fill up.
     while let Some(packet) = read_next_video_packet(video_reader, video_stream_index)? {
-        decode_packet_into_gpu_frames(video_decoder, &packet, &mut gpu_frames, time_base)?;
+        decode_packet_into_gpu_frames(video_decoder, &packet, &mut consume_and_record_frame, time_base)?;
     }
 
     // Flush at EOF to collect delayed frames still held in the decoder.
-    finish_decoding(video_decoder, &mut gpu_frames, time_base)?;
+    finish_decoding(video_decoder, &mut consume_and_record_frame, time_base)?;
 
-    if gpu_frames.is_empty() {
+    if !received_frame {
         return Err(io::Error::other("No decoded video frames"));
     }
-    Ok(gpu_frames)
+    Ok(())
 }
 
 // Skip other tracks. None means end of file; read failures remain errors.
@@ -123,18 +127,18 @@ fn read_next_video_packet(video_reader: &mut ffmpeg::format::context::Input, vid
     }
 }
 
-fn decode_packet_into_gpu_frames(video_decoder: &mut ffmpeg::decoder::Video, packet: &ffmpeg::Packet, gpu_frames: &mut Vec<DecodedFrame>, time_base: ffmpeg::Rational) -> io::Result<()> {
+fn decode_packet_into_gpu_frames(video_decoder: &mut ffmpeg::decoder::Video, packet: &ffmpeg::Packet, consume_frame: &mut impl FnMut(DecodedFrame) -> io::Result<()>, time_base: ffmpeg::Rational) -> io::Result<()> {
     video_decoder.send_packet(packet).map_err(|e| failure("Send video packet", e))?;
-    receive_gpu_frames(video_decoder, time_base, false, gpu_frames)
+    receive_gpu_frames(video_decoder, time_base, false, consume_frame)
 }
 
-fn finish_decoding(video_decoder: &mut ffmpeg::decoder::Video, gpu_frames: &mut Vec<DecodedFrame>, time_base: ffmpeg::Rational) -> io::Result<()> {
+fn finish_decoding(video_decoder: &mut ffmpeg::decoder::Video, consume_frame: &mut impl FnMut(DecodedFrame) -> io::Result<()>, time_base: ffmpeg::Rational) -> io::Result<()> {
     // Signal end of input, then collect the decoder's remaining delayed frames.
     video_decoder.send_eof().map_err(|e| failure("Flush NVIDIA decoder", e))?;
-    receive_gpu_frames(video_decoder, time_base, true, gpu_frames)
+    receive_gpu_frames(video_decoder, time_base, true, consume_frame)
 }
 
-fn receive_gpu_frames(decoder: &mut ffmpeg::decoder::Video, time_base: ffmpeg::Rational, flushing: bool, frames: &mut Vec<DecodedFrame>) -> io::Result<()> {
+fn receive_gpu_frames(decoder: &mut ffmpeg::decoder::Video, time_base: ffmpeg::Rational, flushing: bool, consume_frame: &mut impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
     loop {
         let mut decoded = frame::Video::empty();
         match decoder.receive_frame(&mut decoded) {
@@ -143,7 +147,7 @@ fn receive_gpu_frames(decoder: &mut ffmpeg::decoder::Video, time_base: ffmpeg::R
             Err(ffmpeg::Error::Eof) if flushing => return Ok(()),
             Err(e) => return Err(failure("Receive NVIDIA frame", e)),
         }
-        frames.push(prepare_decoded_frame(decoded, time_base)?);
+        consume_frame(prepare_decoded_frame(decoded, time_base)?)?;
     }
 }
 

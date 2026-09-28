@@ -1,34 +1,24 @@
 //! Enhances one video's decoded GPU frames with NVIDIA Video Super Resolution.
 //!
 //! Flow:
-//! 1. Reuse the decoder's CUDA context and stream, then configure the NVIDIA effect.
-//! 2. Allocate one reusable RGBA input buffer.
-//! 3. For each decoded frame, allocate a separate output GPU buffer and convert
-//!    the decoded pixels into the RGBA input buffer.
-//! 4. Bind the input and output buffers. On the first frame, load the model once.
-//! 5. Run enhancement, wait for GPU work to finish, and move the completed frame
-//!    into the results vector. Moving a frame does not copy its GPU pixels.
-//! 6. Return the completed frames and destroy the effect. Returned frames keep
-//!    their GPU allocations alive until the caller drops them.
+//! 1. The first frame supplies the decoder's CUDA context and stream.
+//! 2. Allocate reusable RGBA input/output buffers, bind them, and load the model.
+//! 3. Each call converts one decoded frame, runs enhancement, and waits for the GPU.
+//! 4. Return a borrowed output frame; consume it before the next call overwrites it.
 //!
-//! Ownership means responsibility for freeing memory. The enhancer owns the
-//! unfinished output and completed results while processing. Each EnhancedFrame
-//! owns one GPU allocation and frees it in its Drop implementation.
+//! The enhancer owns both buffers for the entire job. Borrowing its output does
+//! not copy GPU pixels or transfer responsibility for freeing their allocation.
+//! Original timestamps and colour metadata are refreshed for every output frame.
 //!
-//! If a processing call returns an error, `?` returns it to the caller; it does
-//! not itself terminate the application. Dropping the enhancer destroys the
-//! NVIDIA effect before its buffer fields are dropped and their memory is freed.
-//! Waiting for queued GPU work before propagating processing errors prevents
-//! normal cleanup from releasing buffers while that work is still running.
+//! A processing error propagates to the pipeline and ends the job. Drop destroys
+//! the effect before its bound buffers are freed, including after partial setup.
+//! GPU calls synchronize even on SDK errors before normal cleanup can release memory.
+//! Process exit also releases GPU resources, but explicit ownership handles errors
+//! while the application stays open. Do not reuse an enhancer after a failed call.
 //!
-//! If the entire application exits, the driver reclaims its GPU resources anyway.
-//! Explicit ownership also handles errors while the application stays open,
-//! allowing another job without retaining the previous job's GPU allocations.
-//!
-//! Decoded and enhanced frames are retained in VRAM for the whole batch, so long
-//! videos can exhaust GPU memory. Conversion currently supports 8-bit SDR NV12;
-//! progressive processing, P010/HDR enhancement, encoding, and audio muxing are
-//! not implemented here. Original timestamps are carried into the output frames.
+//! Only one decoded frame is handed through the application at a time; the decoder
+//! and model have additional internal storage. Conversion supports 8-bit SDR NV12.
+//! P010/HDR enhancement, encoding, and audio muxing are not implemented.
 
 use std::{ffi::{c_void, CStr}, io, ptr, rc::Rc};
 
@@ -52,49 +42,46 @@ pub struct ResolutionEnhancer {
     device: Option<Rc<CudaDevice>>,
     input: NvImage, // Reusable RGBA input in GPU memory.
     output_frame_buffer: Option<EnhancedFrame>,
-    enhanced_frames: Vec<EnhancedFrame>,
+    model_loaded: bool,
 }
 
 impl ResolutionEnhancer {
     pub fn new() -> io::Result<Self> {
         // Create the effect handle now; load its model once image buffers are bound.
         let effect = create_video_super_resolution_effect()?;
-        Ok(Self { effect, device: None, input: NvImage::default(), output_frame_buffer: None, enhanced_frames: Vec::new() })
+        Ok(Self { effect, device: None, input: NvImage::default(), output_frame_buffer: None, model_loaded: false })
     }
 
-    pub fn enhance(mut self, frames: &[DecodedFrame], new_resolution_width: u32, new_resolution_height: u32) -> io::Result<Vec<EnhancedFrame>> {
-        let first_frame = frames.first().ok_or_else(|| io::Error::other("No decoded frames to enhance"))?;
-        // Reuse the decoder's CUDA context and stream, rather than creating another context.
-        let device = CudaDevice::configure_cuda_device(first_frame)?;
-        // Activate the context on this CPU thread; the guard restores it on scope exit.
-        let _context = device.enter()?;
-        // Finish earlier work in the stream before starting enhancement.
-        device.synchronize()?;
-        self.configure_video_super_resolution(Rc::clone(&device), first_frame)?;
-
-        // Reserve CPU-side frame slots; pixel buffers are allocated on the GPU in the loop.
-        self.enhanced_frames.reserve(frames.len());
-        self.process_frames(frames, &device, new_resolution_width, new_resolution_height)?;
-        // Transfer completed frame ownership to the caller without copying GPU pixels.
-        Ok(std::mem::take(&mut self.enhanced_frames))
-    }
-
-    fn process_frames(&mut self, frames: &[DecodedFrame], device: &Rc<CudaDevice>, width: u32, height: u32) -> io::Result<()> {
-        #[allow(clippy::needless_range_loop)] // Keep the requested index-based frame loop.
-        for i in 0..frames.len() {
-            // Give this frame its own output allocation; keep it owned here if processing fails.
-            self.output_frame_buffer = Some(EnhancedFrame::allocate_space_on_gpu_for_frame(&frames[i], Rc::clone(device), width, height)?);
-            // Convert into the reusable input buffer, then tell NVIDIA where to read and write.
-            convert_frame_to_rgba(&frames[i], &mut self.input, device)?;
-            bind_video_super_resolution_images(self.effect, &mut self.input, &mut self.output_frame_buffer.as_mut().unwrap().image)?;
-            if i == 0 {
-                // Model loading needs bound image dimensions; reuse the model for later frames.
-                self.load_video_super_resolution_model(device)?;
-            }
-            self.enhance_frame(device)?;
-            // Move the finished frame into the results; take() leaves the working slot empty.
-            self.enhanced_frames.push(self.output_frame_buffer.take().unwrap());
+    /// Process one frame from this job; consume the borrowed output before the next call.
+    pub fn enhance(&mut self, frame: &DecodedFrame, new_resolution_width: u32, new_resolution_height: u32) -> io::Result<&EnhancedFrame> {
+        if self.device.is_none() {
+            self.initialize_video_super_resolution(frame, new_resolution_width, new_resolution_height)?;
         }
+        if !self.model_loaded {
+            return Err(io::Error::other("Video Super Resolution initialization failed; start a new job"));
+        }
+        let device = Rc::clone(self.device.as_ref().unwrap());
+        let _context = device.enter()?;
+        let output = self.output_frame_buffer.as_ref().unwrap();
+        if (output.width, output.height) != (new_resolution_width, new_resolution_height) {
+            return Err(io::Error::other("Output resolution must stay fixed for this video"));
+        }
+        convert_frame_to_rgba(frame, &mut self.input, &device)?;
+        self.enhance_frame(&device)?;
+        let output = self.output_frame_buffer.as_mut().unwrap();
+        output.copy_metadata_from(frame);
+        Ok(output)
+    }
+
+    fn initialize_video_super_resolution(&mut self, frame: &DecodedFrame, width: u32, height: u32) -> io::Result<()> {
+        let device = CudaDevice::configure_cuda_device(frame)?;
+        let _context = device.enter()?;
+        device.synchronize()?;
+        self.configure_video_super_resolution(Rc::clone(&device), frame)?;
+        self.output_frame_buffer = Some(EnhancedFrame::allocate_space_on_gpu_for_frame(frame, Rc::clone(&device), width, height)?);
+        bind_video_super_resolution_images(self.effect, &mut self.input, &mut self.output_frame_buffer.as_mut().unwrap().image)?;
+        self.load_video_super_resolution_model(&device)?;
+        self.model_loaded = true;
         Ok(())
     }
 
