@@ -53,6 +53,7 @@ impl ResolutionEnhancer {
     }
 
     /// Process one frame from this job; consume the borrowed output before the next call.
+    /// The first call sets the output resolution for the job.
     pub fn enhance(&mut self, frame: &DecodedFrame, new_resolution_width: u32, new_resolution_height: u32) -> io::Result<&EnhancedFrame> {
         if self.device.is_none() {
             self.initialize_video_super_resolution(frame, new_resolution_width, new_resolution_height)?;
@@ -62,10 +63,6 @@ impl ResolutionEnhancer {
         }
         let device = Rc::clone(self.device.as_ref().unwrap());
         let _context = device.enter()?;
-        let output = self.output_frame_buffer.as_ref().unwrap();
-        if (output.width, output.height) != (new_resolution_width, new_resolution_height) {
-            return Err(io::Error::other("Output resolution must stay fixed for this video"));
-        }
         convert_frame_to_rgba(frame, &mut self.input, &device)?;
         self.enhance_frame(&device)?;
         let output = self.output_frame_buffer.as_mut().unwrap();
