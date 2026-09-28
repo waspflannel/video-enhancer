@@ -32,7 +32,7 @@ fn main() {
         let path = sdk.join(file);
         println!("cargo:rerun-if-changed={}", path.display());
         for destination in [profile.to_path_buf(), profile.join("deps")] {
-            fs::copy(&path, destination.join(path.file_name().unwrap())).expect("Copy NVIDIA VSR runtime DLL");
+            fs::copy(&path, destination.join(path.file_name().unwrap())).expect("Copy NVIDIA Video Super Resolution runtime DLL");
         }
     }
 }

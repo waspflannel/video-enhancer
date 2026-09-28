@@ -14,43 +14,38 @@ pub struct EnhancedFrame {
     pub color_transfer: ffi::AVColorTransferCharacteristic,
     pub sample_aspect_ratio: (i32, i32),
     // Own the GPU pixels until this result is dropped.
-    _image: Rc<GpuImage>,
+    pub(super) image: NvImage,
+    device: Rc<CudaDevice>,
 }
 
 impl EnhancedFrame {
-    pub(super) fn from_gpu_image(frame: &DecodedFrame, image: Rc<GpuImage>) -> Self {
+    pub(super) fn allocate_space_on_gpu_for_frame(frame: &DecodedFrame, device: Rc<CudaDevice>, width: u32, height: u32) -> io::Result<Self> {
+        let image = allocate_rgba_image(width, height)?;
         // SAFETY: the decoded frame owns its native metadata for this borrow.
         let native = unsafe { &*frame.frame.as_ptr() };
-        Self {
-            width: image.image.width,
-            height: image.image.height,
+        Ok(Self {
+            width: image.width,
+            height: image.height,
             presentation_timestamp: frame.presentation_timestamp,
             time_base: frame.time_base,
             timestamp_seconds: frame.timestamp_seconds,
             color_primaries: native.color_primaries,
             color_transfer: native.color_trc,
             sample_aspect_ratio: (native.sample_aspect_ratio.num, native.sample_aspect_ratio.den),
-            _image: image,
-        }
+            image,
+            device,
+        })
     }
 }
 
-pub(super) struct GpuImage {
-    pub(super) image: NvImage,
-    pub(super) device: Rc<CudaDevice>,
+pub(super) fn allocate_rgba_image(width: u32, height: u32) -> io::Result<NvImage> {
+    let mut image = NvImage::default();
+    // SAFETY: the caller activates CUDA; the returned allocation is owned by its frame or enhancer.
+    sdk_result("Allocate RGBA GPU image", unsafe { NvCVImage_Alloc(&mut image, width, height, NVCV_RGBA, NVCV_U8, 0, NVCV_GPU, 0) })?;
+    Ok(image)
 }
 
-impl GpuImage {
-    pub(super) fn allocate(device: Rc<CudaDevice>, width: u32, height: u32) -> io::Result<Self> {
-        let mut image = NvImage::default();
-        // SAFETY: the caller has activated device; image is an empty descriptor.
-        sdk_result("Allocate RGBA GPU image", unsafe { NvCVImage_Alloc(&mut image, width, height, NVCV_RGBA, NVCV_U8, 0, NVCV_GPU, 0) })?;
-        Ok(Self { image, device })
-    }
-
-}
-
-impl Drop for GpuImage {
+impl Drop for EnhancedFrame {
     fn drop(&mut self) {
         if let Ok(_context) = self.device.enter() {
             // SAFETY: processing is synchronous; this image uniquely owns its allocation.
@@ -59,20 +54,25 @@ impl Drop for GpuImage {
     }
 }
 
-pub(super) fn convert_frame_to_rgba(frame: &DecodedFrame, input: &mut GpuImage, colorspace: u32) -> io::Result<()> {
+pub(super) fn convert_frame_to_rgba(frame: &DecodedFrame, input: &mut NvImage, device: &CudaDevice) -> io::Result<()> {
+    let colorspace = source_colorspace(frame)?;
+    // The raw-plane API reads the destination's dimensions from the source pointers.
+    if frame.frame.width() != input.width || frame.frame.height() != input.height {
+        return Err(io::Error::other("RGBA conversion requires a fixed frame size for this video"));
+    }
     // SAFETY: validated NV12 has Y and interleaved UV device planes; use their actual byte pitches.
     let status = unsafe {
         let native = &*frame.frame.as_ptr();
-        NvCVImage_TransferFromYUV(native.data[0].cast(), 1, native.linesize[0], native.data[1].cast(), native.data[1].wrapping_add(1).cast(), 2, native.linesize[1], NVCV_YUV420, NVCV_U8, colorspace, NVCV_GPU, &mut input.image, ptr::null(), 1.0, input.device.stream, ptr::null_mut())
+        NvCVImage_TransferFromYUV(native.data[0].cast(), 1, native.linesize[0], native.data[1].cast(), native.data[1].wrapping_add(1).cast(), 2, native.linesize[1], NVCV_YUV420, NVCV_U8, colorspace, NVCV_GPU, input, ptr::null(), 1.0, device.stream, ptr::null_mut())
     };
-    let completion = input.device.synchronize();
+    let completion = device.synchronize();
     sdk_result("Convert NV12 to RGBA on GPU", status)?;
     completion
 }
 
-pub(super) fn source_colorspace(frame: &DecodedFrame) -> io::Result<u32> {
+fn source_colorspace(frame: &DecodedFrame) -> io::Result<u32> {
     if frame.pixel_format != "nv12" {
-        return Err(io::Error::other("VSR currently supports 8-bit NV12 frames; P010/10-bit conversion is not implemented"));
+        return Err(io::Error::other("Video Super Resolution currently supports 8-bit NV12 frames; P010/10-bit conversion is not implemented"));
     }
     // SAFETY: only metadata is read from the owned frame, never its device pixels.
     let native = unsafe { &*frame.frame.as_ptr() };
@@ -84,7 +84,7 @@ pub(super) fn source_colorspace(frame: &DecodedFrame) -> io::Result<u32> {
         AVCOL_SPC_BT709 => 1,
         AVCOL_SPC_BT470BG | AVCOL_SPC_SMPTE170M => 0,
         AVCOL_SPC_UNSPECIFIED => u32::from(native.height >= 720),
-        _ => return Err(io::Error::other("VSR conversion currently supports BT.601 or BT.709 SDR colour")),
+        _ => return Err(io::Error::other("Video Super Resolution conversion currently supports BT.601 or BT.709 SDR colour")),
     };
     let range = if native.color_range == AVCOL_RANGE_JPEG { 4 } else { 0 };
     let chroma = match native.chroma_location {

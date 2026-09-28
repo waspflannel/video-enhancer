@@ -140,26 +140,35 @@ The resolution enhancer links directly to `NVVideoEffects.dll` using Rust's
 Windows `raw-dylib` support. `build.rs` copies the core, VSR feature, and required
 runtime DLLs beside the executable. Windows loads the linked DLL at startup;
 missing startup dependencies are reported by Windows before Rust can run.
-`ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frame, width, height)`
+`ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frames, width, height)`
 is coordinated by `resolution/resolution.rs`, which owns and configures the VSR
 effect. `resolution/cuda.rs` manages the CUDA context and synchronization;
 `resolution/frame.rs` owns image buffers, conversion, and enhanced-frame metadata.
 `resolution/commands.rs` contains only the native function declarations, image
 layout, and SDK constants. The enhancement call
-returns an owned RGBA GPU frame with the original integer timestamp, time base,
-colour primaries, transfer characteristic, and sample aspect ratio. Requested
-dimensions must preserve the source aspect ratio and must not downscale it.
+returns owned RGBA GPU frames with the original integer timestamps, time bases,
+colour primaries, transfer characteristic, and sample aspect ratio. The caller
+chooses aspect-preserving output dimensions; SDK failures are propagated.
 The console currently enhances each decoded frame to twice its width and height.
 
-The first call activates the decoder's CUDA context, configures VSR_High (AI
-quality 3), and loads the model. Subsequent calls reuse the model and converted
-input allocation for matching dimensions. Changing dimensions reloads the model.
-Use a new enhancer for a different decoder CUDA context.
+Each enhancement call consumes the enhancer and processes one decoded frame slice.
+It activates the decoder's CUDA context, configures VSR_High (AI quality 3),
+and allocates the reusable input before the loop. Each iteration allocates its
+output, converts the input to RGBA, binds both images, and runs Video Super
+Resolution. The first iteration loads the model after binding. The input
+buffer and model are reused; each returned frame owns a separate output buffer.
+Conversion reads each frame's colour interpretation and rejects unsupported
+pixel layouts or changed frame sizes before passing raw planes to the SDK.
+The effect is destroyed before the call returns, while output buffers stay alive.
+The enhancer owns unfinished and completed outputs during processing. Its Drop
+destroys the effect before releasing buffer fields on failure; success transfers
+completed frames to the caller without copying their GPU pixels.
 
 NVIDIA's image API converts NV12 to interleaved RGBA entirely on the GPU using
 the actual Y/UV plane strides. Conversion and VSR use the decoder's CUDA stream;
-calls synchronize before returning or releasing buffers. Reference-counted device
-and image owners keep output valid after the decoder and enhancer are dropped.
+calls synchronize before returning or releasing buffers. Each EnhancedFrame
+owns its NVIDIA image allocation directly and retains the CUDA device owner.
+GpuImage and VideoSuperResolutionConfiguration wrappers have been removed.
 The effect retains its last output binding until replaced or destroyed.
 
 This first path supports 8-bit SDR BT.601/BT.709 NV12. P010/10-bit, PQ/HLG HDR,

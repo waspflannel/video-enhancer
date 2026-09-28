@@ -8,13 +8,10 @@ fn main() -> io::Result<()> {
     let file_data = parser.get_video_information()?;
     let frames = gpu::decode(&file_data)?;
 
-    let mut enhancer = ResolutionEnhancer::new()?;
+    let enhancer = ResolutionEnhancer::new()?;
     let new_resolution_width = file_data.width * 2;
     let new_resolution_height = file_data.height * 2;
-    let mut enhanced_frames = Vec::with_capacity(frames.len());
-    for frame in &frames {
-        enhanced_frames.push(enhancer.enhance(frame, new_resolution_width, new_resolution_height)?);
-    }
+    let enhanced_frames = enhancer.enhance(&frames, new_resolution_width, new_resolution_height)?;
 
     println!("Enhanced {} GPU frames to {}x{}", enhanced_frames.len(), new_resolution_width, new_resolution_height);
     Ok(())
