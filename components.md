@@ -2,7 +2,7 @@
 
 Build a working local video enhancer first. Then measure it, make it faster, and polish the UI.
 
-The user imports a video, chooses a resolution and FPS, optionally enables AI frame generation, and saves the enhanced video. Processing uses NVIDIA's SDK and local pretrained models on the RTX 5070.
+The user imports a video, chooses a resolution and FPS, uses NVIDIA AI frame generation, and saves the enhanced video. Processing uses NVIDIA's SDK and local pretrained models on the RTX 5070.
 
 ## Before you start reading
 
@@ -58,17 +58,17 @@ No model training is required. We only need the two enhancement features listed 
 
 - Let the user choose the output FPS.
 - Use NVIDIA VFG and its local model to generate intermediate frames when AI frame generation is enabled.
-- When AI is off, duplicate or drop frames as needed to reach the selected FPS.
+- Use AI for intermediate output times; retain original images at matching source timestamps.
 - Keep playback speed and duration consistent with the original video.
 
-FPS conversion and AI frame generation belong in one component: FPS is the requested result, and AI generation is an optional way to produce the frames.
+FPS conversion and AI frame generation belong in one component: FPS is the requested result, and NVIDIA AI generates the required intermediate frames.
 
 **Read before building:**
 
 1. [NVIDIA Video Frame Generation guide](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoFrameGeneration.html) — learn how two existing frames produce an intermediate frame. Read “Operating Modes,” “Model Modes,” and the shot-change parameters.
 2. [NVIDIA VFX sample applications](https://github.com/NVIDIA-Maxine/VFX-SDK-Samples) — look for `VideoFrameGenerationEffectApp` when you are ready to see how the calls fit together.
 
-**Downloads:** the same VFX SDK Core, plus the [VFG feature and models](https://catalog.ngc.nvidia.com/orgs/nvidia/maxine/collections/nvvfxvideoframegeneration/-). Duplicating or dropping frames with AI disabled needs no model.
+**Downloads:** the same VFX SDK Core, plus the [VFG feature and models](https://catalog.ngc.nvidia.com/orgs/nvidia/maxine/collections/nvvfxvideoframegeneration/-).
 
 ### 4. Video export
 

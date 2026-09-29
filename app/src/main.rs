@@ -11,8 +11,7 @@ fn main() -> io::Result<()> {
     let new_resolution_width = file_data.width * 2;
     let new_resolution_height = file_data.height * 2;
     let target_frame_rate = (60, 1);
-    let generate_ai_frames = true;
-    let mut frame_rate_enhancer = FrameRateEnhancer::new(target_frame_rate, generate_ai_frames, file_data.video_end_time)?;
+    let mut frame_rate_enhancer = FrameRateEnhancer::new(target_frame_rate, file_data.video_end_time)?;
     let mut output_frame_count = 0;
     let mut on_frame_ready_for_encoding = |_frame: FrameForEncoder<'_>| {
         // The encoder will consume this timed GPU frame before this callback returns.

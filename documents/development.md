@@ -219,10 +219,10 @@ added. Encoding and audio synchronization remain unverified and unimplemented.
 `main` connects decode -> resolution enhancement -> frame-rate conversion ->
 `on_frame_ready_for_encoding`. The last callback only counts outputs. No encoder,
 export, audio muxing, worker queues, or parallel scheduling has been added.
-Set `target_frame_rate` to a rational rate such as `(60, 1)` or `(60000, 1001)` and
-`generate_ai_frames` to enable/disable AI. Settings stay fixed for the job.
+Set `target_frame_rate` to a rational rate such as `(60, 1)` or `(60000, 1001)`.
+NVIDIA AI is the only interpolation path. Settings stay fixed for the job.
 
-Create `FrameRateEnhancer::new(target_frame_rate, generate_ai_frames, file_data.video_end_time)`
+Create `FrameRateEnhancer::new(target_frame_rate, file_data.video_end_time)`
 once, call `enhance` for each enhanced source image, and call `finish` after the
 decoder drains its final frames. AI interpolation needs two surrounding source
 frames. The first call retains an image; later calls supply the next one.
@@ -234,15 +234,15 @@ The FPS stage shares the existing `EnhancedFrame`, CUDA device, and SDK bindings
 It retains images with GPU-to-GPU copies because resolution enhancement reuses
 its output buffer. AI mode owns two source buffers and one generated buffer for
 the job. It copies the current source into the retained previous buffer after
-each pair. AI-disabled processing only retains the previous image. No production
+each pair. No production
 image download, allocation swapping, or overlapping work is introduced.
 
 On the first pair, AI mode creates `VideoFrameGeneration`, sets the CUDA stream,
 input dimensions, Medium model, explicit-timestep mode, and automatic scene-cut
 detection, then binds RGBA input/output images and loads once. Each intermediate
 output sets `Timestep` and runs synchronously. Exact source-time outputs use the
-source image. Without AI, output slots repeat the most recent source image;
-this also drops source images when the target rate is lower.
+source image. Intermediate output times always use NVIDIA AI. At EOF, hold the
+final image for its remaining duration because there is no following frame.
 
 `FrameForEncoder` borrows GPU pixels and colour metadata from an `EnhancedFrame`
 and supplies a separate output presentation timestamp, time base, and duration.
@@ -270,7 +270,7 @@ The installed runtime successfully loaded the selected Medium model and produced
 GPU interpolation results. `build.rs` copies this feature DLL alongside the
 existing runtime DLLs. No model download or additional dependency was needed.
 
-Manual RTX 5070 checks covered:
+Initial RTX 5070 checks before removal of the non-AI option covered:
 
 - 3 source frames at 60 FPS -> 6 outputs at 120 FPS, with AI on and off.
 - 120 H.264 frames at 24 FPS -> 300 at 60 FPS with AI, 60 at 12 FPS without AI,
@@ -291,8 +291,12 @@ not guaranteed; no custom detector was added. Broader temporal quality, long-vid
 performance, and audio synchronization are not qualified by these checks.
 Temporary download/inspection code was removed. No automated suite was added.
 
-Ponytail review removed an unused current-image allocation/copy from AI-disabled
+The initial Ponytail review removed an unused current-image allocation/copy from AI-disabled
 processing and replaced manual timestamp rescaling with the existing ffmpeg-next
 helper. No new dependencies or scheduling abstractions were added.
 
 Native API reference: [NVIDIA Video Frame Generation](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoFrameGeneration.html).
+
+The AI-only refactor removed the toggle and non-AI interpolation path. Build and
+Clippy passed; a manual 60-to-120 FPS check produced six outputs with the expected
+timestamps and durations. Original-frame pass-through and EOF tail holding remain.

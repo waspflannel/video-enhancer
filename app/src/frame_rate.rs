@@ -1,12 +1,11 @@
-//! Converts enhanced GPU frames to a requested frame rate, optionally using NVIDIA AI.
+//! Converts enhanced GPU frames to a requested frame rate, using NVIDIA AI.
 //!
 //! Flow:
 //! 1. Keep the first enhanced frame on the GPU. AI interpolation needs two source
 //!    frames: the previous image and the next image surrounding an output time.
 //! 2. Copy the next enhanced frame before resolution enhancement can overwrite it.
 //! 3. Walk the output timeline between their timestamps. Deliver a source frame at
-//!    an exact source time, or generate an intermediate image when AI is enabled.
-//!    Without AI, hold the previous image; this duplicates or drops frames as needed.
+//!    an exact source time, or use NVIDIA AI to generate an intermediate image.
 //! 4. Call on_frame_ready_for_encoding for each timed output, then keep the newer
 //!    source frame for the next pair. The callback must finish using its GPU pixels
 //!    before returning: all image buffers are reused.
@@ -33,7 +32,6 @@ pub struct FrameForEncoder<'a> {
 
 pub struct FrameRateEnhancer {
     target_frame_rate: (i32, i32),
-    generate_ai_frames: bool,
     video_end_time: Option<(i64, (i32, i32))>,
     effect: *mut c_void,
     previous_frame: Option<EnhancedFrame>,
@@ -47,12 +45,12 @@ pub struct FrameRateEnhancer {
 
 impl FrameRateEnhancer {
     /// Use a rational rate, such as (60, 1) or (60000, 1001).
-    pub fn new(target_frame_rate: (i32, i32), generate_ai_frames: bool, video_end_time: Option<(i64, (i32, i32))>) -> io::Result<Self> {
+    pub fn new(target_frame_rate: (i32, i32), video_end_time: Option<(i64, (i32, i32))>) -> io::Result<Self> {
         if target_frame_rate.0 <= 0 || target_frame_rate.1 <= 0 {
             return Err(io::Error::other("Target frame rate must be positive"));
         }
         Ok(Self {
-            target_frame_rate, generate_ai_frames, video_end_time, effect: ptr::null_mut(),
+            target_frame_rate, video_end_time, effect: ptr::null_mut(),
             previous_frame: None, current_frame: None, generated_frame: None,
             output_time_base: (1, 1), output_frame_duration: 0,
             next_output_timestamp: 0, last_source_frame_interval: 0,
@@ -73,16 +71,14 @@ impl FrameRateEnhancer {
             return Err(io::Error::other("Frame-rate conversion requires increasing source timestamps"));
         }
         self.last_source_frame_interval = current_timestamp - previous_timestamp;
-        if self.generate_ai_frames {
-            if self.current_frame.is_none() {
-                self.current_frame = Some(EnhancedFrame::allocate_matching_frame(frame)?);
-            }
-            self.current_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame)?;
-            if self.effect.is_null() { self.configure_video_frame_generation()?; }
+        if self.current_frame.is_none() {
+            self.current_frame = Some(EnhancedFrame::allocate_matching_frame(frame)?);
         }
+        self.current_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame)?;
+        if self.effect.is_null() { self.configure_video_frame_generation()?; }
         let end_timestamp = self.video_end_time.map(|(timestamp, time_base)| timestamp.rescale(time_base, self.output_time_base));
         while self.next_output_timestamp < current_timestamp && end_timestamp.is_none_or(|end| self.next_output_timestamp < end) {
-            let output_frame = if self.generate_ai_frames && self.next_output_timestamp > previous_timestamp {
+            let output_frame = if self.next_output_timestamp > previous_timestamp {
                 let timestep = (self.next_output_timestamp - previous_timestamp) as f64 / (current_timestamp - previous_timestamp) as f64;
                 self.generate_intermediate_frame(timestep as f32)?;
                 self.generated_frame.as_ref().unwrap()

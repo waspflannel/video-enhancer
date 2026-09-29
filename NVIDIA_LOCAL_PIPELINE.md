@@ -49,7 +49,7 @@ Pin SDK, feature/model, driver requirements, and media-tool versions after quali
 ## Processing flow
 
 ```text
-Import video + choose resolution / FPS / AI frame generation
+Import video + choose resolution / FPS / NVIDIA AI frame generation
     |
 Probe input and validate the requested output
     |
@@ -66,7 +66,7 @@ NVENC: encode the timed output frames
 Mux original audio, validate the export, and save
 ```
 
-Source audio bypasses image processing and rejoins the encoded video during muxing. Skip VFG when interpolation is not requested or no intermediate times are needed.
+Source audio bypasses image processing and rejoins the encoded video during muxing. Original images pass through at matching source timestamps; NVIDIA VFG generates intermediate images.
 
 The initial processing order is VSR then VFG. This upscales each source frame once, then interpolates at the output resolution. Compare VFG-before-VSR on representative clips during qualification: it performs interpolation at a lower resolution but requires enhancing more frames. Select the order using measured runtime and motion/detail quality; keep the order fixed within a job.
 
@@ -76,7 +76,7 @@ The initial processing order is VSR then VFG. This upscales each source frame on
 - Use actual timestamps and rational frame rates. For a required output time between two source frames, compute its relative position and request that position from VFG. Do not rely solely on frame indexes or assume every input has constant FPS.
 - VFG requires both input frames and its output to have matching dimensions and compatible pixel formats. Consume each generated output before its buffer is reused.
 - Use the SDK's scene-change detection and defined bypass behavior across cuts. Keep output timestamps correct even when interpolation is bypassed; never blend unrelated shots to fill a slot.
-- If AI frame generation is off, a higher selected FPS uses explicit duplication rather than invented frames. A lower FPS selects/drops frames according to output timestamps. Make this distinction clear in the UI.
+- NVIDIA AI is the only interpolation path. At EOF, hold the final image for its remaining duration because no following source frame exists.
 - Preserve aspect ratio when resolving a resolution preset. Handle rotation and pixel aspect ratio before presenting final output dimensions.
 - Preserve colour interpretation through decoding, processing, and encoding. Current VSR/VFG interfaces document 8-bit and packed 10-bit formats; format support alone does not establish correct HDR processing. Define and validate supported colour paths before advertising them, and clearly reject unsupported inputs rather than silently changing their appearance.
 
@@ -87,8 +87,7 @@ Keep decoded and processed frames in GPU memory wherever the selected interfaces
 Current processing: FFmpeg decodes in the Rust process using CUVID and hands each
 owned CUDA frame directly to enhancement. The application retains one decoded
 frame at a time, plus reusable RGBA input/output buffers and the loaded models.
-The FPS stage owns two source images and one generated image for AI processing;
-with AI disabled it only retains the previous source image.
+The FPS stage owns two source images and one generated image for AI processing.
 Decoder reference storage and model workspace consume additional VRAM. No
 production pixel download occurs. The console counts completed frames and reuses
 the output after FPS conversion; encoding and synchronized audio muxing remain
