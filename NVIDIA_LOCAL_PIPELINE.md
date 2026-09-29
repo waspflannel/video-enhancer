@@ -2,7 +2,7 @@
 
 Updated: 2026-09-23
 
-Status: Rust parser uses in-process FFmpeg NVIDIA decoding and owned GPU frame storage; verified on RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. Sequential 8-bit SDR VSR enhancement is implemented and manually verified. P010/HDR enhancement, interpolation, and export remain unimplemented.
+Status: Rust parser uses in-process FFmpeg NVIDIA decoding and owned GPU frame storage; verified on RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. Sequential 8-bit SDR VSR enhancement is implemented and manually verified. Sequential VFG/FPS conversion is also implemented through an encoder handoff callback. P010/HDR enhancement and export remain unimplemented.
 
 ## Product and scope
 
@@ -36,7 +36,7 @@ VSR and VFG are separate features. VSR changes spatial resolution; VFG estimates
 
 ## Local models and setup
 
-Selected existing VFX installation: `C:\video-enhancer-fast\sdk\VFXSDK_windows_1.3.0.0\VideoFX` (1.3.0.0). The core and VSR/VFG feature DLLs and headers were found locally on 2026-09-23. VSR model loading and GPU enhancement now pass manual checks with this installation. VFG readiness remains unverified. Decoding uses FFmpeg; resolution enhancement calls the local VFX SDK directly.
+Selected existing VFX installation: `C:\video-enhancer-fast\sdk\VFXSDK_windows_1.3.0.0\VideoFX` (1.3.0.0). The core and VSR/VFG feature DLLs and headers were found locally on 2026-09-23. VSR model loading and GPU enhancement now pass manual checks with this installation. VFG Medium model loading and GPU interpolation passed manual RTX 5070 checks on 2026-09-28. Automatic scene-cut detection is enabled but missed a synthetic red-to-blue cut. Decoding uses FFmpeg; resolution enhancement calls the local VFX SDK directly.
 
 NVIDIA supplies the pretrained models. Install the VFX SDK Core, then the separate Video Super Resolution and Video Frame Generation feature packages, including their model files and runtime libraries, through NVIDIA NGC. No model training is required.
 
@@ -86,10 +86,13 @@ Keep decoded and processed frames in GPU memory wherever the selected interfaces
 
 Current processing: FFmpeg decodes in the Rust process using CUVID and hands each
 owned CUDA frame directly to enhancement. The application retains one decoded
-frame at a time, plus reusable RGBA input/output buffers and the loaded model.
+frame at a time, plus reusable RGBA input/output buffers and the loaded models.
+The FPS stage owns two source images and one generated image for AI processing;
+with AI disabled it only retains the previous source image.
 Decoder reference storage and model workspace consume additional VRAM. No
 production pixel download occurs. The console counts completed frames and reuses
-the output; encoding and synchronized audio muxing remain the next milestone.
+the output after FPS conversion; encoding and synchronized audio muxing remain
+the next milestone.
 Parallel enhancement of chunks is deferred until measurement justifies it and
 must preserve timestamp order, temporal context, and bounded memory.
 
