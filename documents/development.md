@@ -3,6 +3,8 @@
 The Windows x64 app opens a desktop UI, or runs a saved job with
 `cargo run --release -- path/to/job.json`. Metadata comes from ffprobe;
 FFmpeg/NVDEC, NVIDIA video effects and NVENC run inside the Rust process.
+The current settings, supported combinations and runnable export checks are in
+[SDK capabilities and settings](sdk-capabilities.md).
 
 Follow [Coding standards](coding-standards.md) for implementation style and scope.
 
@@ -33,7 +35,7 @@ It does not change machine-wide environment variables or the VFX SDK.
 
 `app/.cargo/config.toml` sets project-relative `FFMPEG_DIR` and `LIBCLANG_PATH`.
 Run Cargo from `app/` so this configuration is loaded. `build.rs` copies the
-FFmpeg and required VSR/VFG DLLs beside the executable. Directly launching the release
+FFmpeg and required NVIDIA effect DLLs beside the executable. Directly launching the release
 executable requires those DLLs alongside it. Metadata inspection also needs
 the existing project-local ffprobe executable. CUDA/NVDEC is supplied by the
 installed NVIDIA driver; no CUDA toolkit or Video Codec SDK download is
@@ -55,6 +57,9 @@ app/
   src/video_decoder.rs       GPU decoding and frame ownership
   src/resolution/         Resolution enhancer and shared NVIDIA/CUDA bindings
   src/frame_rate.rs       Timestamp scheduling, VFG, and encoder handoff
+  src/video_effects.rs    Temporal denoise, portrait effects and relighting
+  src/hdr.rs              SDR-to-HDR10 conversion
+  src/pixel_conversion.*  GPU conversion for the 10-bit path
   src/video_encoder.rs    NVENC, GPU conversion, and MP4/audio output
   scripts/                Local dependency setup
   target/                 Generated build output, ignored
@@ -69,7 +74,8 @@ The **Download from YouTube** section uses `yt-dlp` from PATH and the existing
 project-local FFmpeg. Choose maximum resolution, maximum frame rate, and MP4
 (H.264/AAC) or MKV (best supported SDR codec). These are download limits, not
 upscaling or frame generation. Audio is included. MP4 is the compatible default;
-MKV may select a 10-bit source that the enhancer cannot currently process.
+MKV can select higher-resolution H.264, HEVC or AV1 SDR sources, including 10-bit
+video. Loading a 10-bit source selects HEVC 10-bit output by default.
 
 Downloads and resumable partial files go in the ignored `youtube-videos/` folder
 at the project root. **Load video** opens that folder, regardless of the process's
@@ -96,7 +102,7 @@ Options follow the [official yt-dlp documentation](https://github.com/yt-dlp/yt-
 
 The following sections record earlier milestones and their verification. Some
 describe features as future work that are now implemented; use the setup and
-layout above and README for current behavior.
+layout above and the SDK capabilities document for current behavior.
 
 ## Parser
 
@@ -173,6 +179,11 @@ The encoder checks below cover short exports; real-world long-video behavior
 remains unvalidated.
 
 ## Resolution enhancement
+
+**Historical implementation notes:** the sections below record earlier milestones
+and their checks. Their fixed settings, API examples and statements about missing
+features describe those milestones. Use [SDK capabilities](sdk-capabilities.md)
+and the current `app/src/job.rs` for today's settings and processing flow.
 
 Use the existing `sdk/VFXSDK_windows_1.3.0.0/VideoFX` installation for VSR/VFG.
 The resolution enhancer links directly to `NVVideoEffects.dll` using Rust's

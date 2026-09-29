@@ -3,8 +3,9 @@
 Reviewed `main` at `a237995` and `codex/sdk-capabilities` at `799f04b`, including
 all application source, CUDA kernels, build/setup code, configuration and project
 standards. The SDK branch contains main plus the additional effects. Shared fixes
-were applied to both working trees; SDK features were not added to main. Changes
-are local and uncommitted.
+were applied to both working trees. After verification, both cleanups were
+committed and the SDK branch, including its additional features, was merged into
+main at the owner's request. The merged application matches the reviewed SDK code.
 
 ## Findings fixed
 

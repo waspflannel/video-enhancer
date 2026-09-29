@@ -2,19 +2,20 @@
 
 Enhance videos locally using NVIDIA's SDK and pretrained models on an RTX 5070.
 
-Import a video, choose its output resolution and frame rate, generate intermediate frames with NVIDIA AI, and save the enhanced video with synchronized audio.
+Import or download a video, choose its enhancement settings, and save a new MP4 with the source audio. Processing runs locally on the GPU.
 
 ## Status
 
-Windows x64 desktop application built with Rust, Tao and Wry. Import or download a video, choose cleanup, colour, resolution and frame-rate settings, then export H.264 MP4 with copied source audio. FFmpeg/NVDEC decodes on the GPU; NVIDIA VSR, VFG and NVENC keep video processing local. Models and GPU buffers are reused throughout each job. The same job can run from JSON through the command line. Enhancement on this branch supports 8-bit SDR input; P010/HDR enhancement and audio transcoding are not implemented.
+Windows x64 desktop application built with Rust, Tao and Wry. The same job can run from a JSON file through the command line. FFmpeg/NVDEC decodes H.264, HEVC and AV1 SDR sources; NVIDIA effects process GPU frames; NVENC saves H.264 or 10-bit HEVC with copied audio.
 
-Build one complete working pipeline first, then optimize its speed and polish the UI.
+The UI exposes VSR modes and strengths, lightweight upscaling, cleanup and temporal denoising, frame-generation quality and scene detection, colour controls, portrait backgrounds and relighting, and TrueHDR conversion. SDK effects have format and source-size limits; see [SDK capabilities and settings](documents/sdk-capabilities.md) for supported combinations and verification status. PQ/HLG source videos, audio transcoding and rotation handling remain unsupported.
 
 ## Start here
 
 - [Components and build order](components.md): what we build, with beginner reading links and SDK/model downloads.
 - [NVIDIA pipeline](NVIDIA_LOCAL_PIPELINE.md): the technical direction.
 - [Development setup](documents/development.md): Rust toolchain prerequisites, layout, and Cargo commands.
+- [SDK capabilities and settings](documents/sdk-capabilities.md): current UI/job settings, effect order, format limits, and a runnable manual export check.
 
 ## Project layout
 
@@ -26,6 +27,6 @@ components.md              Component roadmap and learning resources
 NVIDIA_LOCAL_PIPELINE.md   NVIDIA processing pipeline design
 ```
 
-The project uses one Git repository at the root. Keep downloaded models, SDK archives, sample videos, and exports outside Git. From `app/`, run `cargo run --release` to open the UI, or `cargo run --release -- path/to/job.json` to replay a job. FFmpeg and ffprobe use the project-local `tools/` directory. Run `./scripts/setup-media.ps1` from `app/` to install the pinned shared FFmpeg build and binding-generation dependency. See the development guide for validation commands.
+The project uses one Git repository at the root. Keep downloaded models, SDK archives, sample videos, and exports outside Git. From `app/`, run `cargo run --release` to open the UI, or `cargo run --release -- path/to/job.json` to replay a job. FFmpeg and ffprobe use the project-local `tools/` directory; NVIDIA effects use the installed `sdk/VFXSDK_windows_1.3.0.0/VideoFX` packages. Run `./scripts/setup-media.ps1` from `app/` to install the pinned shared FFmpeg build and binding-generation dependency.
 
-Exports currently use H.264 MP4 with compatible source audio copied unchanged. Existing output files are refused. A failed job can leave an incomplete output; choose a new path or remove that incomplete file before retrying.
+The YouTube panel uses `yt-dlp` from PATH and saves downloads in the ignored `youtube-videos/` directory. The Load video picker starts there. Existing source and output files are preserved. A failed job can leave an incomplete output; choose a new path or remove that incomplete file before retrying.
