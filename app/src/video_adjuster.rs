@@ -1,5 +1,5 @@
 //! One CUDA pass for SDR colour adjustments. No NVIDIA AI model is used here.
-use std::{ffi::{c_char, c_void, CString}, io, ptr, rc::Rc};
+use std::{ffi::{c_char, c_void, CStr, CString}, io, ptr, rc::Rc};
 use ffmpeg_next::ffi;
 use crate::{job::{VideoEnhancementJob, EnhancementSettings}, resolution::EnhancedFrame};
 
@@ -22,7 +22,7 @@ impl VideoAdjuster {
         let _context = device.enter()?;
         if self.output.is_none() {
             self.output = Some(EnhancedFrame::allocate_matching_frame(frame)?);
-            let ptx = compile_colour_kernel()?;
+            let ptx = compile_kernel(include_str!("video_adjuster.cu"), c"video_adjuster.cu")?;
             // SAFETY: PTX is NUL-terminated; the module stays alive for every launch.
             unsafe {
                 check("Load colour kernel", cuModuleLoadData(&mut self.module, ptx.as_ptr().cast()))?;
@@ -35,10 +35,12 @@ impl VideoAdjuster {
         let mut pitch = output.image.pitch;
         let mut width = output.width as i32;
         let mut height = output.height as i32;
+        let mut ten_bit = i32::from(output.image.pixel_format == crate::resolution::commands::NVCV_RGB10A2);
         let mut values = [settings.contrast, settings.saturation, settings.vibrance, settings.exposure, settings.warmth];
         let mut arguments = [
             (&mut pixels as *mut *mut c_void).cast::<c_void>(), (&mut pitch as *mut i32).cast(),
             (&mut width as *mut i32).cast(), (&mut height as *mut i32).cast(),
+            (&mut ten_bit as *mut i32).cast(),
             (&mut values[0] as *mut f32).cast(), (&mut values[1] as *mut f32).cast(),
             (&mut values[2] as *mut f32).cast(), (&mut values[3] as *mut f32).cast(), (&mut values[4] as *mut f32).cast(),
         ];
@@ -60,12 +62,12 @@ impl Drop for VideoAdjuster {
     }
 }
 
-fn compile_colour_kernel() -> io::Result<Vec<u8>> {
-    let source = CString::new(include_str!("video_adjuster.cu")).unwrap();
+pub(crate) fn compile_kernel(source: &str, name: &CStr) -> io::Result<Vec<u8>> {
+    let source = CString::new(source).unwrap();
     let mut program = ptr::null_mut();
     // SAFETY: source and options remain valid throughout synchronous compilation.
     unsafe {
-        check("Create colour compiler", nvrtcCreateProgram(&mut program, source.as_ptr(), c"video_adjuster.cu".as_ptr(), 0, ptr::null(), ptr::null()))?;
+        check("Create CUDA compiler", nvrtcCreateProgram(&mut program, source.as_ptr(), name.as_ptr(), 0, ptr::null(), ptr::null()))?;
         let result = (|| {
             let options = [c"--gpu-architecture=compute_75".as_ptr()];
             let status = nvrtcCompileProgram(program, 1, options.as_ptr());

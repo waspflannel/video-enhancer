@@ -1,14 +1,18 @@
 // Colour controls operate on display-encoded SDR RGB, with clipping at the output.
-extern "C" __global__ void adjust(unsigned char* pixels, int pitch, int width, int height,
+extern "C" __global__ void adjust(unsigned char* pixels, int pitch, int width, int height, int ten_bit,
     float contrast, float saturation, float vibrance, float exposure, float warmth) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;
     unsigned char* pixel = pixels + y * pitch + x * 4;
+    unsigned int packed = ten_bit ? *(unsigned int*)pixel : 0;
+    float input_r = ten_bit ? (packed & 1023) / 1023.0f : pixel[0] / 255.0f;
+    float input_g = ten_bit ? ((packed >> 10) & 1023) / 1023.0f : pixel[1] / 255.0f;
+    float input_b = ten_bit ? ((packed >> 20) & 1023) / 1023.0f : pixel[2] / 255.0f;
     float gain = exp2f(exposure);
-    float r = pixel[0] / 255.0f * gain * (1.0f + warmth * 0.15f);
-    float g = pixel[1] / 255.0f * gain;
-    float b = pixel[2] / 255.0f * gain * (1.0f - warmth * 0.15f);
+    float r = input_r * gain * (1.0f + warmth * 0.15f);
+    float g = input_g * gain;
+    float b = input_b * gain * (1.0f - warmth * 0.15f);
     r = (r - 0.5f) * contrast + 0.5f;
     g = (g - 0.5f) * contrast + 0.5f;
     b = (b - 0.5f) * contrast + 0.5f;
@@ -17,7 +21,10 @@ extern "C" __global__ void adjust(unsigned char* pixels, int pitch, int width, i
     float min_value = fminf(r, fminf(g, b));
     float colourfulness = max_value > 0.0f ? fminf(1.0f, (max_value - min_value) / max_value) : 0.0f;
     float amount = saturation * (1.0f + vibrance * (1.0f - colourfulness));
-    pixel[0] = (unsigned char)(fminf(1.0f, fmaxf(0.0f, luma + (r - luma) * amount)) * 255.0f + 0.5f);
-    pixel[1] = (unsigned char)(fminf(1.0f, fmaxf(0.0f, luma + (g - luma) * amount)) * 255.0f + 0.5f);
-    pixel[2] = (unsigned char)(fminf(1.0f, fmaxf(0.0f, luma + (b - luma) * amount)) * 255.0f + 0.5f);
+    float maximum = ten_bit ? 1023.0f : 255.0f;
+    unsigned int red = (unsigned int)(fminf(1.0f, fmaxf(0.0f, luma + (r - luma) * amount)) * maximum + 0.5f);
+    unsigned int green = (unsigned int)(fminf(1.0f, fmaxf(0.0f, luma + (g - luma) * amount)) * maximum + 0.5f);
+    unsigned int blue = (unsigned int)(fminf(1.0f, fmaxf(0.0f, luma + (b - luma) * amount)) * maximum + 0.5f);
+    if (ten_bit) *(unsigned int*)pixel = red | (green << 10) | (blue << 20) | (packed & 0xc0000000u);
+    else { pixel[0] = red; pixel[1] = green; pixel[2] = blue; }
 }

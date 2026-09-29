@@ -112,12 +112,13 @@ pub struct RelightingSettings {
     pub background_gain: f32,
     pub environment_background: bool,
     pub specularity: f32,
+    pub blur_strength: f32,
     pub quality: u32,
 }
 
 impl Default for RelightingSettings {
     fn default() -> Self {
-        Self { mode: RelightingMode::Off, hdri: None, pan: 0.0, field_of_view: 60.0, foreground_gain: 1.0, background_gain: 1.0, environment_background: false, specularity: 0.0, quality: 0 }
+        Self { mode: RelightingMode::Off, hdri: None, pan: 0.0, field_of_view: 60.0, foreground_gain: 1.0, background_gain: 1.0, environment_background: false, specularity: 0.0, blur_strength: 0.5, quality: 1 }
     }
 }
 
@@ -128,7 +129,7 @@ fn full_strength() -> f32 { 1.0 }
 pub struct VideoEnhancementJob {
     pub input: PathBuf,
     pub output: PathBuf,
-    pub resolution_scale: u32,
+    pub resolution_scale: f64,
     pub upscale_quality: u32,
     #[serde(default)]
     pub upscale_method: UpscaleMethod,
@@ -154,13 +155,13 @@ pub struct VideoEnhancementJob {
 
 impl VideoEnhancementJob {
     pub fn validate(&self, source: &FileData) -> io::Result<()> {
-        if !(1..=4).contains(&self.resolution_scale) || ![0, 1, 2, 3, 4, 16, 17, 18, 19, 21, 23].contains(&self.upscale_quality) {
-            return Err(io::Error::other("Choose a resolution scale from 1 to 4 and a supported VSR quality mode"));
+        if ![1.0, 4.0 / 3.0, 1.5, 2.0, 3.0, 4.0].contains(&self.resolution_scale) || ![0, 1, 2, 3, 4, 16, 17, 18, 19, 21, 23].contains(&self.upscale_quality) {
+            return Err(io::Error::other("Choose a supported resolution scale and VSR quality mode"));
         }
-        let width = source.width.saturating_mul(self.resolution_scale);
-        let height = source.height.saturating_mul(self.resolution_scale);
-        if width > 4096 || height > 4096 || !width.is_multiple_of(2) || !height.is_multiple_of(2) {
-            return Err(io::Error::other("Output requires even dimensions up to 4096 pixels per side. Choose a smaller scale."));
+        let width = (f64::from(source.width) * self.resolution_scale).round() as u32;
+        let height = (f64::from(source.height) * self.resolution_scale).round() as u32;
+        if width > 4096 || height > 4096 || !width.is_multiple_of(2) || !height.is_multiple_of(2) || u64::from(width) * u64::from(source.height) != u64::from(height) * u64::from(source.width) {
+            return Err(io::Error::other("Choose a scale that preserves aspect ratio with even dimensions up to 4096 pixels per side."));
         }
         if let Some(fps) = self.target_fps && (![30, 60, 120].contains(&fps) || source.fps.is_some_and(|rate| f64::from(fps) < rate)) {
             return Err(io::Error::other("Choose Original FPS or an output rate at least as high as the source"));
@@ -178,7 +179,7 @@ impl VideoEnhancementJob {
         if self.hdr.enabled && self.output_encoding != OutputEncoding::Hevc10 {
             return Err(io::Error::other("TrueHDR requires HEVC 10-bit output"));
         }
-        if self.output_encoding == OutputEncoding::Hevc10 && !self.hdr.enabled && (self.temporal_denoise.is_some() || self.portrait.mode != PortraitMode::Off || self.relighting.mode != RelightingMode::Off || (self.upscale_method == UpscaleMethod::Lightweight && self.resolution_scale > 1) || settings.sharpening != 0.0) {
+        if self.output_encoding == OutputEncoding::Hevc10 && !self.hdr.enabled && (self.temporal_denoise.is_some() || self.portrait.mode != PortraitMode::Off || self.relighting.mode != RelightingMode::Off || (self.upscale_method == UpscaleMethod::Lightweight && self.resolution_scale > 1.0) || settings.sharpening != 0.0) {
             return Err(io::Error::other("10-bit SDR supports VSR cleanup/upscaling, colour controls and frame generation. Temporal denoise, portrait effects, lightweight upscale and SDK sharpening require 8-bit processing."));
         }
         if self.temporal_denoise.is_some() && (source.width > 1920 || source.height > 1080) {
@@ -204,6 +205,7 @@ impl VideoEnhancementJob {
             ("Foreground brightness", self.relighting.foreground_gain, 0.0, 4.0),
             ("Background brightness", self.relighting.background_gain, 0.0, 4.0),
             ("Specularity", self.relighting.specularity, 0.0, 1.0),
+            ("Relighting background blur", self.relighting.blur_strength, 0.0, 2.0),
         ] {
             if !value.is_finite() || !(low..=high).contains(&value) { return Err(io::Error::other(format!("{name} is outside its supported range"))); }
         }
@@ -221,6 +223,7 @@ impl VideoEnhancementJob {
         let mut frame_rate = FrameRateEnhancer::new(self, source.video_end_time)?;
         let mut adjuster = VideoAdjuster::new(self);
         let mut sharpener = Sharpener::new(self);
+        let mut hdr = crate::hdr::TrueHdr::new(self);
         let mut encoder = VideoEncoder::new(&source, self)?;
         let mut count = 0;
         let result = (|| {
@@ -228,7 +231,8 @@ impl VideoEnhancementJob {
                 if cancelled.load(Ordering::Relaxed) { return Err(io::Error::new(io::ErrorKind::Interrupted, "Export cancelled")); }
                 let adjusted = adjuster.adjust(timed.frame)?;
                 let sharpened = sharpener.sharpen(adjusted)?;
-                encoder.encode(FrameForEncoder { frame: sharpened, ..timed })?;
+                let output = hdr.enhance(sharpened)?;
+                encoder.encode(FrameForEncoder { frame: output, ..timed })?;
                 count += 1;
                 let seconds = timed.presentation_timestamp as f64 * timed.time_base.0 as f64 / timed.time_base.1 as f64;
                 progress(count, seconds);

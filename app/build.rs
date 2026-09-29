@@ -31,6 +31,8 @@ fn main() {
         "features/nvvfxvideosuperres/bin/nvVFXVideoSuperRes.dll",
         "features/nvvfxvideosuperres/bin/nvngx_vsr.dll",
         "features/nvvfxvideoframegeneration/bin/nvVFXVideoFrameGeneration.dll",
+        "features/nvvfxtruehdr/bin/nvVFXTrueHDR.dll",
+        "features/nvvfxtruehdr/bin/nvngx_truehdr.dll",
     ] {
         let path = sdk.join(file);
         println!("cargo:rerun-if-changed={}", path.display());

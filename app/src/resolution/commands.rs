@@ -3,6 +3,9 @@ use std::ffi::{c_char, c_void};
 use ffmpeg_next::ffi;
 
 pub(crate) const NVCV_RGBA: i32 = 6;
+pub(crate) const NVCV_RGB10A2: i32 = 13;
+pub(crate) const NVCV_P32: i32 = 11;
+pub(crate) const NVCV_BGR: i32 = 5;
 pub(crate) const NVCV_YUV420: i32 = 10;
 pub(crate) const NVCV_U8: i32 = 1;
 pub(crate) const NVCV_GPU: u32 = 1;

@@ -1,7 +1,7 @@
 use std::{io, ptr, rc::Rc};
 
 use ffmpeg_next::ffi;
-use crate::video_decoder::DecodedFrame;
+use crate::{pixel_conversion::PixelConverter, video_decoder::DecodedFrame};
 use super::{commands::*, cuda::CudaDevice, sdk_result};
 
 pub struct EnhancedFrame {
@@ -17,11 +17,13 @@ pub struct EnhancedFrame {
     // Own the GPU pixels until this result is dropped.
     pub(crate) image: NvImage,
     pub(crate) device: Rc<CudaDevice>,
+    converter: Option<PixelConverter>,
 }
 
 impl EnhancedFrame {
-    pub(super) fn allocate_space_on_gpu_for_frame(frame: &DecodedFrame, device: Rc<CudaDevice>, width: u32, height: u32) -> io::Result<Self> {
-        let image = allocate_rgba_image(width, height)?;
+    pub(super) fn allocate_space_on_gpu_for_frame(frame: &DecodedFrame, device: Rc<CudaDevice>, width: u32, height: u32, ten_bit: bool) -> io::Result<Self> {
+        let (format, component_type) = if ten_bit { (NVCV_RGB10A2, NVCV_P32) } else { (NVCV_RGBA, NVCV_U8) };
+        let image = allocate_image(width, height, format, component_type, 0)?;
         // SAFETY: the decoded frame owns its native metadata for this borrow.
         let native = unsafe { &*frame.frame.as_ptr() };
         Ok(Self {
@@ -36,17 +38,22 @@ impl EnhancedFrame {
             sample_aspect_ratio: (native.sample_aspect_ratio.num, native.sample_aspect_ratio.den),
             image,
             device,
+            converter: None,
         })
     }
 
     pub(crate) fn allocate_matching_frame(frame: &Self) -> io::Result<Self> {
+        Self::allocate_format(frame, frame.width, frame.height, frame.image.pixel_format, frame.image.component_type, u32::from(frame.image.planar))
+    }
+
+    pub(crate) fn allocate_format(frame: &Self, width: u32, height: u32, format: i32, component_type: i32, layout: u32) -> io::Result<Self> {
         Ok(Self {
-            width: frame.width, height: frame.height,
+            width, height,
             presentation_timestamp: frame.presentation_timestamp, time_base: frame.time_base,
             duration: frame.duration, timestamp_seconds: frame.timestamp_seconds,
             color_primaries: frame.color_primaries, color_transfer: frame.color_transfer,
             sample_aspect_ratio: frame.sample_aspect_ratio,
-            image: allocate_rgba_image(frame.width, frame.height)?, device: Rc::clone(&frame.device),
+            image: allocate_image(width, height, format, component_type, layout)?, device: Rc::clone(&frame.device), converter: None,
         })
     }
 
@@ -84,10 +91,12 @@ impl EnhancedFrame {
     }
 }
 
-pub(super) fn allocate_rgba_image(width: u32, height: u32) -> io::Result<NvImage> {
+fn allocate_image(width: u32, height: u32, format: i32, component_type: i32, layout: u32) -> io::Result<NvImage> {
     let mut image = NvImage::default();
+    // BGR effects require pitch to be a whole number of three-component pixels.
+    let alignment = if format == NVCV_BGR { 1 } else { 0 };
     // SAFETY: the caller activates CUDA; the returned allocation is owned by its frame or enhancer.
-    sdk_result("Allocate RGBA GPU image", unsafe { NvCVImage_Alloc(&mut image, width, height, NVCV_RGBA, NVCV_U8, 0, NVCV_GPU, 0) })?;
+    sdk_result("Allocate GPU image", unsafe { NvCVImage_Alloc(&mut image, width, height, format, component_type, layout, NVCV_GPU, alignment) })?;
     Ok(image)
 }
 
@@ -100,16 +109,21 @@ impl Drop for EnhancedFrame {
     }
 }
 
-pub(super) fn convert_frame_to_rgba(frame: &DecodedFrame, input: &mut NvImage, device: &CudaDevice) -> io::Result<()> {
+pub(super) fn convert_frame_to_rgba(frame: &DecodedFrame, input: &mut EnhancedFrame) -> io::Result<()> {
     let colorspace = source_colorspace(frame)?;
     // The raw-plane API reads the destination's dimensions from the source pointers.
     if frame.frame.width() != input.width || frame.frame.height() != input.height {
         return Err(io::Error::other("RGBA conversion requires a fixed frame size for this video"));
     }
+    if frame.pixel_format == "p010le" || input.image.pixel_format == NVCV_RGB10A2 {
+        if input.converter.is_none() { input.converter = Some(PixelConverter::new(Rc::clone(&input.device))?); }
+        return input.converter.as_ref().unwrap().decode_yuv(frame, &mut input.image, colorspace);
+    }
+    let device = &input.device;
     // SAFETY: validated NV12 has Y and interleaved UV device planes; use their actual byte pitches.
     let status = unsafe {
         let native = &*frame.frame.as_ptr();
-        NvCVImage_TransferFromYUV(native.data[0].cast(), 1, native.linesize[0], native.data[1].cast(), native.data[1].wrapping_add(1).cast(), 2, native.linesize[1], NVCV_YUV420, NVCV_U8, colorspace, NVCV_GPU, input, ptr::null(), 1.0, device.stream, ptr::null_mut())
+        NvCVImage_TransferFromYUV(native.data[0].cast(), 1, native.linesize[0], native.data[1].cast(), native.data[1].wrapping_add(1).cast(), 2, native.linesize[1], NVCV_YUV420, NVCV_U8, colorspace, NVCV_GPU, &mut input.image, ptr::null(), 1.0, device.stream, ptr::null_mut())
     };
     let completion = device.synchronize();
     sdk_result("Convert NV12 to RGBA on GPU", status)?;
@@ -117,14 +131,14 @@ pub(super) fn convert_frame_to_rgba(frame: &DecodedFrame, input: &mut NvImage, d
 }
 
 fn source_colorspace(frame: &DecodedFrame) -> io::Result<u32> {
-    if frame.pixel_format != "nv12" {
-        return Err(io::Error::other("Video Super Resolution currently supports 8-bit NV12 frames; P010/10-bit conversion is not implemented"));
+    if !matches!(frame.pixel_format, "nv12" | "p010le") {
+        return Err(io::Error::other("NVIDIA enhancement supports NV12 or P010 video frames"));
     }
     // SAFETY: only metadata is read from the owned frame, never its device pixels.
     let native = unsafe { &*frame.frame.as_ptr() };
     use ffi::{AVChromaLocation::*, AVColorRange::*, AVColorSpace::*, AVColorTransferCharacteristic::*};
     if matches!(native.color_trc, AVCOL_TRC_SMPTE2084 | AVCOL_TRC_ARIB_STD_B67) {
-        return Err(io::Error::other("HDR resolution enhancement is not implemented"));
+        return Err(io::Error::other("PQ/HLG HDR input is not supported; TrueHDR converts SDR input to HDR"));
     }
     let matrix = match native.colorspace {
         AVCOL_SPC_BT709 => 1,

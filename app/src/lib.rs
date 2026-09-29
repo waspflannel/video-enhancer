@@ -9,3 +9,5 @@ pub mod video_encoder;
 pub mod job;
 pub mod video_adjuster;
 pub mod sharpening;
+mod pixel_conversion;
+mod hdr;
