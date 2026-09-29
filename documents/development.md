@@ -154,7 +154,7 @@ before the next call overwrites its pixels. Output dimensions stay fixed for a
 job. The console chooses an aspect-preserving 2x resolution.
 
 Create one mutable enhancer per video. The first call retains the decoder's CUDA
-context, configures VSR_High (AI quality 3), allocates and binds input/output
+context, configures VSR_Ultra (AI quality 4), allocates and binds input/output
 buffers, and loads the model. Each call converts the source into the reusable
 RGBA input, runs enhancement synchronously, and refreshes output metadata.
 Initialization completion is recorded separately from partial setup. A failed
