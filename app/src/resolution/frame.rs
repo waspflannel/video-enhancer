@@ -36,6 +36,17 @@ impl EnhancedFrame {
             device,
         })
     }
+
+    pub(super) fn copy_metadata_from(&mut self, frame: &DecodedFrame) {
+        // SAFETY: the decoded frame owns its native metadata for this borrow.
+        let native = unsafe { &*frame.frame.as_ptr() };
+        self.presentation_timestamp = frame.presentation_timestamp;
+        self.time_base = frame.time_base;
+        self.timestamp_seconds = frame.timestamp_seconds;
+        self.color_primaries = native.color_primaries;
+        self.color_transfer = native.color_trc;
+        self.sample_aspect_ratio = (native.sample_aspect_ratio.num, native.sample_aspect_ratio.den);
+    }
 }
 
 pub(super) fn allocate_rgba_image(width: u32, height: u32) -> io::Result<NvImage> {

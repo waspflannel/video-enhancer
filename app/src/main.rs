@@ -6,13 +6,18 @@ fn main() -> io::Result<()> {
 
     let parser = Parser::new(test_file);
     let file_data = parser.get_video_information()?;
-    let frames = gpu::decode(&file_data)?;
 
-    let enhancer = ResolutionEnhancer::new()?;
+    let mut enhancer = ResolutionEnhancer::new()?;
     let new_resolution_width = file_data.width * 2;
     let new_resolution_height = file_data.height * 2;
-    let enhanced_frames = enhancer.enhance(&frames, new_resolution_width, new_resolution_height)?;
+    let mut enhanced_frame_count = 0;
+    gpu::decode(&file_data, |decoded_frame| {
+        let _enhanced_frame = enhancer.enhance(&decoded_frame, new_resolution_width, new_resolution_height)?;
+        // Encoding will consume this output before the next frame overwrites it.
+        enhanced_frame_count += 1;
+        Ok(())
+    })?;
 
-    println!("Enhanced {} GPU frames to {}x{}", enhanced_frames.len(), new_resolution_width, new_resolution_height);
+    println!("Enhanced {} GPU frames to {}x{}", enhanced_frame_count, new_resolution_width, new_resolution_height);
     Ok(())
 }

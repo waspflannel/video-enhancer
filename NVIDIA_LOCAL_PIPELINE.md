@@ -84,7 +84,14 @@ The initial processing order is VSR then VFG. This upscales each source frame on
 
 Keep decoded and processed frames in GPU memory wherever the selected interfaces allow. Perform necessary colour/pixel-format conversions on the GPU where practical. Avoid saving individual frame images to disk or repeatedly copying pixels through CPU memory between stages.
 
-Current parser stage: FFmpeg's shared libraries decode in the Rust process using CUVID and require CUDA output. Each returned frame owns a reference-counted GPU buffer and hardware context, retaining NV12/P010 pixels after the decoder closes. No production pixel download to system RAM is performed. The full decoded video is still collected with no configured VRAM cap; long videos can exhaust GPU memory. Bounded progressive processing is the next stage. Parallel enhancement of video chunks is a later optimization and must preserve timestamp order, temporal context at chunk boundaries, and synchronized audio.
+Current processing: FFmpeg decodes in the Rust process using CUVID and hands each
+owned CUDA frame directly to enhancement. The application retains one decoded
+frame at a time, plus reusable RGBA input/output buffers and the loaded model.
+Decoder reference storage and model workspace consume additional VRAM. No
+production pixel download occurs. The console counts completed frames and reuses
+the output; encoding and synchronized audio muxing remain the next milestone.
+Parallel enhancement of chunks is deferred until measurement justifies it and
+must preserve timestamp order, temporal context, and bounded memory.
 
 Reuse loaded models and a bounded pool of frame buffers. Overlap decoding, inference, and encoding where dependencies and memory permit. These stages still have ordering constraints; parallel work does not make all video frames independent.
 

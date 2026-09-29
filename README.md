@@ -6,7 +6,7 @@ Import a video, choose its output resolution and frame rate, optionally generate
 
 ## Status
 
-Rust/Cargo console application targeting Windows x64. The parser reads metadata with ffprobe and decodes through in-process FFmpeg/NVIDIA CUVID, retaining timestamped frames in GPU memory until dropped. GPU decoding and frame lifetime have been tested on the RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. NVIDIA VSR now enhances 8-bit SDR NV12 frames on the GPU, with timestamps retained and manual preview checks on the RTX 5070. The console runs decode then sequential 2x enhancement. Both frame arrays are retained, so long videos can exhaust VRAM. P010/HDR enhancement, desktop UI, interpolation, and export are not implemented.
+Rust/Cargo console application targeting Windows x64. The parser reads metadata with ffprobe and decodes through in-process FFmpeg/NVIDIA CUVID, handing timestamped GPU frames directly to the next stage. GPU decoding and frame lifetime have been tested on the RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. NVIDIA VSR now enhances 8-bit SDR NV12 frames on the GPU, with timestamps retained and manual preview checks on the RTX 5070. The console progressively decodes and enhances frames at 2x resolution, loading the model once and reusing its GPU input/output buffers. Completed frames are currently counted and overwritten; saving output is not implemented. P010/HDR enhancement, desktop UI, interpolation, and export are not implemented.
 
 Build one complete working pipeline first, then optimize its speed and polish the UI.
 
