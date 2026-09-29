@@ -113,7 +113,7 @@ does not expose the wrapper's CPU pixel accessors for GPU frames.
 The application releases each decoded frame after the consumer returns. Decoder
 references, cached allocations, and model workspace remain internal to their
 libraries; there is no fixed byte budget. The console uses one reusable RGBA
-input and one output instead of retaining whole-video frame arrays. CPU memory
+input, a source-sized deblur result, and one upscaled output instead of retaining whole-video frame arrays. CPU memory
 contains compressed packets, metadata, and handles. Audio is read separately from the source for stream-copy muxing; source files
 are unchanged.
 
@@ -154,14 +154,16 @@ before the next call overwrites its pixels. Output dimensions stay fixed for a
 job. The console chooses an aspect-preserving 2x resolution.
 
 Create one mutable enhancer per video. The first call retains the decoder's CUDA
-context, configures VSR_Ultra (AI quality 4), allocates and binds input/output
-buffers, and loads the model. Each call converts the source into the reusable
-RGBA input, runs enhancement synchronously, and refreshes output metadata.
+context, configures Deblur_Low (quality 12, strength 0.3) and VSR_Ultra (quality 4),
+allocates their GPU buffers, and loads both models. Each call converts NV12 to
+RGBA, deblurs at source resolution, upscales the cleaned image synchronously,
+and refreshes output metadata. The deblur output is also the upscaler input;
+there is no intermediate copy or CPU pixel transfer.
 Initialization completion is recorded separately from partial setup. A failed
 call aborts the job; reuse after processing failure is unsupported.
 
-The enhancer keeps both bound buffers alive for its lifetime. Drop destroys the
-effect before releasing buffers, including after partial initialization. The
+The enhancer keeps all three bound buffers alive for its lifetime. Drop destroys
+both effects before releasing buffers, including after partial initialization. The
 caller borrows the output rather than taking ownership of its allocation.
 
 NVIDIA's image API converts NV12 to interleaved RGBA entirely on the GPU using
@@ -372,3 +374,34 @@ References: [FFmpeg hardware-frame ownership](https://ffmpeg.org/doxygen/trunk/h
 [FFmpeg NVENC implementation](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/nvenc.c),
 and the installed NVIDIA `nvCVImage.h` declarations. Context7 was attempted first
 but its monthly quota was exhausted; installed headers and official sources were used.
+
+
+## Gentle cleanup before upscaling
+
+The cleanup pass uses a second `VideoSuperRes` effect in NVIDIA's Deblur_Low mode
+(12), with strength 0.3. This targets mild softness, not noise or severe motion
+blur. Ultra upscaling (4), frame generation, and encoder quality stay unchanged.
+The installed VSR runtime accepted the strength setting and successfully loaded
+and ran both models on RTX 5070; no new SDK package or model download was needed.
+
+The same CUDA context and stream run conversion -> deblur -> upscale. The extra
+source-sized RGBA allocation is reused for every frame. Both effects are destroyed
+before any bound allocation, including when setup or processing fails. No new
+wrapper types, dependencies, automated tests, or background scheduling were added.
+
+A matching short Nancy clip was exported with and without cleanup at 1080p/60.
+Visual inspection showed modestly more defined car/window edges; this is a
+subjective comparison, not proof of recovered detail. Denoising is deliberately
+omitted because the reported problem is softness. Deblur can exaggerate artifacts
+on degraded sources; broader content and motion still need visual qualification.
+
+Reference: [NVIDIA VSR deblur requirements and strength](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoSuperResolution.html).
+Context7 was attempted first but unavailable due to quota. The installed
+`nvVideoEffects.h` declares the Strength parameter; model readiness was verified
+by actual load/run calls, not inferred from DLL presence.
+
+Release build and Clippy passed on 2026-09-29. The full Nancy video exported as
+12,975 frames at 1920x1080/60 FPS in 65.74 seconds. Every output timestamp and
+duration, including the partial tail, matched the intended timeline. Copied audio
+packet payload hashes and timing matched the source; the complete export decoded
+without errors. Temporary comparison paths and inspection code were restored.
