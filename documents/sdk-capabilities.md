@@ -122,7 +122,7 @@ an alpha-channel export. Background replacement uses the selected solid colour.
 | `field_of_view` | `1`–`179` degrees; projected environment only | `60` |
 | `foreground_gain`, `background_gain` | `0`–`4`; background gain affects the projected environment | `1` |
 | `environment_background` | Boolean; replace source backdrop with projected HDRI | `false`; required for every AIGS mode and cannot combine with a portrait background effect. |
-| `quality` | AIGS only: `0` quality, `1` performance, `2` quality + HDRI blur, `3` performance + HDRI blur | `1`; quality modes require their separate model files. |
+| `quality` | AIGS only: `0` quality, `1` performance, `2` quality + HDRI blur, `3` performance + HDRI blur | `1`; all four modes are installed and verified locally. |
 | `specularity` | AIGS only: `0`–`1` | `0` |
 | `blur_strength` | AIGS blur modes only: `0`–`2` | `0.5` |
 
@@ -141,6 +141,31 @@ Temporal denoising, segmentation and relighting also need matching NVIDIA model
 files in `sdk/VFXSDK_windows_1.3.0.0/VideoFX/bin/models`. Missing models produce a
 load error naming the effect; the app does not silently substitute another effect.
 DLL presence alone does not establish that its models run successfully.
+
+### Relighting quality models
+
+The authenticated NGC manifests for `nvvfxrelighting` Windows SM100 versions
+`1.2.0.0` and `1.3.0.0` contain only the two performance models. Version
+`1.1.0.0_models_windows_sm100` also contains the quality models:
+
+- `relight_0thframe_qual_100.engine.trtpkg`
+- `relight_nthframe_qual_100.engine.trtpkg`
+
+From the project root, using the configured NGC CLI, download only these files:
+
+```powershell
+& ./tools/ngc-cli-4.36.6/ngccli/amd64/ngc.exe registry model download-version nvidia/maxine/nvvfxrelighting:1.1.0.0_models_windows_sm100 --file '*_qual_*.trtpkg' --dest ./sdk
+Copy-Item ./sdk/nvvfxrelighting_v1.1.0.0_models_windows_sm100/*_qual_*.trtpkg ./sdk/VFXSDK_windows_1.3.0.0/VideoFX/bin/models/
+```
+
+Keep the current 1.3 feature DLLs and performance models. SM100 is the Windows
+model target selected by NVIDIA's installer for the RTX 5070. The two performance
+models have identical published SHA-256 hashes in versions 1.1 and 1.3.
+Both quality files were checked against NVIDIA's published SHA-256 hashes and
+verified through actual exports with the 1.3 runtime on this RTX 5070.
+
+Source: [NVIDIA's relighting collection](https://catalog.ngc.nvidia.com/orgs/nvidia/maxine/collections/nvvfxrelighting/-)
+and its authenticated NGC version manifests, checked on 2026-09-29.
 
 ## Runnable manual export check
 
@@ -225,11 +250,14 @@ Manual GPU checks on 2026-09-29 verified:
   were rejected before output creation; attempting to overwrite the source
   was refused and its checksum stayed unchanged.
 
-AIGS quality modes 0 and 2 are wired but could not run with the installed
-performance-only relighting models. Their missing models require authenticated
-NVIDIA NGC downloads; these modes are labelled in the UI and fail with a model
-load error instead of silently changing quality. Long videos and subjective
-HDR appearance on a calibrated HDR display have not been qualified.
+On 2026-09-29, all four AIGS modes also passed exports of a moving person at
+640 × 360 / 25 FPS, with 20 frames over 0.8 seconds. Quality modes 0 and 2 passed
+combined 2× VSR / 60 FPS VFG exports at 1280 × 720, with 48 frames over the same
+duration. All six files decoded cleanly, had uniform video timestamps, and
+preserved the source AAC bytes and all 35 audio packet timestamps. First and last
+frames were inspected; the blur modes visibly softened the projected background.
+Long videos and subjective HDR appearance on a calibrated HDR display have not
+been qualified.
 
 SDK references: [VSR](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoSuperResolution.html),
 [VFG](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoFrameGeneration.html),
