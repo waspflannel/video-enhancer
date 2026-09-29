@@ -35,7 +35,7 @@ It does not change machine-wide environment variables or the VFX SDK.
 
 `app/.cargo/config.toml` sets project-relative `FFMPEG_DIR` and `LIBCLANG_PATH`.
 Run Cargo from `app/` so this configuration is loaded. `build.rs` copies the
-FFmpeg and required NVIDIA effect DLLs beside the executable and Cargo dependency outputs. Directly launching the release
+FFmpeg and required NVIDIA effect DLLs beside the executable. Directly launching the release
 executable requires those DLLs alongside it. Metadata inspection also needs
 the existing project-local ffprobe executable. CUDA/NVDEC is supplied by the
 installed NVIDIA driver; no CUDA toolkit or Video Codec SDK download is
@@ -97,6 +97,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Downloaded video/audio verification failed' }
 ```
 
 Options follow the [official yt-dlp documentation](https://github.com/yt-dlp/yt-dlp#usage-and-options).
+
+## Implementation history
+
+The following sections record earlier milestones and their verification. Some
+describe features as future work that are now implemented; use the setup and
+layout above and the SDK capabilities document for current behavior.
 
 ## Parser
 
