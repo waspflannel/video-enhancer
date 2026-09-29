@@ -5,3 +5,4 @@ pub mod video_decoder;
 pub mod resolution;
 
 pub mod frame_rate;
+pub mod video_encoder;
