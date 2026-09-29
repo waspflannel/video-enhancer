@@ -28,11 +28,12 @@ fn main() {
         "bin/nvngxruntime.dll",
         "features/nvvfxvideosuperres/bin/nvVFXVideoSuperRes.dll",
         "features/nvvfxvideosuperres/bin/nvngx_vsr.dll",
+        "features/nvvfxvideoframegeneration/bin/nvVFXVideoFrameGeneration.dll",
     ] {
         let path = sdk.join(file);
         println!("cargo:rerun-if-changed={}", path.display());
         for destination in [profile.to_path_buf(), profile.join("deps")] {
-            fs::copy(&path, destination.join(path.file_name().unwrap())).expect("Copy NVIDIA Video Super Resolution runtime DLL");
+            fs::copy(&path, destination.join(path.file_name().unwrap())).expect("Copy NVIDIA video effect runtime DLL");
         }
     }
 }

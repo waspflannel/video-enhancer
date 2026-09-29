@@ -25,9 +25,9 @@ use std::{ffi::{c_void, CStr}, io, ptr, rc::Rc};
 use crate::gpu::DecodedFrame;
 
 #[path = "commands.rs"]
-mod commands;
+pub(crate) mod commands;
 #[path = "cuda.rs"]
-mod cuda;
+pub(crate) mod cuda;
 #[path = "frame.rs"]
 mod frame;
 
@@ -152,7 +152,7 @@ fn bind_video_super_resolution_images(effect: *mut c_void, input: &mut NvImage, 
     }
 }
 
-fn sdk_result(operation: &str, status: i32) -> io::Result<()> {
+pub(crate) fn sdk_result(operation: &str, status: i32) -> io::Result<()> {
     if status == 0 { return Ok(()); }
     // SAFETY: the SDK returns a static error description for its status codes.
     let description = unsafe { CStr::from_ptr(NvCV_GetErrorStringFromCode(status)) }.to_string_lossy();

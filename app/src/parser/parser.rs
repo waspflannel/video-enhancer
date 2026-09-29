@@ -14,6 +14,8 @@ pub struct FileData {
     /// Decimal average FPS, not a guarantee of constant frame rate.
     pub fps: Option<f64>,
     pub duration_seconds: Option<f64>,
+    /// End timestamp and time base of the video track, when present in the container.
+    pub video_end_time: Option<(i64, (i32, i32))>,
     pub video_stream_index: u32,
     pub codec: String,
     pub pixel_format: String,
@@ -68,6 +70,7 @@ impl Parser {
             width: serde_json::from_value(video["width"].clone())?,
             height: serde_json::from_value(video["height"].clone())?,
             fps,
+            video_end_time: parse_video_end_time(video),
             duration_seconds: video["duration"].as_str().and_then(|v| v.parse().ok()),
             video_stream_index: serde_json::from_value(video["index"].clone())?,
             codec: serde_json::from_value(video["codec_name"].clone())?,
@@ -83,4 +86,10 @@ fn parse_fps_from_metadata(rate: &str) -> Option<f64> {
     let (numerator, denominator) = rate.split_once('/')?;
     let fps = numerator.parse::<f64>().ok()? / denominator.parse::<f64>().ok()?;
     (fps.is_finite() && fps > 0.0).then_some(fps)
+}
+
+fn parse_video_end_time(video: &Value) -> Option<(i64, (i32, i32))> {
+    let (numerator, denominator) = video["time_base"].as_str()?.split_once('/')?;
+    let end_timestamp = video["start_pts"].as_i64()?.checked_add(video["duration_ts"].as_i64()?)?;
+    Some((end_timestamp, (numerator.parse().ok()?, denominator.parse().ok()?)))
 }
