@@ -2,7 +2,7 @@
 
 Updated: 2026-09-23
 
-Status: Rust parser uses in-process FFmpeg NVIDIA decoding and owned GPU frame storage; verified on RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. Sequential 8-bit SDR VSR enhancement is implemented and manually verified. Sequential VFG/FPS conversion is also implemented through an encoder handoff callback. P010/HDR enhancement and export remain unimplemented.
+Status: Rust parser uses in-process FFmpeg NVIDIA decoding and owned GPU frame storage; verified on RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. Sequential 8-bit SDR VSR enhancement is implemented and manually verified. Sequential VFG/FPS conversion feeds an in-process NVENC H.264 encoder and MP4 muxer. Short exports with copied audio are verified; P010/HDR enhancement remains unimplemented.
 
 ## Product and scope
 
@@ -89,9 +89,10 @@ owned CUDA frame directly to enhancement. The application retains one decoded
 frame at a time, plus reusable RGBA input/output buffers and the loaded models.
 The FPS stage owns two source images and one generated image for AI processing.
 Decoder reference storage and model workspace consume additional VRAM. No
-production pixel download occurs. The console counts completed frames and reuses
-the output after FPS conversion; encoding and synchronized audio muxing remain
-the next milestone.
+production pixel download occurs. The encoder converts each timed RGBA image to
+an independently owned NV12 GPU frame from FFmpeg's pool. NVENC retains that
+frame until compression completes. Video packets and copied audio are muxed
+progressively into MP4 with their original relative timing.
 Parallel enhancement of chunks is deferred until measurement justifies it and
 must preserve timestamp order, temporal context, and bounded memory.
 
