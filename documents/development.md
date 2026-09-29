@@ -50,7 +50,7 @@ app/
   src/lib.rs              Application module exports
   src/parser/parser.rs    Metadata and parser API
   src/parser/commands.rs  ffprobe command
-  src/gpu.rs       GPU decoding and frame ownership
+  src/video_decoder.rs       GPU decoding and frame ownership
   src/resolution/         Resolution enhancer and shared NVIDIA/CUDA bindings
   src/frame_rate.rs       Timestamp scheduling, VFG, and encoder handoff
   scripts/                Local dependency setup
@@ -63,11 +63,11 @@ outputs out of Git. Cargo.lock belongs in Git.
 ## Parser
 
 ```rust
-use video_enhancer::{gpu, parser::Parser};
+use video_enhancer::{video_decoder, parser::Parser};
 
 let parser = Parser::new("video.mp4");
 let information = parser.get_video_information()?;
-gpu::decode(&information, |frame| {
+video_decoder::decode(&information, |frame| {
     // Consume this owned GPU frame here before decoding continues.
     println!("Frame timestamp: {}", frame.presentation_timestamp);
     Ok(())
@@ -81,7 +81,7 @@ require a GPU. It selects the first video stream that is not cover art.
 Missing FPS/duration remains `None`; average FPS does not imply constant
 frame rate. Rotation, colour, aspect ratio, and stream timing are retained.
 
-`gpu::decode(&information, on_frame_decoded)` returns `io::Result<()>` after
+`video_decoder::decode(&information, on_frame_decoded)` returns `io::Result<()>` after
 calling a fallible consumer for each owned GPU frame. Consumer errors stop
 decoding immediately. No frame vector is collected. It selects
 `h264_cuvid`, `hevc_cuvid`, or `av1_cuvid` on
@@ -143,7 +143,7 @@ missing startup dependencies are reported by Windows before Rust can run.
 `ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frame, width, height)`
 is coordinated by `resolution/resolution.rs`, which owns and configures the VSR
 effect. `resolution/cuda.rs` manages the CUDA context and synchronization;
-`resolution/frame.rs` owns image buffers, conversion, and enhanced-frame metadata.
+`resolution/enhanced_frame.rs` owns image buffers, conversion, and enhanced-frame metadata.
 `resolution/commands.rs` contains only the native function declarations, image
 layout, and SDK constants. The enhancement call
 returns a borrowed RGBA GPU frame with original integer timestamps, time base,

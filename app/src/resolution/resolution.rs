@@ -22,19 +22,19 @@
 
 use std::{ffi::{c_void, CStr}, io, ptr, rc::Rc};
 
-use crate::gpu::DecodedFrame;
+use crate::video_decoder::DecodedFrame;
 
 #[path = "commands.rs"]
 pub(crate) mod commands;
 #[path = "cuda.rs"]
 pub(crate) mod cuda;
-#[path = "frame.rs"]
-mod frame;
+#[path = "enhanced_frame.rs"]
+mod enhanced_frame;
 
 use commands::*;
 use cuda::CudaDevice;
-use frame::{allocate_rgba_image, convert_frame_to_rgba};
-pub use frame::EnhancedFrame;
+use enhanced_frame::{allocate_rgba_image, convert_frame_to_rgba};
+pub use enhanced_frame::EnhancedFrame;
 
 // Own the NVIDIA effect and its buffers for one video; Drop releases the effect first.
 pub struct ResolutionEnhancer {

@@ -1,7 +1,7 @@
 use std::{io, ptr, rc::Rc};
 
 use ffmpeg_next::ffi;
-use crate::gpu::DecodedFrame;
+use crate::video_decoder::DecodedFrame;
 use super::{commands::*, cuda::CudaDevice, sdk_result};
 
 pub struct EnhancedFrame {

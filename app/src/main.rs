@@ -1,5 +1,5 @@
 use std::io;
-use video_enhancer::{gpu, parser::Parser, resolution::ResolutionEnhancer, frame_rate::{FrameRateEnhancer, FrameForEncoder}};
+use video_enhancer::{video_decoder, parser::Parser, resolution::ResolutionEnhancer, frame_rate::{FrameRateEnhancer, FrameForEncoder}};
 
 fn main() -> io::Result<()> {
     let test_file = r"C:\video-enhancer-fast\sample-videos\replace-me.mp4";
@@ -7,7 +7,7 @@ fn main() -> io::Result<()> {
     let parser = Parser::new(test_file);
     let file_data = parser.get_video_information()?;
 
-    let mut enhancer = ResolutionEnhancer::new()?;
+    let mut resolution_enhancer = ResolutionEnhancer::new()?;
     let new_resolution_width = file_data.width * 2;
     let new_resolution_height = file_data.height * 2;
     let target_frame_rate = (60, 1);
@@ -18,8 +18,8 @@ fn main() -> io::Result<()> {
         output_frame_count += 1;
         Ok(())
     };
-    gpu::decode(&file_data, |decoded_frame| {
-        let enhanced_frame = enhancer.enhance(&decoded_frame, new_resolution_width, new_resolution_height)?;
+    video_decoder::decode(&file_data, |decoded_frame| {
+        let enhanced_frame = resolution_enhancer.enhance(&decoded_frame, new_resolution_width, new_resolution_height)?;
         frame_rate_enhancer.enhance(enhanced_frame, &mut on_frame_ready_for_encoding)?;
         Ok(())
     })?;

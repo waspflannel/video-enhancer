@@ -1,6 +1,6 @@
 #[path = "parser/parser.rs"]
 pub mod parser;
-pub mod gpu;
+pub mod video_decoder;
 #[path = "resolution/resolution.rs"]
 pub mod resolution;
 
