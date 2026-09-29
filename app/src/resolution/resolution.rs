@@ -1,6 +1,6 @@
-//! Optional NVIDIA cleanup and upscaling. Neutral jobs only convert NV12 to RGBA.
+//! Converts decoded frames, applies source-sized effects, then cleans up and upscales.
 use std::{ffi::{c_void, CStr}, io, ptr, rc::Rc};
-use crate::{job::{VideoEnhancementJob, OutputEncoding}, video_decoder::DecodedFrame};
+use crate::{job::{VideoEnhancementJob, OutputEncoding, UpscaleMethod}, video_decoder::DecodedFrame, video_effects::VideoEffects};
 #[path = "commands.rs"]
 pub(crate) mod commands;
 #[path = "cuda.rs"]
@@ -14,76 +14,89 @@ pub use enhanced_frame::EnhancedFrame;
 
 struct EffectStage {
     effect: *mut c_void,
-    output: EnhancedFrame,
+    input: Box<NvImage>,
+    output: Box<EnhancedFrame>,
 }
 
 pub struct ResolutionEnhancer {
     stages: Vec<EffectStage>,
     input: Option<EnhancedFrame>,
+    effects: VideoEffects,
     job: VideoEnhancementJob,
     ready: bool,
 }
 
 impl ResolutionEnhancer {
     pub fn new(job: &VideoEnhancementJob) -> Self {
-        Self { stages: Vec::with_capacity(3), input: None, job: job.clone(), ready: false }
+        Self { stages: Vec::new(), input: None, effects: VideoEffects::new(job), job: job.clone(), ready: false }
     }
 
     pub fn enhance(&mut self, frame: &DecodedFrame) -> io::Result<&EnhancedFrame> {
-        if self.input.is_none() { self.initialize(frame)?; }
-        if !self.ready { return Err(io::Error::other("Resolution initialization failed; start a new job")); }
+        if self.input.is_none() {
+            let device = CudaDevice::configure_cuda_device(frame)?;
+            let _context = device.enter()?;
+            device.synchronize()?;
+            let ten_bit = self.job.output_encoding == OutputEncoding::Hevc10 && !self.job.hdr.enabled;
+            self.input = Some(EnhancedFrame::allocate_space_on_gpu_for_frame(frame, Rc::clone(&device), frame.frame.width(), frame.frame.height(), ten_bit)?);
+        }
         let input = self.input.as_mut().unwrap();
         let device = Rc::clone(&input.device);
         let _context = device.enter()?;
         convert_frame_to_rgba(frame, input)?;
         input.copy_metadata_from(frame);
+        let cleaned = self.effects.enhance(input)?;
+        if !self.ready {
+            configure_stages(&mut self.stages, cleaned, &self.job)?;
+            self.ready = true;
+        }
         for stage in &mut self.stages {
             // SAFETY: the effect and its bound GPU buffers live for this job.
             let result = sdk_result("Run NVIDIA enhancement", unsafe { NvVFX_Run(stage.effect, 0) });
             let completion = device.synchronize();
             result?;
             completion?;
-            stage.output.copy_metadata_from(frame);
+            stage.output.copy_metadata_from_enhanced_frame(cleaned);
         }
-        Ok(self.stages.last().map_or(self.input.as_ref().unwrap(), |stage| &stage.output))
+        Ok(self.stages.last().map_or(cleaned, |stage| &stage.output))
     }
+}
 
-    fn initialize(&mut self, frame: &DecodedFrame) -> io::Result<()> {
-        let device = CudaDevice::configure_cuda_device(frame)?;
-        let _context = device.enter()?;
-        device.synchronize()?;
-        let ten_bit = self.job.output_encoding == OutputEncoding::Hevc10 && !self.job.hdr.enabled;
-        let width = frame.frame.width();
-        let height = frame.frame.height();
-        self.input = Some(EnhancedFrame::allocate_space_on_gpu_for_frame(frame, Rc::clone(&device), width, height, ten_bit)?);
-        let settings = &self.job.enhancements;
-        let modes = [(8, settings.denoise, 1.0), (12, settings.deblur, 1.0), (self.job.upscale_quality, 1.0, self.job.resolution_scale)];
-        for (mode, strength, scale) in modes {
-            if strength == 0.0 || (mode <= 4 && scale == 1.0) { continue; }
-            let output = EnhancedFrame::allocate_space_on_gpu_for_frame(frame, Rc::clone(&device), (f64::from(width) * scale).round() as u32, (f64::from(height) * scale).round() as u32, ten_bit)?;
-            self.stages.push(EffectStage { effect: ptr::null_mut(), output });
-            let index = self.stages.len() - 1;
-            let (previous, current) = self.stages.split_at_mut(index);
-            let input = previous.last_mut().map_or(self.input.as_mut().unwrap(), |stage| &mut stage.output);
-            let stage = &mut current[0];
-            // SAFETY: SDK copies descriptors; all allocations outlive the effects.
-            unsafe {
-                sdk_result("Create NVIDIA enhancement", NvVFX_CreateEffect(c"VideoSuperRes".as_ptr(), &mut stage.effect))?;
-                sdk_result("Set enhancement stream", NvVFX_SetCudaStream(stage.effect, c"CudaStream".as_ptr(), device.stream))?;
-                sdk_result("Set enhancement encoding", NvVFX_SetU32(stage.effect, c"ImageEncodingMode".as_ptr(), u32::from(ten_bit)))?;
+fn configure_stages(stages: &mut Vec<EffectStage>, source: &EnhancedFrame, job: &VideoEnhancementJob) -> io::Result<()> {
+    let device = &source.device;
+    let settings = &job.enhancements;
+    let modes = [(8 + settings.denoise_quality, settings.denoise, 1.0), (12 + settings.deblur_quality, settings.deblur, 1.0), (job.upscale_quality, job.upscale_strength, job.resolution_scale)];
+    for (position, (mode, strength, scale)) in modes.into_iter().enumerate() {
+        if (position < 2 && strength == 0.0) || (position == 2 && scale == 1.0) { continue; }
+        let width = (f64::from(source.width) * scale).round() as u32;
+        let height = (f64::from(source.height) * scale).round() as u32;
+        let output = Box::new(EnhancedFrame::allocate_format(source, width, height, source.image.pixel_format, source.image.component_type, 0)?);
+        let input = stages.last().map_or(source, |stage| &stage.output);
+        // VSR retains descriptor addresses in this SDK; heap ownership also survives Vec growth.
+        let input = Box::new(unsafe { ptr::read(&input.image) });
+        stages.push(EffectStage { effect: ptr::null_mut(), input, output });
+        let index = stages.len() - 1;
+        let stage = &mut stages[index];
+        let lightweight = position == 2 && job.upscale_method == UpscaleMethod::Lightweight;
+        // SAFETY: all descriptors and GPU allocations outlive the effects.
+        unsafe {
+            let name = if lightweight { c"Upscale" } else { c"VideoSuperRes" };
+            sdk_result("Create NVIDIA enhancement", NvVFX_CreateEffect(name.as_ptr(), &mut stage.effect))?;
+            sdk_result("Set enhancement stream", NvVFX_SetCudaStream(stage.effect, c"CudaStream".as_ptr(), device.stream))?;
+            if !lightweight {
+                let encoding = u32::from(source.image.pixel_format == NVCV_RGB10A2);
+                sdk_result("Set enhancement encoding", NvVFX_SetU32(stage.effect, c"ImageEncodingMode".as_ptr(), encoding))?;
                 sdk_result("Set enhancement mode", NvVFX_SetU32(stage.effect, c"QualityLevel".as_ptr(), mode))?;
-                sdk_result("Set enhancement strength", NvVFX_SetF32(stage.effect, c"Strength".as_ptr(), strength))?;
-                sdk_result("Bind enhancement input", NvVFX_SetImage(stage.effect, c"SrcImage0".as_ptr(), &mut input.image))?;
-                sdk_result("Bind enhancement output", NvVFX_SetImage(stage.effect, c"DstImage0".as_ptr(), &mut stage.output.image))?;
             }
-            let result = sdk_result("Load NVIDIA enhancement model", unsafe { NvVFX_Load(stage.effect) });
-            let completion = device.synchronize();
-            result?;
-            completion?;
+            sdk_result("Set enhancement strength", NvVFX_SetF32(stage.effect, c"Strength".as_ptr(), strength))?;
+            sdk_result("Bind enhancement input", NvVFX_SetImage(stage.effect, c"SrcImage0".as_ptr(), &mut *stage.input))?;
+            sdk_result("Bind enhancement output", NvVFX_SetImage(stage.effect, c"DstImage0".as_ptr(), &mut stage.output.image))?;
         }
-        self.ready = true;
-        Ok(())
+        let result = sdk_result("Load NVIDIA enhancement model", unsafe { NvVFX_Load(stage.effect) });
+        let completion = device.synchronize();
+        result?;
+        completion?;
     }
+    Ok(())
 }
 
 impl Drop for ResolutionEnhancer {

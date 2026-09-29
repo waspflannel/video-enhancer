@@ -11,3 +11,4 @@ pub mod video_adjuster;
 pub mod sharpening;
 mod pixel_conversion;
 mod hdr;
+mod video_effects;

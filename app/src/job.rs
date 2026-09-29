@@ -192,6 +192,9 @@ impl VideoEnhancementJob {
             if self.relighting.environment_background && self.portrait.mode != PortraitMode::Off {
                 return Err(io::Error::other("Choose either an environment background or a portrait background effect"));
             }
+            if self.relighting.mode == RelightingMode::Aigs && !self.relighting.environment_background {
+                return Err(io::Error::other("Combined relighting uses the HDR environment as its background. Choose Relighting to preserve the source background."));
+            }
         }
         for (name, value, low, high) in [
             ("Upscale strength", self.upscale_strength, 0.0, 1.0),

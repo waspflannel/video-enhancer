@@ -20,7 +20,7 @@
 use std::{ffi::c_void, io, ptr, rc::Rc};
 use ffmpeg_next::{ffi, Rescale};
 use crate::resolution::{EnhancedFrame, commands::*, sdk_result};
-use crate::job::VideoEnhancementJob;
+use crate::job::{VideoEnhancementJob, FrameGenerationSettings};
 
 /// The output timestamp belongs to the new FPS timeline, not the source image.
 /// The borrowed GPU image and its colour metadata are valid during the callback.
@@ -32,6 +32,7 @@ pub struct FrameForEncoder<'a> {
 }
 
 pub struct FrameRateEnhancer {
+    settings: FrameGenerationSettings,
     keep_source_timing: bool,
     target_frame_rate: (i32, i32),
     video_end_time: Option<(i64, (i32, i32))>,
@@ -53,6 +54,7 @@ impl FrameRateEnhancer {
             return Err(io::Error::other("Target frame rate must be positive"));
         }
         Ok(Self {
+            settings: job.frame_generation.clone(),
             keep_source_timing: job.target_fps.is_none(),
             target_frame_rate, video_end_time, effect: ptr::null_mut(),
             previous_frame: None, current_frame: None, generated_frame: None,
@@ -158,9 +160,9 @@ impl FrameRateEnhancer {
             sdk_result("Set frame generation CUDA stream", NvVFX_SetCudaStream(self.effect, c"CudaStream".as_ptr(), device.stream))?;
             sdk_result("Set frame generation width", NvVFX_SetU32(self.effect, c"InputWidth".as_ptr(), previous_frame.width))?;
             sdk_result("Set frame generation height", NvVFX_SetU32(self.effect, c"InputHeight".as_ptr(), previous_frame.height))?;
-            sdk_result("Set frame generation model", NvVFX_SetU32(self.effect, c"Mode".as_ptr(), 1))?;
+            sdk_result("Set frame generation model", NvVFX_SetU32(self.effect, c"Mode".as_ptr(), self.settings.quality))?;
             sdk_result("Set explicit interpolation timing", NvVFX_SetU32(self.effect, c"FrameMultiplier".as_ptr(), 0))?;
-            sdk_result("Enable scene-cut detection", NvVFX_SetU32(self.effect, c"AutomaticShotChangeDetectionEnabled".as_ptr(), 1))?;
+            sdk_result("Set scene-cut detection", NvVFX_SetU32(self.effect, c"AutomaticShotChangeDetectionEnabled".as_ptr(), u32::from(self.settings.detect_scene_changes)))?;
             sdk_result("Bind previous frame", NvVFX_SetImage(self.effect, c"SrcImage0".as_ptr(), &mut previous_frame.image))?;
             sdk_result("Bind current frame", NvVFX_SetImage(self.effect, c"SrcImage1".as_ptr(), &mut current_frame.image))?;
             sdk_result("Bind generated frame", NvVFX_SetImage(self.effect, c"DstImage0".as_ptr(), &mut generated_frame.image))?;
