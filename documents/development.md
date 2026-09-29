@@ -53,6 +53,7 @@ app/
   src/video_decoder.rs       GPU decoding and frame ownership
   src/resolution/         Resolution enhancer and shared NVIDIA/CUDA bindings
   src/frame_rate.rs       Timestamp scheduling, VFG, and encoder handoff
+  src/video_encoder.rs    NVENC, GPU conversion, and MP4/audio output
   scripts/                Local dependency setup
   target/                 Generated build output, ignored
 ```
@@ -113,8 +114,8 @@ The application releases each decoded frame after the consumer returns. Decoder
 references, cached allocations, and model workspace remain internal to their
 libraries; there is no fixed byte budget. The console uses one reusable RGBA
 input and one output instead of retaining whole-video frame arrays. CPU memory
-contains compressed packets, metadata, and handles. Audio stays in the source
-file for later muxing; source files are unchanged.
+contains compressed packets, metadata, and handles. Audio is read separately from the source for stream-copy muxing; source files
+are unchanged.
 
 ## Verification
 
@@ -131,7 +132,8 @@ Before removal, the hardware test passed on RTX 5070 with H.264 (120 frames),
 10-bit HEVC (120), AV1 (120), and variable-frame-rate H.264 (72). It checked
 retained GPU frames against software-decoded pixels and timestamps after
 closing the decoder. These are historical results, not an available test suite.
-Export and real-world long-video behavior remain unvalidated.
+The encoder checks below cover short exports; real-world long-video behavior
+remains unvalidated.
 
 ## Resolution enhancement
 
@@ -152,7 +154,7 @@ before the next call overwrites its pixels. Output dimensions stay fixed for a
 job. The console chooses an aspect-preserving 2x resolution.
 
 Create one mutable enhancer per video. The first call retains the decoder's CUDA
-context, configures VSR_High (AI quality 3), allocates and binds input/output
+context, configures VSR_Ultra (AI quality 4), allocates and binds input/output
 buffers, and loads the model. Each call converts the source into the reusable
 RGBA input, runs enhancement synchronously, and refreshes output metadata.
 Initialization completion is recorded separately from partial setup. A failed
@@ -248,8 +250,8 @@ final image for its remaining duration because there is no following frame.
 and supplies a separate output presentation timestamp, time base, and duration.
 The consumer must use these output timing fields rather than the source image's
 original timing. Each callback must finish using the image before returning;
-we reuse its buffer. A future asynchronous encoder must respect native buffer
-completion before allowing reuse. Normal and EOF callbacks run with the CUDA
+we reuse its buffer. The encoder converts into a separate FFmpeg-owned GPU allocation and finishes
+that conversion before returning. NVENC retains the allocation until it is done. Normal and EOF callbacks run with the CUDA
 context active. Errors stop the job; effect destruction precedes buffer release.
 
 The parser retains the track's exact `start_pts + duration_ts` and time base as
@@ -300,3 +302,73 @@ Native API reference: [NVIDIA Video Frame Generation](https://docs.nvidia.com/ma
 The AI-only refactor removed the toggle and non-AI interpolation path. Build and
 Clippy passed; a manual 60-to-120 FPS check produced six outputs with the expected
 timestamps and durations. Original-frame pass-through and EOF tail holding remain.
+
+
+## Video encoding and export
+
+`VideoEncoder::new(&file_data, output_path, target_frame_rate)` creates a new MP4
+and prepares source audio tracks. The first `encode(FrameForEncoder)` configures
+`h264_nvenc` using the received dimensions, rational time base, and existing CUDA
+device. Encoding uses preset P4, VBR constant quality 19, and no B-frames. The
+console callback now calls `encode`, then calls `finish` after the FPS stage's
+own `finish` has delivered its tail frames.
+
+`NvCVImage_TransferToYUV` converts RGBA to limited-range BT.709 NV12 directly on
+the GPU, respecting the FFmpeg allocation's actual Y/UV pitches. Primaries,
+transfer characteristic, and sample aspect ratio come from the enhanced frame.
+The CUDA hardware-frame pool belongs to the codec. Its allocations are reused
+only after FFmpeg/NVENC releases the frame references, so enhancement may safely
+overwrite its own borrowed input image after conversion completes. No CPU pixel
+transfer, custom CUDA kernel, new dependency, or application work queue is used.
+
+Submitting a frame and receiving a compressed packet are separate operations,
+just like sending decoder packets and receiving frames. Available packets are
+drained after each submission. `AV_CODEC_FLAG_FRAME_DURATION` preserves the FPS
+stage's shortened final interval. `finish(self)` sends EOF, drains remaining
+packets, copies remaining audio, and writes the MP4 trailer. Native contexts and
+GPU allocations are released by their existing owners on success or error.
+
+Audio is read through a second FFmpeg input and copied without decoding. One
+pending audio packet lets it advance alongside encoded video. Both streams keep
+their relative timestamps; no independent resetting to zero or audio stretching
+occurs. Multiple audio tracks retain their metadata and dispositions. The muxer
+rescales packets into its selected stream time bases.
+
+Set `test_file`, `output_file`, and `target_frame_rate` in `main.rs`; run `cargo run`
+from `app/`. The output must not exist: exclusive creation protects sources and
+previous exports. A failed job can leave an incomplete output file. Do not treat
+it as a completed export; remove it or use a different path before retrying.
+Audio must be supported by MP4 stream copy; otherwise the header/write returns
+an error. Audio transcoding, subtitles, rotation/display-matrix handling, HDR,
+codec selection, and performance tuning are not implemented in this milestone.
+
+### Encoder verification (2026-09-28)
+
+Build and Clippy passed. Temporary manual runs on RTX 5070 covered:
+
+- A real 3-frame 640x360 clip at 60 FPS exported as 6 frames at 1280x720/120 FPS.
+  An encoded AI midpoint was downloaded for visual inspection.
+- H.264 and AV1 sources: 120 frames at 24 FPS exported as 300 at 60 FPS.
+- Variable-rate source: 72 frames exported as 298 at 60 FPS, preserving the exact
+  4.958333-second track duration, including the half-length final interval.
+- Fractional output at 60000/1001 FPS, preserving the exact source track end.
+- Source video starting at 2 seconds with audio starting at 0: original offset
+  retained. Output PTS and every packet duration checked using rational arithmetic.
+- Copied AAC packet hashes, PTS/DTS, and durations match the sources exactly;
+  decoded PCM also matches byte-for-byte. Complete outputs decode without errors.
+- Two audio tracks, including a 250 ms offset and language tags, retained exact
+  packet payloads and timing. A flash/beep fixture retains shared source-frame
+  times and identical audio. VFG still blends some frames before a sudden flash;
+  this is the previously observed scene-cut limitation, not encoder timestamp drift.
+- Attempts to export over the source or an existing export fail without changing
+  their contents. No automated suite or temporary inspection code was retained.
+- A WMA audio input fails with a clear MP4 header error rather than silently
+  dropping its unsupported audio track.
+
+Ponytail review: lean already; native FFmpeg owners/pooling, packet rescaling,
+and muxing avoid custom buffer queues and resource wrappers.
+
+References: [FFmpeg hardware-frame ownership](https://ffmpeg.org/doxygen/trunk/hwcontext_8h.html),
+[FFmpeg NVENC implementation](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/nvenc.c),
+and the installed NVIDIA `nvCVImage.h` declarations. Context7 was attempted first
+but its monthly quota was exhausted; installed headers and official sources were used.

@@ -14,8 +14,8 @@
 //! One effect/model is loaded per job. Work is sequential on the decoder's CUDA
 //! context and stream. Owned buffers outlive the effect, including on errors.
 //! Stop the job on a processing error; retrying a partially configured effect is unsupported.
-//! There is no encoder here. An asynchronous encoder will need its own completion
-//! handling before the callback can return and permit buffer reuse.
+//! The encoder converts the borrowed image into its own GPU buffer before returning,
+//! so these images can be reused while NVENC retains its independent frame references.
 
 use std::{ffi::c_void, io, ptr, rc::Rc};
 use ffmpeg_next::{ffi, Rescale};

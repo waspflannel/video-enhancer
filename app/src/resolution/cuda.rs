@@ -5,7 +5,7 @@ use crate::video_decoder::DecodedFrame;
 use super::commands::{cuCtxPushCurrent_v2, cuCtxPopCurrent_v2, cuStreamSynchronize};
 
 pub(crate) struct CudaDevice {
-    reference: *mut ffi::AVBufferRef,
+    pub(crate) reference: *mut ffi::AVBufferRef,
     pub(crate) context: ffi::CUcontext,
     pub(crate) stream: ffi::CUstream,
 }

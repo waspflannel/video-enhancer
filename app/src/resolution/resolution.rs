@@ -86,12 +86,12 @@ impl ResolutionEnhancer {
         // Keep CUDA alive for cleanup and allocate one source-sized conversion buffer.
         self.device = Some(Rc::clone(&device));
         self.input = allocate_rgba_image(frame.frame.width(), frame.frame.height())?;
-        // Use the decoder's stream, 8-bit RGB encoding, and NVIDIA's high AI quality mode.
-        // SAFETY: effect and CUDA stream are live; RGB8 and VSR_High are SDK-defined values.
+        // Use the decoder's stream, 8-bit RGB encoding, and NVIDIA's Ultra AI quality mode.
+        // SAFETY: effect and CUDA stream are live; RGB8 and VSR_Ultra are SDK-defined values.
         unsafe {
             sdk_result("Set Video Super Resolution CUDA stream", NvVFX_SetCudaStream(self.effect, c"CudaStream".as_ptr(), device.stream))?;
             sdk_result("Set Video Super Resolution pixel encoding", NvVFX_SetU32(self.effect, c"ImageEncodingMode".as_ptr(), 0))?;
-            sdk_result("Set Video Super Resolution AI quality", NvVFX_SetU32(self.effect, c"QualityLevel".as_ptr(), 3))?;
+            sdk_result("Set Video Super Resolution AI quality", NvVFX_SetU32(self.effect, c"QualityLevel".as_ptr(), 4))?;
         }
         Ok(())
     }

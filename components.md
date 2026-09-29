@@ -72,6 +72,10 @@ FPS conversion and AI frame generation belong in one component: FPS is the reque
 
 ### 4. Video export
 
+Implemented in `app/src/video_encoder.rs`: sequential H.264 NVENC encoding to MP4,
+with GPU NV12 conversion and compatible audio copied with its timestamps.
+Audio transcoding and other output codecs remain future work.
+
 - Encode the processed frames using NVIDIA NVENC.
 - Include the original audio, converting it only if required for the output format, and keep it synchronized.
 - Save a playable output file without overwriting the source.

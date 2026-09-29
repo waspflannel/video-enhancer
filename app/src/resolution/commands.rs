@@ -44,6 +44,7 @@ unsafe extern "C" {
 #[link(name = "NVCVImage", kind = "raw-dylib")]
 unsafe extern "C" {
     pub(crate) fn NvCVImage_Transfer(source: *const NvImage, destination: *mut NvImage, scale: f32, stream: ffi::CUstream, temporary: *mut NvImage) -> i32;
+    pub(crate) fn NvCVImage_TransferToYUV(source: *const NvImage, rectangle: *const c_void, y: *const c_void, y_pixel_bytes: i32, y_pitch: i32, u: *const c_void, v: *const c_void, uv_pixel_bytes: i32, uv_pitch: i32, format: i32, component_type: i32, colorspace: u32, memory: u32, scale: f32, stream: ffi::CUstream, temporary: *mut NvImage) -> i32;
     pub(crate) fn NvCVImage_Alloc(image: *mut NvImage, width: u32, height: u32, format: i32, component_type: i32, layout: u32, memory: u32, alignment: u32) -> i32;
     pub(crate) fn NvCVImage_Dealloc(image: *mut NvImage);
     pub(crate) fn NvCVImage_TransferFromYUV(y: *const c_void, y_pixel_bytes: i32, y_pitch: i32, u: *const c_void, v: *const c_void, uv_pixel_bytes: i32, uv_pitch: i32, format: i32, component_type: i32, colorspace: u32, memory: u32, destination: *mut NvImage, rectangle: *const c_void, scale: f32, stream: ffi::CUstream, temporary: *mut NvImage) -> i32;
