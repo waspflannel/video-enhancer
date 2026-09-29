@@ -10,6 +10,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
 </style>
 <style>
 .youtube{margin-top:22px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.youtube summary{cursor:pointer;font-weight:600}.youtube .field{margin-top:13px}.youtube input{width:100%;min-width:0;margin-top:8px;padding:10px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.youtube .row{gap:10px}.youtube select{padding:9px 6px}.download-actions{display:flex;gap:8px;margin-top:15px}.download-actions button:first-child{flex:1}.download-status{font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap;max-height:110px;overflow:auto;margin-top:12px}.download-status.error{color:#ffb8ae}
+.section .row+.row,.section .row+.sliders,.section .sliders+.row,.section .sliders+.sliders{margin-top:17px}.check{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:15px}.check input{accent-color:var(--accent)}.field input[type=color],.field input[type=number]{display:block;width:100%;height:39px;margin-top:8px;padding:8px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.field input[type=color]{padding:3px}.asset-picker{display:flex;align-items:center;gap:9px;margin-top:14px}.asset-picker button{font-size:12px;padding:8px 10px}.asset-name{color:var(--muted);font-size:12px;overflow-wrap:anywhere;min-width:0}input:disabled,select:disabled{opacity:.45}.section details>summary{font-size:13px;font-weight:600;cursor:pointer}.section details[open]>summary{margin-bottom:17px}.section fieldset{margin-top:15px}.section fieldset:disabled{opacity:.55}
 </style>
 <header><strong>Video Enhancer<span style="color:var(--accent)">.</span></strong><span class="local">LOCAL · NVIDIA</span></header>
 <main>
@@ -35,20 +36,27 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
   </details>
   <div id="name">No video selected</div>
   <dl><div><dt>Resolution</dt><dd id="dimensions">—</dd></div><div><dt>Frame rate</dt><dd id="fps">—</dd></div><div><dt>Duration</dt><dd id="duration">—</dd></div><div><dt>Audio</dt><dd id="audio">—</dd></div></dl>
-  <p class="note">Your original stays untouched.<br>Exports are saved as H.264 MP4 with the source audio.</p>
+  <p class="note">Your original stays untouched.<br>Export H.264 or 10-bit HEVC MP4 with the source audio.</p>
 </aside>
 <section class="workspace">
   <div class="intro"><div><h2>Enhancement settings</h2><p>Start neutral. Adjust only what your video needs.</p></div><button id="reset" disabled>Reset</button></div>
   <div class="settings-wrap">
   <fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
     <section class="section"><div class="section-title"><h3>Output</h3><small>Preserve aspect ratio</small></div>
-      <div class="row"><label class="field">Resolution<select id="scale"><option value="1">Original resolution</option><option value="2">2× resolution</option><option value="3">3× resolution</option><option value="4">4× resolution</option></select></label><label class="field">Frame rate<select id="target_fps"><option value="">Original FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select></label></div>
-      <label class="field" style="margin-top:14px">Upscale quality<select id="quality" disabled><option value="1">Low · fastest</option><option value="2">Medium</option><option value="3">High</option><option value="4" selected>Ultra · most detail</option></select></label>
+      <div class="row"><label class="field">Resolution<select id="scale"><option value="1">Original resolution</option><option value="1.3333333333333333">1⅓× resolution</option><option value="1.5">1.5× resolution</option><option value="2">2× resolution</option><option value="3">3× resolution</option><option value="4">4× resolution</option></select></label><label class="field">Frame rate<select id="target_fps"><option value="">Original FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select></label></div>
+      <div class="row"><label class="field">Upscale method<select id="upscale_method"><option value="vsr">Video Super Resolution</option><option value="lightweight">Lightweight Upscale</option></select></label><label class="field">VSR quality<select id="quality"><optgroup label="Standard"><option value="0">Bicubic · no AI</option><option value="1">Low · fastest</option><option value="2">Medium</option><option value="3">High</option><option value="4" selected>Ultra · most detail</option></optgroup><optgroup label="High bitrate"><option value="16">High bitrate · low</option><option value="17">High bitrate · medium</option><option value="18">High bitrate · high</option><option value="19">High bitrate · ultra</option></optgroup><optgroup label="Streaming"><option value="21">Streaming · medium</option><option value="23">Streaming · ultra</option></optgroup></select></label></div>
+      <div class="sliders" id="upscale-controls"></div>
       <p class="helper">Higher FPS uses NVIDIA AI frame generation. Maximum output: 4096 pixels per side.</p>
+      <details style="margin-top:17px"><summary>Frame generation & encoding</summary><div class="row"><label class="field">Frame generation quality<select id="frame_quality"><option value="0">Low</option><option value="1" selected>Medium</option><option value="2">High</option></select></label><label class="field">Output encoding<select id="output_encoding"><option value="h264">H.264 · 8-bit SDR</option><option value="hevc10">HEVC · 10-bit</option></select></label></div>
+      <label class="check"><input id="detect_scene_changes" type="checkbox" checked>Detect scene changes before generating frames</label>
+      <div class="row"><label class="field">Encoder preset<select id="encoder_preset"><option value="1">P1 · fastest</option><option value="2">P2</option><option value="3">P3</option><option value="4" selected>P4 · balanced</option><option value="5">P5</option><option value="6">P6</option><option value="7">P7 · best compression</option></select></label><label class="field">Encoder quality · 0–51<input id="encoder_quality" type="number" min="0" max="51" step="1" value="19" required></label></div><p class="helper">Encoder quality 1–51: lower retains more detail and uses more space. 0 selects automatic quality. 10-bit output preserves finer colour steps; it does not recover missing source detail.</p><p class="helper" id="precision-note" hidden>10-bit SDR supports VSR, frame generation and colour controls. Lightweight Upscale, temporal denoising, sharpening and portrait effects use 8-bit SDR and are disabled.</p></details>
     </section>
-    <section class="section"><div class="section-title"><h3>Look presets</h3><small id="preset-label">Neutral</small></div><div class="presets" id="presets"></div><p class="helper" id="preset-description">All enhancements off. Resolution and FPS stay as selected.</p></section>
-    <section class="section"><div class="section-title"><h3>Detail & cleanup</h3><small>NVIDIA</small></div><div class="sliders" id="detail-controls"></div><p class="helper">Cleanup uses gentle AI modes. Too much sharpening can create halos.</p></section>
+    <section class="section"><div class="section-title"><h3>Look presets</h3><small id="preset-label">Neutral</small></div><div class="presets" id="presets"></div><p class="helper" id="preset-description">Basic detail and colour controls reset. Output and advanced effects stay as selected.</p></section>
+    <section class="section"><div class="section-title"><h3>Detail & cleanup</h3><small>NVIDIA</small></div><div class="sliders" id="detail-controls"></div><div class="row"><label class="field">VSR denoise quality<select id="denoise_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label><label class="field">VSR deblur quality<select id="deblur_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label></div><label class="field" style="margin-top:17px">Temporal denoising · sources up to 1920 × 1080<select id="temporal_denoise"><option value="">Off</option><option value="0">Weak</option><option value="1">Strong</option></select></label><p class="helper">Temporal denoising uses nearby frames. VSR cleanup and temporal denoising can be combined. Too much sharpening can create halos.</p></section>
     <section class="section"><div class="section-title"><h3>Colour & tone</h3><small>SDR</small></div><div class="sliders" id="colour-controls"></div></section>
+    <section class="section"><details><summary>TrueHDR · SDR to HDR10</summary><label class="check"><input id="hdr_enabled" type="checkbox">Convert SDR to HDR10</label><fieldset id="hdr-settings" aria-label="TrueHDR settings" disabled><div class="sliders" id="hdr-controls"></div><label class="check"><input id="hdr_debanding" type="checkbox" checked>Use TrueHDR debanding</label></fieldset><p class="helper">Uses the SDK's 8-bit SDR input and exports 10-bit HEVC HDR10. Requires an HDR display for correct playback. Debanding is part of this conversion; it cannot recover detail lost to source compression.</p></details></section>
+    <section class="section"><details><summary>Portrait background</summary><div class="row"><label class="field">Background effect<select id="portrait_mode"><option value="off">Off</option><option value="blur">Blur background</option><option value="replace">Replace with colour</option><option value="mask">Export person mask</option></select></label><label class="field">Segmentation quality<select id="segmentation_mode"><option value="0">Quality · keep chairs</option><option value="1">Performance · keep chairs</option><option value="2">Quality · remove chairs</option><option value="3">Performance · remove chairs</option></select></label></div><div class="sliders" id="portrait-controls"></div><label class="field" style="margin-top:17px">Replacement colour<input id="background_color" type="color" value="#00b140"></label><p class="helper">Designed for people in sources at least 512 × 288. Mask export saves a grayscale video with white foreground and black background.</p></details></section>
+    <section class="section"><details><summary>Portrait relighting</summary><div class="row"><label class="field">Relighting effect<select id="relighting_mode"><option value="off">Off</option><option value="relighting">Relighting</option><option value="aigs">Relighting + HDR background</option></select></label><label class="field">Quality<select id="relighting_quality"><option value="0">Quality · extra models</option><option value="1" selected>Performance</option><option value="2">Quality + HDRI blur · extra models</option><option value="3">Performance + HDRI blur</option></select></label></div><div class="asset-picker"><button id="choose-hdri" type="button">Choose HDR environment</button><button id="clear-hdri" type="button" disabled>Clear</button><span class="asset-name" id="hdri-name">No environment selected</span></div><fieldset id="relighting-settings" aria-label="Relighting settings" disabled><div class="sliders" id="relighting-controls"></div><label class="check"><input id="environment_background" type="checkbox">Use HDR environment as the background</label></fieldset><p class="helper">Uses the selected HDR environment to light the person. Performance models are installed; quality modes need the separate quality model files. The combined SDK effect uses the HDR environment background; its blur modes blur that background. Choose Relighting to preserve the source backdrop or apply a portrait background effect. Sources must be at least 512 × 288. An environment background replaces the portrait background effect.</p></details></section>
   </fieldset>
   <div class="lock-message" id="lock"><span>Load a video to unlock settings</span></div>
   </div>
@@ -59,46 +67,96 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
 <script>
 const $ = id => document.getElementById(id);
 const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
-let source = null, busy = false, downloading = false, presets = [];
+let source = null, busy = false, downloading = false, presets = [], hdri = null;
 const specs = [
-  ['denoise','Denoise',0,1,0.05,'detail-controls'],['deblur','Deblur',0,1,0.05,'detail-controls'],['sharpening','Sharpening',0,2,0.05,'detail-controls'],
+  ['denoise','VSR denoise',0,1,0.05,'detail-controls'],['deblur','VSR deblur',0,1,0.05,'detail-controls'],['sharpening','Sharpening',0,2,0.05,'detail-controls'],
   ['contrast','Contrast',0.5,1.5,0.01,'colour-controls'],['vibrance','Vibrance',-1,1,0.01,'colour-controls'],['saturation','Saturation',0,2,0.01,'colour-controls'],['exposure','Exposure',-2,2,0.05,'colour-controls'],['warmth','Warmth',-1,1,0.01,'colour-controls']
 ];
-const descriptions = {'Neutral':'All enhancements off. Resolution and FPS stay as selected.','Natural':'A subtle contrast, colour and detail lift.','Crisp':'Gentle deblur with a little extra edge definition.','Colour lift':'Richer colour and contrast without changing exposure.','Gentle cleanup':'Light denoise and deblur for slightly noisy or soft footage.'};
-for(const [id,label,min,max,step,group] of specs){
+const advancedSpecs = [
+  ['upscale_strength','Upscale strength',0,1,0.05,'upscale-controls'],
+  ['hdr_contrast','HDR contrast',0,200,1,'hdr-controls'],['hdr_saturation','HDR saturation',0,200,1,'hdr-controls'],['hdr_middle_gray','Middle gray',10,100,1,'hdr-controls'],['hdr_max_luminance','Peak luminance · nits',400,2000,10,'hdr-controls'],
+  ['blur_strength','Background blur',0,1,0.05,'portrait-controls'],
+  ['relighting_pan','Environment pan · °',-180,180,1,'relighting-controls'],['relighting_field_of_view','Field of view · °',1,179,1,'relighting-controls'],['relighting_foreground_gain','Foreground gain',0,4,0.05,'relighting-controls'],['relighting_background_gain','Background gain',0,4,0.05,'relighting-controls'],['relighting_specularity','Specularity',0,1,0.05,'relighting-controls'],['relighting_blur_strength','Relighting background blur',0,2,0.05,'relighting-controls']
+];
+const defaults = {scale:1,quality:4,upscale_method:'vsr',upscale_strength:1,target_fps:'',frame_quality:1,output_encoding:'h264',encoder_preset:4,encoder_quality:19,temporal_denoise:'',portrait_mode:'off',segmentation_mode:0,blur_strength:0.5,background_color:'#00b140',relighting_mode:'off',relighting_quality:1,relighting_pan:0,relighting_field_of_view:60,relighting_foreground_gain:1,relighting_background_gain:1,relighting_specularity:0,relighting_blur_strength:0.5,hdr_contrast:100,hdr_saturation:100,hdr_middle_gray:50,hdr_max_luminance:650};
+const descriptions = {'Neutral':'Basic detail and colour controls reset. Output and advanced effects stay as selected.','Natural':'A subtle contrast, colour and detail lift.','Crisp':'Gentle deblur with a little extra edge definition.','Colour lift':'Richer colour and contrast without changing exposure.','Gentle cleanup':'Light denoise and deblur for slightly noisy or soft footage.'};
+for(const [id,label,min,max,step,group] of [...specs,...advancedSpecs]){
  const wrapper=document.createElement('div');
  wrapper.innerHTML=`<div class="slider-head"><label for="${id}">${label}</label><output id="${id}-value" for="${id}"></output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
  $(group).append(wrapper);
- $(id).addEventListener('input',()=>{displayValue(id); $('preset-label').textContent='Custom'; $('preset-description').textContent='Your adjustments. Resolution and FPS stay as selected.'; document.querySelectorAll('.presets button').forEach(b=>b.classList.remove('selected'));});
+ $(id).addEventListener('input',()=>{displayValue(id);if(specs.some(([name])=>name===id))markCustom();updateState();});
 }
-function displayValue(id){let v=Number($(id).value); $(id+'-value').textContent = id==='exposure'?`${v.toFixed(2)} EV`:v.toFixed(2);}
-function applyPreset(name,settings){for(const [id] of specs){$(id).value=settings[id];displayValue(id);} $('preset-label').textContent=name;$('preset-description').textContent=descriptions[name];document.querySelectorAll('.presets button').forEach(b=>b.classList.toggle('selected',b.textContent===name));}
+function displayValue(id){const v=Number($(id).value);$(id+'-value').textContent=id==='exposure'?`${v.toFixed(2)} EV`:Number($(id).step)>=1?String(v):v.toFixed(2);}
+function markCustom(){$('preset-label').textContent='Custom';$('preset-description').textContent='Your detail and colour adjustments.';document.querySelectorAll('.presets button').forEach(b=>b.classList.remove('selected'));}
+function applyPreset(name,settings){for(const [id] of specs){$(id).value=settings[id];displayValue(id);}for(const id of ['denoise_quality','deblur_quality'])$(id).value=settings[id]??0;$('preset-label').textContent=name;$('preset-description').textContent=descriptions[name];document.querySelectorAll('.presets button').forEach(b=>b.classList.toggle('selected',b.textContent===name));applyOutputFormat();}
+function resetSettings(){for(const [id,value] of Object.entries(defaults))$(id).value=value;for(const [id] of advancedSpecs)displayValue(id);$('hdr_enabled').checked=false;$('hdr_debanding').checked=true;$('detect_scene_changes').checked=true;$('environment_background').checked=false;hdri=null;$('hdri-name').textContent='No environment selected';if(presets.length)applyPreset(...presets[0]);updateState();}
+function precisionOutput(){return $('output_encoding').value==='hevc10'&&!$('hdr_enabled').checked;}
+function applyOutputFormat(){
+ if($('hdr_enabled').checked)$('output_encoding').value='hevc10';
+ if(precisionOutput()){for(const id of ['portrait_mode','relighting_mode'])$(id).value='off';$('temporal_denoise').value='';$('upscale_method').value='vsr';$('sharpening').value=0;displayValue('sharpening');}
+ updateState();
+}
 function updateState(){
  $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);$('lock').hidden=!!source;
  $('load').disabled=busy;$('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy||!source||downloading;
  $('download-settings').disabled=busy;$('download').disabled=busy;$('download-cancel').hidden=!downloading;
- $('quality').disabled=$('scale').value==='1';
- if(source){const scale=Number($('scale').value);$('summary').textContent=`${source.width*scale} × ${source.height*scale} · ${$('target_fps').value || 'Original'} FPS`;}
+ const portraitTooSmall=source&&(source.width<512||source.height<288);
+ if(portraitTooSmall){$('portrait_mode').value='off';$('relighting_mode').value='off';}
+ const precision=precisionOutput(),scaling=$('scale').value!=='1',relighting=$('relighting_mode').value!=='off',combined=$('relighting_mode').value==='aigs';
+ const combinedBlur=combined&&Number($('relighting_quality').value)>=2;
+ if(combined)$('environment_background').checked=true;
+ $('environment_background').disabled=combined;
+ if(relighting&&$('environment_background').checked)$('portrait_mode').value='off';
+ const portrait=$('portrait_mode').value,denoiseTooLarge=source&&(source.width>1920||source.height>1080);
+ if(denoiseTooLarge)$('temporal_denoise').value='';
+ $('quality').disabled=!scaling||$('upscale_method').value!=='vsr';$('upscale_method').disabled=!scaling||precision;$('upscale_strength').disabled=!scaling;
+ $('frame_quality').disabled=!$('target_fps').value;$('detect_scene_changes').disabled=!$('target_fps').value;
+ $('denoise_quality').disabled=Number($('denoise').value)===0;$('deblur_quality').disabled=Number($('deblur').value)===0;
+ for(const id of ['temporal_denoise','portrait_mode','relighting_mode','sharpening'])$(id).disabled=precision;
+ $('temporal_denoise').disabled=precision||denoiseTooLarge;
+ $('portrait_mode').disabled=precision||portraitTooSmall||(relighting&&$('environment_background').checked);$('relighting_mode').disabled=precision||portraitTooSmall;
+ $('segmentation_mode').disabled=combined||(portrait==='off'&&!relighting);$('blur_strength').disabled=portrait!=='blur';$('background_color').disabled=portrait!=='replace';$('relighting_blur_strength').disabled=!combinedBlur;
+ $('relighting_quality').disabled=!combined;$('relighting_specularity').disabled=!combined;$('relighting-settings').disabled=!relighting;$('choose-hdri').disabled=!relighting;$('clear-hdri').disabled=!relighting||!hdri;
+ $('relighting_field_of_view').disabled=!$('environment_background').checked;$('relighting_background_gain').disabled=!$('environment_background').checked;
+ $('hdr-settings').disabled=!$('hdr_enabled').checked;$('output_encoding').disabled=$('hdr_enabled').checked;$('precision-note').hidden=!precision;
+ if(source){const scale=Number($('scale').value),format=$('hdr_enabled').checked?'HDR10':precision?'10-bit SDR':'SDR';$('summary').textContent=`${Math.round(source.width*scale)} × ${Math.round(source.height*scale)} · ${$('target_fps').value || 'Original'} FPS · ${format}`;}
 }
 function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
 function downloadMessage(text,error=false){$('download-status').textContent=text;$('download-status').classList.toggle('error',error);}
 $('download-form').onsubmit=event=>{event.preventDefault();if(busy)return;send('download',{options:{url:$('youtube-url').value.trim(),height:Number($('download-height').value),fps:Number($('download-fps').value),format:$('download-format').value}});};
 $('download-cancel').onclick=()=>{send('cancel');$('download-cancel').disabled=true;downloadMessage('Stopping download…');};
 $('load').onclick=()=>send('load');
-$('reset').onclick=()=>{applyPreset(...presets[0]);$('scale').value='1';$('quality').value='4';$('target_fps').value='';updateState();};
-$('scale').onchange=updateState;$('target_fps').onchange=updateState;
+$('reset').onclick=resetSettings;
+for(const id of ['scale','target_fps','upscale_method','portrait_mode','relighting_mode','relighting_quality'])$(id).onchange=updateState;
+for(const id of ['output_encoding','hdr_enabled'])$(id).onchange=applyOutputFormat;
+ $('environment_background').onchange=()=>{if($('environment_background').checked)$('portrait_mode').value='off';updateState();};
+for(const id of ['denoise_quality','deblur_quality'])$(id).onchange=markCustom;
+$('choose-hdri').onclick=()=>send('choose-hdri');
+$('clear-hdri').onclick=()=>{hdri=null;$('hdri-name').textContent='No environment selected';updateState();};
 $('cancel').onclick=()=>{send('cancel');$('cancel').disabled=true;message('Stopping after the current frame…');};
-$('generate').onclick=()=>{const enhancements=Object.fromEntries(specs.map(([id])=>[id,Number($(id).value)]));send('generate',{job:{resolution_scale:Number($('scale').value),upscale_quality:Number($('quality').value),target_fps:$('target_fps').value?Number($('target_fps').value):null,enhancements}});};
+function buildJob(){
+ const number=id=>Number($(id).value),enhancements=Object.fromEntries(specs.map(([id])=>[id,number(id)]));
+ enhancements.denoise_quality=number('denoise_quality');enhancements.deblur_quality=number('deblur_quality');
+ return {resolution_scale:number('scale'),upscale_method:$('upscale_method').value,upscale_quality:number('quality'),upscale_strength:number('upscale_strength'),target_fps:$('target_fps').value?number('target_fps'):null,enhancements,
+  frame_generation:{quality:number('frame_quality'),detect_scene_changes:$('detect_scene_changes').checked},output_encoding:$('output_encoding').value,encoder:{preset:number('encoder_preset'),quality:number('encoder_quality')},
+  temporal_denoise:$('temporal_denoise').value===''?null:number('temporal_denoise'),
+  hdr:{enabled:$('hdr_enabled').checked,contrast:number('hdr_contrast'),saturation:number('hdr_saturation'),middle_gray:number('hdr_middle_gray'),max_luminance:number('hdr_max_luminance'),debanding:$('hdr_debanding').checked},
+  portrait:{mode:$('portrait_mode').value,segmentation_mode:number('segmentation_mode'),blur_strength:number('blur_strength'),background_color:$('background_color').value.slice(1).match(/../g).map(value=>parseInt(value,16))},
+  relighting:{mode:$('relighting_mode').value,hdri,quality:number('relighting_quality'),pan:number('relighting_pan'),field_of_view:number('relighting_field_of_view'),foreground_gain:number('relighting_foreground_gain'),background_gain:number('relighting_background_gain'),specularity:number('relighting_specularity'),blur_strength:number('relighting_blur_strength'),environment_background:$('environment_background').checked}
+ };
+}
+$('generate').onclick=()=>{const quality=$('encoder_quality');if(!quality.checkValidity()){quality.closest('details').open=true;quality.reportValidity();return;}if($('relighting_mode').value!=='off'&&!hdri){message('Choose an HDR environment for relighting.',true);return;}send('generate',{job:buildJob()});};
 window.receive = event => {
  switch(event.type){
  case 'download-started':busy=true;downloading=true;$('download-cancel').disabled=false;downloadMessage('Connecting to YouTube…');break;
  case 'download-progress':if(!$('download-cancel').disabled)downloadMessage(event.message);break;
  case 'downloaded':busy=false;downloading=false;downloadMessage(`Saved. Use Load video to open it.\n${event.path}`);break;
  case 'download-error':busy=false;downloading=false;downloadMessage(event.message,true);break;
- case 'presets':presets=event.presets;for(const [name,settings] of presets){const b=document.createElement('button');b.textContent=name;b.onclick=()=>applyPreset(name,settings);$('presets').append(b);}applyPreset(...presets[0]);break;
+ case 'presets':presets=event.presets;for(const [name,settings] of presets){const b=document.createElement('button');b.textContent=name;b.onclick=()=>applyPreset(name,settings);$('presets').append(b);}resetSettings();break;
+ case 'hdri-selected':hdri=event.path;$('hdri-name').textContent=event.name;break;
  case 'loading':source=null;busy=true;$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
  case 'loaded':source=event.source;busy=false;$('name').textContent=source.name;$('dimensions').textContent=`${source.width} × ${source.height}`;$('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable / unknown';$('duration').textContent=source.duration?`${Math.floor(source.duration/60)}:${String(Math.floor(source.duration%60)).padStart(2,'0')}`:'Unknown';$('audio').textContent=source.audio?`${source.audio} track${source.audio>1?'s':''}`:'No audio';
- $('scale').value='1';$('target_fps').value='';for(const option of $('scale').options)option.disabled=source.width*Number(option.value)>4096||source.height*Number(option.value)>4096;for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;message('Ready. Choose your settings, then Generate.');break;
+ $('scale').value='1';$('target_fps').value='';if(['yuv420p10le','p010le'].includes(source.pixel_format)){$('output_encoding').value='hevc10';applyOutputFormat();}for(const option of $('scale').options){const width=Math.round(source.width*Number(option.value)),height=Math.round(source.height*Number(option.value));option.disabled=width>4096||height>4096||width%2!==0||height%2!==0||width*source.height!==height*source.width;}for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;message('Ready. Choose your settings, then Generate.');break;
  case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
  case 'progress':if(source.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
  case 'finished':busy=false;$('progress').value=1;message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;

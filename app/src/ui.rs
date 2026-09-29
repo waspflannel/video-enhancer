@@ -46,6 +46,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 match message["command"].as_str().unwrap_or("") {
                     "ready" => emit(json!({"type":"presets", "presets":EnhancementSettings::presets()})),
                     "cancel" => { cancelled.store(true, Ordering::Relaxed); }
+                    "choose-hdri" if !busy => {
+                        if let Some(path) = rfd::FileDialog::new().set_title("Choose a relighting environment").add_filter("HDR environment", &["hdr", "exr", "pfm"]).pick_file() {
+                            emit(json!({"type":"hdri-selected", "path":path, "name":path.file_name().unwrap_or_default().to_string_lossy()}));
+                        }
+                    }
                     "download" if !busy => {
                         let options = match serde_json::from_value::<DownloadOptions>(message["options"].clone()) {
                             Ok(options) => options,
@@ -76,10 +81,14 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                             let sender = proxy.clone();
                             std::thread::spawn(move || {
                                 let result = Parser::new(&path).get_video_information().and_then(|source| {
-                                    if !["h264", "hevc", "av1"].contains(&source.codec.as_str()) || !["yuv420p", "yuvj420p", "nv12"].contains(&source.pixel_format.as_str()) {
-                                        return Err(std::io::Error::other("Choose an 8-bit SDR H.264, HEVC or AV1 video. HDR and 10-bit processing are not supported yet."));
+                                    if !["h264", "hevc", "av1"].contains(&source.codec.as_str()) || !["yuv420p", "yuvj420p", "nv12", "yuv420p10le", "p010le"].contains(&source.pixel_format.as_str()) {
+                                        return Err(std::io::Error::other("Choose an 8-bit or 10-bit SDR H.264, HEVC or AV1 video."));
                                     }
-                                    Ok(json!({"path":source.path, "name":path.file_name().unwrap_or_default().to_string_lossy(), "width":source.width, "height":source.height, "fps":source.fps, "duration":source.duration_seconds, "audio":source.audio_streams.len(), "codec":source.codec}))
+                                    let video = source.metadata["streams"].as_array().and_then(|streams| streams.iter().find(|stream| stream["index"].as_u64() == Some(u64::from(source.video_stream_index))));
+                                    if video.and_then(|stream| stream["color_transfer"].as_str()).is_some_and(|transfer| ["smpte2084", "arib-std-b67"].contains(&transfer)) {
+                                        return Err(std::io::Error::other("Choose an SDR source. TrueHDR converts SDR to HDR10; existing HDR sources are not supported."));
+                                    }
+                                    Ok(json!({"path":source.path, "name":path.file_name().unwrap_or_default().to_string_lossy(), "width":source.width, "height":source.height, "fps":source.fps, "duration":source.duration_seconds, "audio":source.audio_streams.len(), "codec":source.codec, "pixel_format":source.pixel_format}))
                                 }).map_err(|error| error.to_string());
                                 let _ = sender.send_event(AppEvent::Loaded(result));
                             });
