@@ -17,9 +17,6 @@ impl TrueHdr {
 
     pub fn enhance<'a>(&'a mut self, frame: &'a EnhancedFrame) -> io::Result<&'a EnhancedFrame> {
         if !self.settings.enabled { return Ok(frame); }
-        if frame.image.pixel_format != NVCV_RGBA || frame.image.component_type != NVCV_U8 {
-            return Err(io::Error::other("TrueHDR requires 8-bit SDR RGBA input"));
-        }
         let device = Rc::clone(&frame.device);
         let _context = device.enter()?;
         if self.output.is_none() { self.initialize(frame)?; }
@@ -31,9 +28,8 @@ impl TrueHdr {
         *self.input = unsafe { ptr::read(&frame.image) };
         unsafe { sdk_result("Bind TrueHDR input", NvVFX_SetImage(self.effect, c"SrcImage0".as_ptr(), &mut *self.input))?; }
         let result = sdk_result("Convert SDR to HDR", unsafe { NvVFX_Run(self.effect, 0) });
-        let completion = device.synchronize();
+        if result.is_err() { let _ = device.synchronize(); }
         result?;
-        completion?;
         Ok(output)
     }
 

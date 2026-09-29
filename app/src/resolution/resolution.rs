@@ -23,12 +23,12 @@ pub struct ResolutionEnhancer {
     input: Option<EnhancedFrame>,
     effects: VideoEffects,
     job: VideoEnhancementJob,
-    ready: bool,
+    stages_configured: bool,
 }
 
 impl ResolutionEnhancer {
     pub fn new(job: &VideoEnhancementJob) -> Self {
-        Self { stages: Vec::new(), input: None, effects: VideoEffects::new(job), job: job.clone(), ready: false }
+        Self { stages: Vec::new(), input: None, effects: VideoEffects::new(job), job: job.clone(), stages_configured: false }
     }
 
     pub fn enhance(&mut self, frame: &DecodedFrame) -> io::Result<&EnhancedFrame> {
@@ -37,7 +37,7 @@ impl ResolutionEnhancer {
             let _context = device.enter()?;
             device.synchronize()?;
             let ten_bit = self.job.output_encoding == OutputEncoding::Hevc10 && !self.job.hdr.enabled;
-            self.input = Some(EnhancedFrame::allocate_space_on_gpu_for_frame(frame, Rc::clone(&device), frame.frame.width(), frame.frame.height(), ten_bit)?);
+            self.input = Some(EnhancedFrame::allocate_decoded_frame(frame, Rc::clone(&device), ten_bit)?);
         }
         let input = self.input.as_mut().unwrap();
         let device = Rc::clone(&input.device);
@@ -45,16 +45,15 @@ impl ResolutionEnhancer {
         convert_frame_to_rgba(frame, input)?;
         input.copy_metadata_from(frame);
         let cleaned = self.effects.enhance(input)?;
-        if !self.ready {
+        if !self.stages_configured {
             configure_stages(&mut self.stages, cleaned, &self.job)?;
-            self.ready = true;
+            self.stages_configured = true;
         }
         for stage in &mut self.stages {
             // SAFETY: the effect and its bound GPU buffers live for this job.
             let result = sdk_result("Run NVIDIA enhancement", unsafe { NvVFX_Run(stage.effect, 0) });
-            let completion = device.synchronize();
+            if result.is_err() { let _ = device.synchronize(); }
             result?;
-            completion?;
             stage.output.copy_metadata_from_enhanced_frame(cleaned);
         }
         Ok(self.stages.last().map_or(cleaned, |stage| &stage.output))

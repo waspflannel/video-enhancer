@@ -86,14 +86,14 @@ for(const [id,label,min,max,step,group] of [...specs,...advancedSpecs]){
  $(group).append(wrapper);
  $(id).addEventListener('input',()=>{displayValue(id);if(specs.some(([name])=>name===id))markCustom();updateState();});
 }
-function displayValue(id){const v=Number($(id).value);$(id+'-value').textContent=id==='exposure'?`${v.toFixed(2)} EV`:Number($(id).step)>=1?String(v):v.toFixed(2);}
-function markCustom(){$('preset-label').textContent='Custom';$('preset-description').textContent='Your detail and colour adjustments.';document.querySelectorAll('.presets button').forEach(b=>b.classList.remove('selected'));}
-function applyPreset(name,settings){for(const [id] of specs){$(id).value=settings[id];displayValue(id);}for(const id of ['denoise_quality','deblur_quality'])$(id).value=settings[id]??0;$('preset-label').textContent=name;$('preset-description').textContent=descriptions[name];document.querySelectorAll('.presets button').forEach(b=>b.classList.toggle('selected',b.textContent===name));applyOutputFormat();}
-function resetSettings(){for(const [id,value] of Object.entries(defaults))$(id).value=value;for(const [id] of advancedSpecs)displayValue(id);$('hdr_enabled').checked=false;$('hdr_debanding').checked=true;$('detect_scene_changes').checked=true;$('environment_background').checked=false;hdri=null;$('hdri-name').textContent='No environment selected';if(presets.length)applyPreset(...presets[0]);updateState();}
-function precisionOutput(){return $('output_encoding').value==='hevc10'&&!$('hdr_enabled').checked;}
+function displayValue(id){const value=Number($(id).value);$(id+'-value').textContent=id==='exposure'?`${value.toFixed(2)} EV`:Number($(id).step)>=1?String(value):value.toFixed(2);}
+function markCustom(){$('preset-label').textContent='Custom';$('preset-description').textContent='Your detail and colour adjustments.';document.querySelectorAll('.presets button').forEach(button=>button.classList.remove('selected'));}
+function applyPreset(name,settings){for(const [id] of specs){$(id).value=settings[id];displayValue(id);}for(const id of ['denoise_quality','deblur_quality'])$(id).value=settings[id];$('preset-label').textContent=name;$('preset-description').textContent=descriptions[name];document.querySelectorAll('.presets button').forEach(button=>button.classList.toggle('selected',button.textContent===name));applyOutputFormat();}
+function resetSettings(){for(const [id,value] of Object.entries(defaults))$(id).value=value;for(const [id] of advancedSpecs)displayValue(id);$('hdr_enabled').checked=false;$('hdr_debanding').checked=true;$('detect_scene_changes').checked=true;$('environment_background').checked=false;hdri=null;$('hdri-name').textContent='No environment selected';applyPreset(...presets[0]);}
+function isTenBitSdrOutput(){return $('output_encoding').value==='hevc10'&&!$('hdr_enabled').checked;}
 function applyOutputFormat(){
  if($('hdr_enabled').checked)$('output_encoding').value='hevc10';
- if(precisionOutput()){for(const id of ['portrait_mode','relighting_mode'])$(id).value='off';$('temporal_denoise').value='';$('upscale_method').value='vsr';$('sharpening').value=0;displayValue('sharpening');}
+ if(isTenBitSdrOutput()){for(const id of ['portrait_mode','relighting_mode'])$(id).value='off';$('temporal_denoise').value='';$('upscale_method').value='vsr';$('sharpening').value=0;displayValue('sharpening');}
  updateState();
 }
 function updateState(){
@@ -102,24 +102,41 @@ function updateState(){
  $('download-settings').disabled=busy;$('download').disabled=busy;$('download-cancel').hidden=!downloading;
  const portraitTooSmall=source&&(source.width<512||source.height<288);
  if(portraitTooSmall){$('portrait_mode').value='off';$('relighting_mode').value='off';}
- const precision=precisionOutput(),scaling=$('scale').value!=='1',relighting=$('relighting_mode').value!=='off',combined=$('relighting_mode').value==='aigs';
+ const tenBitSdr=isTenBitSdrOutput(),scaling=$('scale').value!=='1',relighting=$('relighting_mode').value!=='off',combined=$('relighting_mode').value==='aigs';
  const combinedBlur=combined&&Number($('relighting_quality').value)>=2;
  if(combined)$('environment_background').checked=true;
  $('environment_background').disabled=combined;
  if(relighting&&$('environment_background').checked)$('portrait_mode').value='off';
- const portrait=$('portrait_mode').value,denoiseTooLarge=source&&(source.width>1920||source.height>1080);
- if(denoiseTooLarge)$('temporal_denoise').value='';
- $('quality').disabled=!scaling||$('upscale_method').value!=='vsr';$('upscale_method').disabled=!scaling||precision;$('upscale_strength').disabled=!scaling;
+ const portrait=$('portrait_mode').value,unsupportedDenoiseSize=source&&(source.height<80||source.height>1080||source.width>1920);
+ if(unsupportedDenoiseSize)$('temporal_denoise').value='';
+ $('quality').disabled=!scaling||$('upscale_method').value!=='vsr';$('upscale_method').disabled=!scaling||tenBitSdr;$('upscale_strength').disabled=!scaling;
  $('frame_quality').disabled=!$('target_fps').value;$('detect_scene_changes').disabled=!$('target_fps').value;
  $('denoise_quality').disabled=Number($('denoise').value)===0;$('deblur_quality').disabled=Number($('deblur').value)===0;
- for(const id of ['temporal_denoise','portrait_mode','relighting_mode','sharpening'])$(id).disabled=precision;
- $('temporal_denoise').disabled=precision||denoiseTooLarge;
- $('portrait_mode').disabled=precision||portraitTooSmall||(relighting&&$('environment_background').checked);$('relighting_mode').disabled=precision||portraitTooSmall;
+ $('sharpening').disabled=tenBitSdr;
+ $('temporal_denoise').disabled=tenBitSdr||unsupportedDenoiseSize;
+ $('portrait_mode').disabled=tenBitSdr||portraitTooSmall||(relighting&&$('environment_background').checked);$('relighting_mode').disabled=tenBitSdr||portraitTooSmall;
  $('segmentation_mode').disabled=combined||(portrait==='off'&&!relighting);$('blur_strength').disabled=portrait!=='blur';$('background_color').disabled=portrait!=='replace';$('relighting_blur_strength').disabled=!combinedBlur;
  $('relighting_quality').disabled=!combined;$('relighting_specularity').disabled=!combined;$('relighting-settings').disabled=!relighting;$('choose-hdri').disabled=!relighting;$('clear-hdri').disabled=!relighting||!hdri;
  $('relighting_field_of_view').disabled=!$('environment_background').checked;$('relighting_background_gain').disabled=!$('environment_background').checked;
- $('hdr-settings').disabled=!$('hdr_enabled').checked;$('output_encoding').disabled=$('hdr_enabled').checked;$('precision-note').hidden=!precision;
- if(source){const scale=Number($('scale').value),format=$('hdr_enabled').checked?'HDR10':precision?'10-bit SDR':'SDR';$('summary').textContent=`${Math.round(source.width*scale)} × ${Math.round(source.height*scale)} · ${$('target_fps').value || 'Original'} FPS · ${format}`;}
+ $('hdr-settings').disabled=!$('hdr_enabled').checked;$('output_encoding').disabled=$('hdr_enabled').checked;$('precision-note').hidden=!tenBitSdr;
+ if(source){const scale=Number($('scale').value),format=$('hdr_enabled').checked?'HDR10':tenBitSdr?'10-bit SDR':'SDR';$('summary').textContent=`${Math.round(source.width*scale)} × ${Math.round(source.height*scale)} · ${$('target_fps').value || 'Original'} FPS · ${format}`;}
+ else $('summary').textContent='Waiting for a video';
+}
+function displayLoadedVideo(){
+ $('name').textContent=source.name;
+ $('dimensions').textContent=`${source.width} × ${source.height}`;
+ $('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable / unknown';
+ $('duration').textContent=source.duration?`${Math.floor(source.duration/60)}:${String(Math.floor(source.duration%60)).padStart(2,'0')}`:'Unknown';
+ $('audio').textContent=source.audio?`${source.audio} track${source.audio>1?'s':''}`:'No audio';
+ $('scale').value='1';
+ $('target_fps').value='';
+ if(['yuv420p10le','p010le'].includes(source.pixel_format)){$('output_encoding').value='hevc10';applyOutputFormat();}
+ for(const option of $('scale').options){
+  const width=Math.round(source.width*Number(option.value)),height=Math.round(source.height*Number(option.value));
+  option.disabled=width>4096||height>4096||width%2!==0||height%2!==0||width*source.height!==height*source.width;
+ }
+ for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;
+ message('Ready. Choose your settings, then Generate.');
 }
 function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
 function downloadMessage(text,error=false){$('download-status').textContent=text;$('download-status').classList.toggle('error',error);}
@@ -129,7 +146,7 @@ $('load').onclick=()=>send('load');
 $('reset').onclick=resetSettings;
 for(const id of ['scale','target_fps','upscale_method','portrait_mode','relighting_mode','relighting_quality'])$(id).onchange=updateState;
 for(const id of ['output_encoding','hdr_enabled'])$(id).onchange=applyOutputFormat;
- $('environment_background').onchange=()=>{if($('environment_background').checked)$('portrait_mode').value='off';updateState();};
+$('environment_background').onchange=updateState;
 for(const id of ['denoise_quality','deblur_quality'])$(id).onchange=markCustom;
 $('choose-hdri').onclick=()=>send('choose-hdri');
 $('clear-hdri').onclick=()=>{hdri=null;$('hdri-name').textContent='No environment selected';updateState();};
@@ -152,11 +169,10 @@ window.receive = event => {
  case 'download-progress':if(!$('download-cancel').disabled)downloadMessage(event.message);break;
  case 'downloaded':busy=false;downloading=false;downloadMessage(`Saved. Use Load video to open it.\n${event.path}`);break;
  case 'download-error':busy=false;downloading=false;downloadMessage(event.message,true);break;
- case 'presets':presets=event.presets;for(const [name,settings] of presets){const b=document.createElement('button');b.textContent=name;b.onclick=()=>applyPreset(name,settings);$('presets').append(b);}resetSettings();break;
+ case 'presets':presets=event.presets;for(const [name,settings] of presets){const button=document.createElement('button');button.textContent=name;button.onclick=()=>applyPreset(name,settings);$('presets').append(button);}resetSettings();break;
  case 'hdri-selected':hdri=event.path;$('hdri-name').textContent=event.name;break;
  case 'loading':source=null;busy=true;$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
- case 'loaded':source=event.source;busy=false;$('name').textContent=source.name;$('dimensions').textContent=`${source.width} × ${source.height}`;$('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable / unknown';$('duration').textContent=source.duration?`${Math.floor(source.duration/60)}:${String(Math.floor(source.duration%60)).padStart(2,'0')}`:'Unknown';$('audio').textContent=source.audio?`${source.audio} track${source.audio>1?'s':''}`:'No audio';
- $('scale').value='1';$('target_fps').value='';if(['yuv420p10le','p010le'].includes(source.pixel_format)){$('output_encoding').value='hevc10';applyOutputFormat();}for(const option of $('scale').options){const width=Math.round(source.width*Number(option.value)),height=Math.round(source.height*Number(option.value));option.disabled=width>4096||height>4096||width%2!==0||height%2!==0||width*source.height!==height*source.width;}for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;message('Ready. Choose your settings, then Generate.');break;
+ case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
  case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
  case 'progress':if(source.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
  case 'finished':busy=false;$('progress').value=1;message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;

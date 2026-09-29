@@ -1,6 +1,6 @@
 //! Temporal cleanup and portrait effects, applied at source resolution before upscaling.
 use std::{ffi::{c_void, CStr, CString}, io, os::windows::process::CommandExt, path::Path, process::{Command, Stdio}, ptr};
-use crate::{job::{PortraitMode, RelightingMode, VideoEnhancementJob}, parser::Parser, resolution::{EnhancedFrame, commands::*, sdk_result}};
+use crate::{job::{PortraitMode, RelightingMode, VideoEnhancementJob}, parser::Parser, resolution::{EnhancedFrame, commands::*, cuda::cuda_result, sdk_result}};
 
 struct EffectStage {
     name: &'static CStr,
@@ -50,14 +50,14 @@ impl EffectStage {
 
     fn allocate_temporal_state(&mut self) -> io::Result<()> {
         self.denoise_state = true;
-        let mut size = 0;
-        let mut allocation = 0;
+        let mut state_size = 0;
+        let mut state_pointer = 0;
         // SAFETY: CUDA is active; the boxed pointer array and its allocation outlive the effect.
         unsafe {
-            sdk_result("Read denoising state size", NvVFX_GetU32(self.handle, c"StateSize".as_ptr(), &mut size))?;
-            cuda_result("Allocate denoising state", cuMemAlloc_v2(&mut allocation, size as usize))?;
-            self.state[0] = allocation as *mut c_void;
-            cuda_result("Reset denoising state", cuMemsetD8Async(allocation, 0, size as usize, self.output.device.stream))?;
+            sdk_result("Read denoising state size", NvVFX_GetU32(self.handle, c"StateSize".as_ptr(), &mut state_size))?;
+            cuda_result("Allocate denoising state", cuMemAlloc_v2(&mut state_pointer, state_size as usize))?;
+            self.state[0] = state_pointer as *mut c_void;
+            cuda_result("Reset denoising state", cuMemsetD8Async(state_pointer, 0, state_size as usize, self.output.device.stream))?;
             sdk_result("Bind denoising state", NvVFX_SetObject(self.handle, c"State".as_ptr(), self.state.as_mut_ptr().cast()))?;
         }
         Ok(())
@@ -108,12 +108,11 @@ pub struct VideoEffects {
     composite: Option<EnhancedFrame>,
     portrait_output: Option<EnhancedFrame>,
     output: Option<EnhancedFrame>,
-    ready: bool,
 }
 
 impl VideoEffects {
     pub fn new(job: &VideoEnhancementJob) -> Self {
-        Self { job: job.clone(), blur: None, relighting: None, segmentation: None, denoising: None, input: None, environment: None, projected_environment: None, background_color: None, composite: None, portrait_output: None, output: None, ready: false }
+        Self { job: job.clone(), blur: None, relighting: None, segmentation: None, denoising: None, input: None, environment: None, projected_environment: None, background_color: None, composite: None, portrait_output: None, output: None }
     }
 
     pub fn enhance<'a>(&'a mut self, frame: &'a EnhancedFrame) -> io::Result<&'a EnhancedFrame> {
@@ -121,7 +120,6 @@ impl VideoEffects {
         let device = std::rc::Rc::clone(&frame.device);
         let _context = device.enter()?;
         if self.input.is_none() { self.initialize(frame)?; }
-        if !self.ready { return Err(io::Error::other("Video effect initialization failed; start a new job")); }
         let result: io::Result<()> = (|| {
             transfer_image(&frame.image, &mut self.input.as_mut().unwrap().image, device.stream)?;
             if let Some(stage) = &self.denoising { stage.run()?; }
@@ -168,12 +166,7 @@ impl VideoEffects {
     }
 
     fn initialize(&mut self, frame: &EnhancedFrame) -> io::Result<()> {
-        if frame.image.component_type != NVCV_U8 { return Err(io::Error::other("Temporal denoising and portrait effects require 8-bit SDR processing")); }
-        if self.job.temporal_denoise.is_some() && (frame.height < 80 || frame.height > 1080 || frame.width > 1920) {
-            return Err(io::Error::other("NVIDIA temporal denoising supports source video from 80p up to 1920×1080"));
-        }
         let portrait = self.job.portrait.mode != PortraitMode::Off || self.job.relighting.mode != RelightingMode::Off;
-        if portrait && (frame.width < 512 || frame.height < 288) { return Err(io::Error::other("NVIDIA portrait effects require source video at least 512×288")); }
         self.input = Some(EnhancedFrame::allocate_format(frame, frame.width, frame.height, NVCV_BGR, NVCV_U8, 0)?);
         self.output = Some(EnhancedFrame::allocate_matching_frame(frame)?);
         if let Some(strength) = self.job.temporal_denoise {
@@ -238,7 +231,6 @@ impl VideoEffects {
             completion?;
             self.background_color = Some(color);
         }
-        self.ready = true;
         Ok(())
     }
 }
@@ -273,8 +265,4 @@ fn load_environment(path: &Path, frame: &EnhancedFrame) -> io::Result<EnhancedFr
 fn transfer_image(source: &NvImage, destination: &mut NvImage, stream: ffmpeg_next::ffi::CUstream) -> io::Result<()> {
     // SAFETY: callers retain both allocations and synchronize before releasing CPU or GPU storage.
     sdk_result("Convert video effect image", unsafe { NvCVImage_Transfer(source, destination, 1.0, stream, ptr::null_mut()) })
-}
-
-fn cuda_result(operation: &str, status: i32) -> io::Result<()> {
-    if status == 0 { Ok(()) } else { Err(io::Error::other(format!("{operation}: CUDA status {status}"))) }
 }

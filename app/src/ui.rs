@@ -1,12 +1,12 @@
-use std::{path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
+use std::{io, path::{Path, PathBuf}, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 use serde_json::{json, Value};
 use tao::{event::{Event, WindowEvent}, event_loop::{ControlFlow, EventLoopBuilder}, window::WindowBuilder, dpi::LogicalSize};
-use video_enhancer::{job::{VideoEnhancementJob, EnhancementSettings}, parser::Parser};
+use video_enhancer::{job::{VideoEnhancementJob, EnhancementSettings}, parser::{FileData, Parser}};
 use crate::youtube::{self, DownloadOptions};
 
 enum AppEvent {
     Command(String),
-    Loaded(Result<Value, String>),
+    Loaded(Result<FileData, String>),
     Progress(Value),
     Finished(Result<Value, String>),
     Downloaded(Result<PathBuf, String>),
@@ -26,7 +26,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             move |url| url.starts_with("data:text/html") && initial_page.swap(false, Ordering::Relaxed)
         })
         .build(&window)?;
-    let mut loaded: Option<PathBuf> = None;
+    let mut loaded_path: Option<PathBuf> = None;
     let mut busy = false;
     let mut close_when_finished = false;
     let cancelled = Arc::new(AtomicBool::new(false));
@@ -69,33 +69,19 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         });
                     }
                     "load" if !busy => {
-                        let directory = youtube::directory();
-                        if let Err(error) = std::fs::create_dir_all(&directory) {
-                            emit(json!({"type":"error", "message":format!("Could not create youtube-videos: {error}")}));
-                            return;
-                        }
-                        if let Some(path) = rfd::FileDialog::new().set_title("Load video").set_directory(directory).add_filter("Video", &["mp4", "mkv", "mov", "avi", "webm", "m4v"]).pick_file() {
+                        if let Some(path) = rfd::FileDialog::new().set_title("Load video").set_directory(youtube::directory()).add_filter("Video", &["mp4", "mkv", "mov", "avi", "webm", "m4v"]).pick_file() {
                             busy = true;
-                            loaded = None;
+                            loaded_path = None;
                             emit(json!({"type":"loading"}));
                             let sender = proxy.clone();
                             std::thread::spawn(move || {
-                                let result = Parser::new(&path).get_video_information().and_then(|source| {
-                                    if !["h264", "hevc", "av1"].contains(&source.codec.as_str()) || !["yuv420p", "yuvj420p", "nv12", "yuv420p10le", "p010le"].contains(&source.pixel_format.as_str()) {
-                                        return Err(std::io::Error::other("Choose an 8-bit or 10-bit SDR H.264, HEVC or AV1 video."));
-                                    }
-                                    let video = source.metadata["streams"].as_array().and_then(|streams| streams.iter().find(|stream| stream["index"].as_u64() == Some(u64::from(source.video_stream_index))));
-                                    if video.and_then(|stream| stream["color_transfer"].as_str()).is_some_and(|transfer| ["smpte2084", "arib-std-b67"].contains(&transfer)) {
-                                        return Err(std::io::Error::other("Choose an SDR source. TrueHDR converts SDR to HDR10; existing HDR sources are not supported."));
-                                    }
-                                    Ok(json!({"path":source.path, "name":path.file_name().unwrap_or_default().to_string_lossy(), "width":source.width, "height":source.height, "fps":source.fps, "duration":source.duration_seconds, "audio":source.audio_streams.len(), "codec":source.codec, "pixel_format":source.pixel_format}))
-                                }).map_err(|error| error.to_string());
+                                let result = load_video_information(&path).map_err(|error| error.to_string());
                                 let _ = sender.send_event(AppEvent::Loaded(result));
                             });
                         }
                     }
-                    "generate" if !busy && loaded.is_some() => {
-                        let source_path = loaded.as_ref().unwrap();
+                    "generate" if !busy => {
+                        let Some(source_path) = loaded_path.as_ref() else { return; };
                         let name = format!("{}-enhanced.mp4", source_path.file_stem().unwrap_or_default().to_string_lossy());
                         let Some(output) = rfd::FileDialog::new().set_title("Save enhanced video — choose a new filename").add_filter("MP4 video", &["mp4"]).set_file_name(name).save_file() else { return; };
                         let mut value = message["job"].clone();
@@ -129,8 +115,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 busy = false;
                 match result {
                     Ok(source) => {
-                        loaded = source["path"].as_str().map(PathBuf::from);
-                        emit(json!({"type":"loaded", "source":source}));
+                        loaded_path = Some(source.path.clone());
+                        emit(json!({"type":"loaded", "source":{"name":source.path.file_name().unwrap_or_default().to_string_lossy(), "width":source.width, "height":source.height, "fps":source.fps, "duration":source.duration_seconds, "audio":source.audio_streams.len(), "pixel_format":source.pixel_format}}));
                     }
                     Err(error) => emit(json!({"type":"error", "message":error})),
                 }
@@ -153,4 +139,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         }
     });
+}
+
+fn load_video_information(path: &Path) -> io::Result<FileData> {
+    let source = Parser::new(path).get_video_information()?;
+    if !["h264", "hevc", "av1"].contains(&source.codec.as_str()) || !["yuv420p", "yuvj420p", "nv12", "yuv420p10le", "p010le"].contains(&source.pixel_format.as_str()) {
+        return Err(io::Error::other("Choose an 8-bit or 10-bit SDR H.264, HEVC or AV1 video."));
+    }
+    let video_stream = source.metadata["streams"].as_array().and_then(|streams| streams.iter().find(|stream| stream["index"].as_u64() == Some(u64::from(source.video_stream_index))));
+    if video_stream.and_then(|stream| stream["color_transfer"].as_str()).is_some_and(|transfer| ["smpte2084", "arib-std-b67"].contains(&transfer)) {
+        return Err(io::Error::other("Choose an SDR source. TrueHDR converts SDR to HDR10; existing HDR sources are not supported."));
+    }
+    Ok(source)
 }

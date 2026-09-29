@@ -154,7 +154,7 @@ pub struct VideoEnhancementJob {
 }
 
 impl VideoEnhancementJob {
-    pub fn validate(&self, source: &FileData) -> io::Result<()> {
+    fn validate(&self, source: &FileData) -> io::Result<()> {
         if ![1.0, 4.0 / 3.0, 1.5, 2.0, 3.0, 4.0].contains(&self.resolution_scale) || ![0, 1, 2, 3, 4, 16, 17, 18, 19, 21, 23].contains(&self.upscale_quality) {
             return Err(io::Error::other("Choose a supported resolution scale and VSR quality mode"));
         }
@@ -182,8 +182,11 @@ impl VideoEnhancementJob {
         if self.output_encoding == OutputEncoding::Hevc10 && !self.hdr.enabled && (self.temporal_denoise.is_some() || self.portrait.mode != PortraitMode::Off || self.relighting.mode != RelightingMode::Off || (self.upscale_method == UpscaleMethod::Lightweight && self.resolution_scale > 1.0) || settings.sharpening != 0.0) {
             return Err(io::Error::other("10-bit SDR supports VSR cleanup/upscaling, colour controls and frame generation. Temporal denoise, portrait effects, lightweight upscale and SDK sharpening require 8-bit processing."));
         }
-        if self.temporal_denoise.is_some() && (source.width > 1920 || source.height > 1080) {
-            return Err(io::Error::other("NVIDIA temporal denoise supports source frames up to 1920 × 1080"));
+        if self.temporal_denoise.is_some() && (source.height < 80 || source.height > 1080 || source.width > 1920) {
+            return Err(io::Error::other("NVIDIA temporal denoise supports source heights from 80 to 1080 pixels and widths up to 1920 pixels"));
+        }
+        if (self.portrait.mode != PortraitMode::Off || self.relighting.mode != RelightingMode::Off) && (source.width < 512 || source.height < 288) {
+            return Err(io::Error::other("NVIDIA portrait effects require source video at least 512 × 288"));
         }
         if self.relighting.mode != RelightingMode::Off {
             if !self.relighting.hdri.as_ref().is_some_and(|path| path.is_file()) {
@@ -210,45 +213,44 @@ impl VideoEnhancementJob {
             ("Specularity", self.relighting.specularity, 0.0, 1.0),
             ("Relighting background blur", self.relighting.blur_strength, 0.0, 2.0),
         ] {
-            if !value.is_finite() || !(low..=high).contains(&value) { return Err(io::Error::other(format!("{name} is outside its supported range"))); }
+            if !(low..=high).contains(&value) { return Err(io::Error::other(format!("{name} is outside its supported range"))); }
         }
         if !self.output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("mp4")) {
             return Err(io::Error::other("Choose an .mp4 output file"));
         }
-        if self.output.exists() { return Err(io::Error::other("Output already exists. Choose a new filename; source and existing videos are never overwritten.")); }
         Ok(())
     }
 
     pub fn run(&self, cancelled: &AtomicBool, mut progress: impl FnMut(u64, f64)) -> io::Result<u64> {
         let source = Parser::new(&self.input).get_video_information()?;
         self.validate(&source)?;
-        let mut resolution = ResolutionEnhancer::new(self);
-        let mut frame_rate = FrameRateEnhancer::new(self, source.video_end_time)?;
-        let mut adjuster = VideoAdjuster::new(self);
+        let mut resolution_enhancer = ResolutionEnhancer::new(self);
+        let mut frame_rate_enhancer = FrameRateEnhancer::new(self, source.video_end_time);
+        let mut video_adjuster = VideoAdjuster::new(self);
         let mut sharpener = Sharpener::new(self);
-        let mut hdr = crate::hdr::TrueHdr::new(self);
-        let mut encoder = VideoEncoder::new(&source, self)?;
-        let mut count = 0;
+        let mut hdr_converter = crate::hdr::TrueHdr::new(self);
+        let mut video_encoder = VideoEncoder::new(&source, self)?;
+        let mut encoded_frames = 0;
         let result = (|| {
-            let mut encode = |timed: FrameForEncoder<'_>| {
+            let mut encode_frame = |timed_frame: FrameForEncoder<'_>| {
                 if cancelled.load(Ordering::Relaxed) { return Err(io::Error::new(io::ErrorKind::Interrupted, "Export cancelled")); }
-                let adjusted = adjuster.adjust(timed.frame)?;
-                let sharpened = sharpener.sharpen(adjusted)?;
-                let output = hdr.enhance(sharpened)?;
-                encoder.encode(FrameForEncoder { frame: output, ..timed })?;
-                count += 1;
-                let seconds = timed.presentation_timestamp as f64 * timed.time_base.0 as f64 / timed.time_base.1 as f64;
-                progress(count, seconds);
+                let adjusted_frame = video_adjuster.adjust(timed_frame.frame)?;
+                let sharpened_frame = sharpener.sharpen(adjusted_frame)?;
+                let output_frame = hdr_converter.enhance(sharpened_frame)?;
+                video_encoder.encode(FrameForEncoder { frame: output_frame, ..timed_frame })?;
+                encoded_frames += 1;
+                let timestamp_seconds = timed_frame.presentation_timestamp as f64 * timed_frame.time_base.0 as f64 / timed_frame.time_base.1 as f64;
+                progress(encoded_frames, timestamp_seconds);
                 Ok(())
             };
-            video_decoder::decode(&source, |decoded| {
+            video_decoder::decode(&source, |decoded_frame| {
                 if cancelled.load(Ordering::Relaxed) { return Err(io::Error::new(io::ErrorKind::Interrupted, "Export cancelled")); }
-                let enhanced = resolution.enhance(&decoded)?;
-                frame_rate.enhance(enhanced, &mut encode)
+                let enhanced_frame = resolution_enhancer.enhance(&decoded_frame)?;
+                frame_rate_enhancer.enhance(enhanced_frame, &mut encode_frame)
             })?;
-            frame_rate.finish(&mut encode)?;
-            encoder.finish()?;
-            Ok(count)
+            frame_rate_enhancer.finish(&mut encode_frame)?;
+            video_encoder.finish()?;
+            Ok(encoded_frames)
         })();
         // An interrupted export is kept for diagnosis; it is never reported as complete.
         result.map_err(|error: io::Error| io::Error::new(error.kind(), format!("{error}. Incomplete output may remain at {}", self.output.display())))

@@ -8,7 +8,6 @@ use crate::parser::FileData;
 /// Owns a CUDA frame and the references keeping its GPU allocation/context alive.
 /// Dropping this value releases its frame; there is no CPU pixel buffer.
 pub struct DecodedFrame {
-    pub timestamp_seconds: f64,
     /// Presentation timestamp in `time_base` units, retained without rounding.
     pub presentation_timestamp: i64,
     pub time_base: (i32, i32),
@@ -24,25 +23,21 @@ fn failure(stage: &str, error: ffmpeg::Error) -> io::Error {
 
 /// Hand each owned GPU frame to the consumer before decoding more output.
 pub fn decode(video: &FileData, mut on_frame_decoded: impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
-
-    let mut video_file = open_video_file(video)?;
-
-    let (mut decoder, time_base) = open_video_decoder(&video_file, video)?;
-
-    process_gpu_frames(&mut video_file, &mut decoder, video.video_stream_index as usize, time_base, &mut on_frame_decoded)
+    let mut video_reader = open_video_reader(video)?;
+    let (mut video_decoder, time_base) = open_video_decoder(&video_reader, video)?;
+    decode_video_packets(&mut video_reader, &mut video_decoder, video.video_stream_index as usize, time_base, &mut on_frame_decoded)
 }
 
-fn open_video_file(video: &FileData) -> io::Result<ffmpeg::format::context::Input> {
+fn open_video_reader(video: &FileData) -> io::Result<ffmpeg::format::context::Input> {
     ffmpeg::init().map_err(|e| failure("Initialize FFmpeg", e))?;
 
     // The wrapper expects a UTF-8 filename; reject unsupported paths explicitly.
     let path = video.path.to_str().ok_or_else(|| io::Error::other("Video path is not valid UTF-8"))?;
-    let video_file = ffmpeg::format::input(&path).map_err(|e| failure("Open video", e))?;
-    Ok(video_file)
+    ffmpeg::format::input(&path).map_err(|e| failure("Open video", e))
 }
 
-fn open_video_decoder(video_file: &ffmpeg::format::context::Input, video: &FileData) -> io::Result<(ffmpeg::decoder::Video, ffmpeg::Rational)> {
-    let video_stream = video_file.stream(video.video_stream_index as usize).ok_or_else(|| io::Error::other("Selected video stream no longer exists"))?;
+fn open_video_decoder(video_reader: &ffmpeg::format::context::Input, video: &FileData) -> io::Result<(ffmpeg::decoder::Video, ffmpeg::Rational)> {
+    let video_stream = video_reader.stream(video.video_stream_index as usize).ok_or_else(|| io::Error::other("Selected video stream no longer exists"))?;
     let time_base = video_stream.time_base();
 
     let decoder_name = match video.codec.as_str() {
@@ -56,9 +51,9 @@ fn open_video_decoder(video_file: &ffmpeg::format::context::Input, video: &FileD
     let mut decoder_context = ffmpeg::codec::Context::from_parameters(video_stream.parameters()).map_err(|e| failure("Read decoder parameters", e))?;
 
     configure_cuda_decoder(&mut decoder_context, time_base)?;
-    let decoder: ffmpeg_next::decoder::Video = decoder_context.decoder().open_as(decoder_implementation).and_then(|opened| opened.video()).map_err(|e| failure("Open NVIDIA decoder", e))?;
+    let video_decoder = decoder_context.decoder().open_as(decoder_implementation).and_then(|opened| opened.video()).map_err(|e| failure("Open NVIDIA decoder", e))?;
 
-    Ok((decoder, time_base))
+    Ok((video_decoder, time_base))
 }
 
 fn configure_cuda_decoder(decoder_context: &mut ffmpeg::codec::Context, time_base: ffmpeg::Rational) -> io::Result<()> {
@@ -92,7 +87,7 @@ unsafe extern "C" fn select_cuda_frame_format(_decoder_context: *mut ffi::AVCode
     ffi::AVPixelFormat::AV_PIX_FMT_NONE
 }
 
-fn process_gpu_frames(video_reader: &mut ffmpeg::format::context::Input, video_decoder: &mut ffmpeg::decoder::Video, video_stream_index: usize, time_base: ffmpeg::Rational, on_frame_decoded: &mut impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
+fn decode_video_packets(video_reader: &mut ffmpeg::format::context::Input, video_decoder: &mut ffmpeg::decoder::Video, video_stream_index: usize, time_base: ffmpeg::Rational, on_frame_decoded: &mut impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
     let mut received_frame = false;
     let mut record_and_forward_frame = |frame| {
         received_frame = true;
@@ -140,24 +135,24 @@ fn finish_decoding(video_decoder: &mut ffmpeg::decoder::Video, on_frame_decoded:
     receive_gpu_frames(video_decoder, time_base, true, on_frame_decoded)
 }
 
-fn receive_gpu_frames(decoder: &mut ffmpeg::decoder::Video, time_base: ffmpeg::Rational, flushing: bool, on_frame_decoded: &mut impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
+fn receive_gpu_frames(video_decoder: &mut ffmpeg::decoder::Video, time_base: ffmpeg::Rational, flushing: bool, on_frame_decoded: &mut impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
     loop {
-        let mut decoded = frame::Video::empty();
-        match decoder.receive_frame(&mut decoded) {
+        let mut decoded_frame = frame::Video::empty();
+        match video_decoder.receive_frame(&mut decoded_frame) {
             Ok(()) => {}
             Err(ffmpeg::Error::Other { errno: ffmpeg::error::EAGAIN }) if !flushing => return Ok(()),
             Err(ffmpeg::Error::Eof) if flushing => return Ok(()),
             Err(e) => return Err(failure("Receive NVIDIA frame", e)),
         }
-        on_frame_decoded(prepare_decoded_frame(decoded, time_base)?)?;
+        on_frame_decoded(prepare_decoded_frame(decoded_frame, time_base)?)?;
     }
 }
 
-fn prepare_decoded_frame(decoded: frame::Video, time_base: ffmpeg::Rational) -> io::Result<DecodedFrame> {
+fn prepare_decoded_frame(decoded_frame: frame::Video, time_base: ffmpeg::Rational) -> io::Result<DecodedFrame> {
     // SAFETY: successful CUVID output selected by select_cuda_frame_format owns
     // a live hardware-frame context. Only its format metadata is read here.
     let pixel_format = unsafe {
-        let frame_ptr = decoded.as_ptr();
+        let frame_ptr = decoded_frame.as_ptr();
         let gpu_frames_context = &*(*(*frame_ptr).hw_frames_ctx).data.cast::<ffi::AVHWFramesContext>();
         match gpu_frames_context.sw_format {
             ffi::AVPixelFormat::AV_PIX_FMT_NV12 => "nv12",
@@ -165,16 +160,15 @@ fn prepare_decoded_frame(decoded: frame::Video, time_base: ffmpeg::Rational) -> 
             _ => return Err(io::Error::other("Unsupported CUDA frame pixel format")),
         }
     };
-    let presentation_timestamp = decoded.timestamp().or_else(|| decoded.pts()).ok_or_else(|| io::Error::other("Missing frame timestamp"))?;
+    let presentation_timestamp = decoded_frame.timestamp().or_else(|| decoded_frame.pts()).ok_or_else(|| io::Error::other("Missing frame timestamp"))?;
     // CUVID copies output into independently owned CUDA buffers, so
     // retaining these does not hold the limited NVDEC decode surfaces.
     Ok(DecodedFrame {
-        timestamp_seconds: presentation_timestamp as f64 * f64::from(time_base),
         presentation_timestamp,
         time_base: (time_base.numerator(), time_base.denominator()),
         pixel_format,
-        // SAFETY: decoded owns this live AVFrame; duration is scalar metadata.
-        duration: unsafe { (*decoded.as_ptr()).duration },
-        frame: decoded,
+        // SAFETY: decoded_frame owns this live AVFrame; duration is scalar metadata.
+        duration: unsafe { (*decoded_frame.as_ptr()).duration },
+        frame: decoded_frame,
     })
 }

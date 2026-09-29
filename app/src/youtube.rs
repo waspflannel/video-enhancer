@@ -26,12 +26,12 @@ pub fn download(options: DownloadOptions, cancelled: &AtomicBool, progress: impl
     let mut filter = String::new();
     if options.height != 0 { filter.push_str(&format!("[height<={}]", options.height)); }
     if options.fps != 0 { filter.push_str(&format!("[fps<=?{}]", options.fps)); }
-    let (video, audio) = if options.format == "mp4" {
+    let (video_filter, audio_selection) = if options.format == "mp4" {
         ("[vcodec^=avc1]", "ba[ext=m4a]")
     } else {
         ("[vcodec~='^(avc1|av01|hvc1|hev1)'][dynamic_range=SDR]", "ba")
     };
-    let selection = format!("bv{video}{filter}+{audio}/b{video}{filter}");
+    let format_selection = format!("bv{video_filter}{filter}+{audio_selection}/b{video_filter}{filter}");
     let directory = directory();
     std::fs::create_dir_all(&directory)?;
     let mut child = Command::new("yt-dlp")
@@ -39,7 +39,7 @@ pub fn download(options: DownloadOptions, cancelled: &AtomicBool, progress: impl
         .args(["--ignore-config", "--no-playlist", "--use-extractors", "youtube", "--no-overwrites", "--windows-filenames", "--newline", "--progress", "--progress-delta", "0.5", "--encoding", "utf-8", "--js-runtimes", "node"])
         .args(["--ffmpeg-location", concat!(env!("CARGO_MANIFEST_DIR"), "/../tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin")])
         .arg("--paths").arg(&directory)
-        .args(["--output", "%(title).120B [%(id)s] [%(format_id)s].%(ext)s", "--format", &selection, "--merge-output-format", &options.format, "--remux-video", &options.format, "--print", "after_move:DOWNLOAD_FILE:%(filepath)j", "--", url])
+        .args(["--output", "%(title).120B [%(id)s] [%(format_id)s].%(ext)s", "--format", &format_selection, "--merge-output-format", &options.format, "--remux-video", &options.format, "--print", "after_move:DOWNLOAD_FILE:%(filepath)j", "--", url])
         .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped())
         .spawn().map_err(|error| io::Error::other(format!("Could not start yt-dlp: {error}. Make sure yt-dlp is on PATH, then reopen the app.")))?;
     let stdout = child.stdout.take().unwrap();
@@ -88,7 +88,5 @@ pub fn download(options: DownloadOptions, cancelled: &AtomicBool, progress: impl
     if !status.success() {
         return Err(io::Error::other(format!("yt-dlp failed ({status}).\n{diagnostics}")));
     }
-    let path = output.ok_or_else(|| io::Error::other("yt-dlp did not report a completed video file"))?;
-    if !path.is_file() { return Err(io::Error::other("The downloaded video could not be found")); }
-    Ok(path)
+    output.ok_or_else(|| io::Error::other("yt-dlp did not report a completed video file"))
 }

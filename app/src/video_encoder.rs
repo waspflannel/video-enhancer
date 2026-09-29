@@ -1,15 +1,6 @@
 //! Encodes timed GPU frames and copies source audio into a new MP4 file.
-//!
-//! Flow: the first frame opens NVENC on the decoder's CUDA device and writes the
-//! container header. Each encode call converts RGB to limited-range NV12 or P010
-//! on the GPU, submits that owned frame, then writes available compressed packets.
-//! FFmpeg retains submitted buffers until NVENC finishes; the enhancer's borrowed
-//! image can be reused as soon as conversion completes. The hardware frame pool
-//! reuses released allocations instead of retaining the whole video.
-//! Audio packets bypass enhancement and keep their source timestamps. Read them
-//! alongside video output so the muxer does not buffer an entire audio track.
-//! Call finish after frame-rate conversion finishes to flush NVENC, copy remaining
-//! audio, and write the trailer. Stop on errors; an unfinished output is incomplete.
+//! NVENC owns converted GPU frames until compression finishes; borrowed input buffers can be reused.
+//! Audio is copied progressively with its source timestamps. Call finish to flush and write the trailer.
 
 use std::{fs::OpenOptions, io, ptr, rc::Rc};
 use crate::{job::{EncoderSettings, OutputEncoding, VideoEnhancementJob}, pixel_conversion::PixelConverter};
@@ -22,7 +13,7 @@ pub struct VideoEncoder {
     audio_reader: ffmpeg::format::context::Input,
     audio_stream_mapping: Vec<Option<usize>>,
     pending_audio_packet: Option<ffmpeg::Packet>,
-    target_frame_rate: (i32, i32),
+    target_frame_rate: ffmpeg::Rational,
     settings: EncoderSettings,
     ten_bit: bool,
     converter: Option<PixelConverter>,
@@ -30,22 +21,21 @@ pub struct VideoEncoder {
 
 impl VideoEncoder {
     pub fn new(source: &FileData, job: &VideoEnhancementJob) -> io::Result<Self> {
-        let source_rate = source.metadata["streams"].as_array().and_then(|streams| streams.iter().find(|stream| stream["index"].as_u64() == Some(u64::from(source.video_stream_index))))
-            .and_then(|stream| stream["avg_frame_rate"].as_str()).and_then(|rate| rate.split_once('/'))
-            .and_then(|(n, d)| Some((n.parse::<i32>().ok()?, d.parse::<i32>().ok()?)))
-            .filter(|(n, d)| *n > 0 && *d > 0).unwrap_or((0, 1));
-        let target_frame_rate = job.target_fps.map_or(source_rate, |fps| (fps as i32, 1));
-        let output_path = &job.output;
         ffmpeg::init().map_err(|e| failure("Initialize FFmpeg encoder", e))?;
         let source_path = source.path.to_str().ok_or_else(|| io::Error::other("Source path is not valid UTF-8"))?;
-        let output_path = output_path.to_str().ok_or_else(|| io::Error::other("Output path is not valid UTF-8"))?;
+        let output_path = job.output.to_str().ok_or_else(|| io::Error::other("Output path is not valid UTF-8"))?;
         let audio_reader = ffmpeg::format::input(&source_path).map_err(|e| failure("Open source audio", e))?;
+        let source_frame_rate = audio_reader.stream(source.video_stream_index as usize).ok_or_else(|| io::Error::other("Selected video stream no longer exists"))?.avg_frame_rate();
+        let target_frame_rate = job.target_fps.map_or(source_frame_rate, |fps| (fps as i32, 1).into());
         // Exclusive creation also protects the source, hard links, and existing exports.
-        OpenOptions::new().write(true).create_new(true).open(output_path)?;
+        OpenOptions::new().write(true).create_new(true).open(output_path).map_err(|error| {
+            if error.kind() == io::ErrorKind::AlreadyExists {
+                io::Error::new(error.kind(), "Output already exists. Choose a new filename; source and existing videos are never overwritten.")
+            } else { error }
+        })?;
         let mut output_file = ffmpeg::format::output_as(&output_path, "mp4").map_err(|e| failure("Create MP4 output", e))?;
         let ten_bit = job.output_encoding == OutputEncoding::Hevc10;
-        let codec = if ten_bit { ffmpeg::codec::Id::HEVC } else { ffmpeg::codec::Id::H264 };
-        output_file.add_stream(ffmpeg::encoder::find(codec)).map_err(|e| failure("Create output video track", e))?;
+        output_file.add_stream(None::<ffmpeg::Codec>).map_err(|e| failure("Create output video track", e))?;
         let mut audio_stream_mapping = vec![None; audio_reader.nb_streams() as usize];
         for source_stream in audio_reader.streams().filter(|stream| stream.parameters().medium() == ffmpeg::media::Type::Audio) {
             let mut output_stream = output_file.add_stream(None::<ffmpeg::Codec>).map_err(|e| failure("Create output audio track", e))?;
@@ -83,13 +73,10 @@ impl VideoEncoder {
     }
 
     fn open_video_encoder(&mut self, first_frame: &FrameForEncoder<'_>) -> io::Result<()> {
-        let name = if self.ten_bit { "hevc_nvenc" } else { "h264_nvenc" };
-        let encoder_implementation = ffmpeg::encoder::find_by_name(name).ok_or_else(|| io::Error::other(format!("FFmpeg lacks {name}")))?;
+        let encoder_name = if self.ten_bit { "hevc_nvenc" } else { "h264_nvenc" };
+        let encoder_implementation = ffmpeg::encoder::find_by_name(encoder_name).ok_or_else(|| io::Error::other(format!("FFmpeg lacks {encoder_name}")))?;
         let mut encoder_context = ffmpeg::codec::Context::new_with_codec(encoder_implementation).encoder().video().map_err(|e| failure("Create NVENC context", e))?;
         let image = first_frame.frame;
-        if self.ten_bit != (image.image.pixel_format == NVCV_RGB10A2) {
-            return Err(io::Error::other("Encoder bit depth does not match the enhanced frame"));
-        }
         if self.ten_bit { self.converter = Some(PixelConverter::new(Rc::clone(&image.device))?); }
         encoder_context.set_width(image.width);
         encoder_context.set_height(image.height);
@@ -184,19 +171,19 @@ fn configure_encoder_gpu_buffers(encoder_context: &mut ffmpeg::codec::encoder::v
     // SAFETY: the unopened codec owns this new pool reference, including on errors.
     // The pool retains the existing decoder device and supplies independent YUV buffers.
     unsafe {
-        let context = &mut *encoder_context.as_mut_ptr();
+        let encoder_context = &mut *encoder_context.as_mut_ptr();
         // Otherwise FFmpeg substitutes a full FPS interval for the shortened final frame.
-        context.flags |= ffi::AV_CODEC_FLAG_FRAME_DURATION as i32;
-        context.hw_frames_ctx = ffi::av_hwframe_ctx_alloc(frame.frame.device.reference);
-        if context.hw_frames_ctx.is_null() { return Err(io::Error::other("Allocate encoder GPU frame pool: out of memory")); }
-        let pool = &mut *(*context.hw_frames_ctx).data.cast::<ffi::AVHWFramesContext>();
-        pool.format = ffi::AVPixelFormat::AV_PIX_FMT_CUDA;
+        encoder_context.flags |= ffi::AV_CODEC_FLAG_FRAME_DURATION as i32;
+        encoder_context.hw_frames_ctx = ffi::av_hwframe_ctx_alloc(frame.frame.device.reference);
+        if encoder_context.hw_frames_ctx.is_null() { return Err(io::Error::other("Allocate encoder GPU frame pool: out of memory")); }
+        let gpu_frame_pool = &mut *(*encoder_context.hw_frames_ctx).data.cast::<ffi::AVHWFramesContext>();
+        gpu_frame_pool.format = ffi::AVPixelFormat::AV_PIX_FMT_CUDA;
         let ten_bit = frame.frame.image.pixel_format == NVCV_RGB10A2;
-        pool.sw_format = if ten_bit { ffi::AVPixelFormat::AV_PIX_FMT_P010LE } else { ffi::AVPixelFormat::AV_PIX_FMT_NV12 };
-        pool.width = context.width;
-        pool.height = context.height;
-        native_result("Initialize encoder GPU frame pool", ffi::av_hwframe_ctx_init(context.hw_frames_ctx))?;
-        context.chroma_sample_location = ffi::AVChromaLocation::AVCHROMA_LOC_LEFT;
+        gpu_frame_pool.sw_format = if ten_bit { ffi::AVPixelFormat::AV_PIX_FMT_P010LE } else { ffi::AVPixelFormat::AV_PIX_FMT_NV12 };
+        gpu_frame_pool.width = encoder_context.width;
+        gpu_frame_pool.height = encoder_context.height;
+        native_result("Initialize encoder GPU frame pool", ffi::av_hwframe_ctx_init(encoder_context.hw_frames_ctx))?;
+        encoder_context.chroma_sample_location = ffi::AVChromaLocation::AVCHROMA_LOC_LEFT;
     }
     Ok(())
 }
@@ -204,11 +191,7 @@ fn configure_encoder_gpu_buffers(encoder_context: &mut ffmpeg::codec::encoder::v
 fn prepare_encoder_frame(video_encoder: &ffmpeg::encoder::Video, frame: &FrameForEncoder<'_>, converter: Option<&PixelConverter>) -> io::Result<ffmpeg::frame::Video> {
     let mut gpu_frame = ffmpeg::frame::Video::empty();
     let device = &frame.frame.device;
-    // The raw conversion reads the source dimensions, so its destination must match.
-    if frame.frame.width != video_encoder.width() || frame.frame.height != video_encoder.height() {
-        return Err(io::Error::other("Encoder requires a fixed frame size for this video"));
-    }
-    // SAFETY: the active CUDA context matches the initialized pool. AVFrame owns its
+    // SAFETY: the pipeline reuses fixed-size images matching this CUDA pool. AVFrame owns its
     // allocation; FFmpeg retains another reference when NVENC needs delayed access.
     unsafe {
         native_result("Allocate encoder GPU frame", ffi::av_hwframe_get_buffer((*video_encoder.as_ptr()).hw_frames_ctx, gpu_frame.as_mut_ptr(), 0))?;

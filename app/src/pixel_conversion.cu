@@ -10,11 +10,11 @@ __device__ float chroma_sample(const unsigned char *plane, int pitch, int width,
 __device__ float chroma(const unsigned char *plane, int pitch, int width, int height, float x, float y, int component, int ten_bit) {
     int left = (int)floorf(x), top = (int)floorf(y);
     float dx = x - left, dy = y - top;
-    float a = chroma_sample(plane, pitch, width, height, left, top, component, ten_bit);
-    float b = chroma_sample(plane, pitch, width, height, left + 1, top, component, ten_bit);
-    float c = chroma_sample(plane, pitch, width, height, left, top + 1, component, ten_bit);
-    float d = chroma_sample(plane, pitch, width, height, left + 1, top + 1, component, ten_bit);
-    return (a + dx * (b - a)) * (1.0f - dy) + (c + dx * (d - c)) * dy;
+    float top_left = chroma_sample(plane, pitch, width, height, left, top, component, ten_bit);
+    float top_right = chroma_sample(plane, pitch, width, height, left + 1, top, component, ten_bit);
+    float bottom_left = chroma_sample(plane, pitch, width, height, left, top + 1, component, ten_bit);
+    float bottom_right = chroma_sample(plane, pitch, width, height, left + 1, top + 1, component, ten_bit);
+    return (top_left + dx * (top_right - top_left)) * (1.0f - dy) + (bottom_left + dx * (bottom_right - bottom_left)) * dy;
 }
 
 extern "C" __global__ void decode_yuv(const unsigned char *luma, const unsigned char *uv, int y_pitch, int uv_pitch, unsigned char *output, int output_pitch, int width, int height, int source_ten_bit, int output_ten_bit, int colorspace) {

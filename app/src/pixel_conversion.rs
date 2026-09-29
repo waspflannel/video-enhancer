@@ -1,7 +1,6 @@
 //! GPU conversion for packed 10-bit images, which NvCV's raw YUV transfer does not support.
-use std::{ffi::{c_char, c_void}, io, ptr, rc::Rc};
-use ffmpeg_next::ffi;
-use crate::{resolution::{commands::{NvImage, NVCV_RGB10A2}, cuda::CudaDevice}, video_adjuster::compile_kernel, video_decoder::DecodedFrame};
+use std::{ffi::c_void, io, ptr, rc::Rc};
+use crate::{resolution::{commands::*, cuda::{CudaDevice, cuda_result}}, video_adjuster::compile_kernel, video_decoder::DecodedFrame};
 
 pub(crate) struct PixelConverter {
     module: *mut c_void,
@@ -16,9 +15,9 @@ impl PixelConverter {
         let mut converter = Self { module: ptr::null_mut(), decode: ptr::null_mut(), encode: ptr::null_mut(), device };
         // SAFETY: the caller activates this device; the module stays live through every synchronized launch.
         unsafe {
-            check("Load pixel conversion kernel", cuModuleLoadData(&mut converter.module, ptx.as_ptr().cast()))?;
-            check("Find YUV conversion kernel", cuModuleGetFunction(&mut converter.decode, converter.module, c"decode_yuv".as_ptr()))?;
-            check("Find P010 conversion kernel", cuModuleGetFunction(&mut converter.encode, converter.module, c"encode_p010".as_ptr()))?;
+            cuda_result("Load pixel conversion kernel", cuModuleLoadData(&mut converter.module, ptx.as_ptr().cast()))?;
+            cuda_result("Find YUV conversion kernel", cuModuleGetFunction(&mut converter.decode, converter.module, c"decode_yuv".as_ptr()))?;
+            cuda_result("Find P010 conversion kernel", cuModuleGetFunction(&mut converter.encode, converter.module, c"encode_p010".as_ptr()))?;
         }
         Ok(converter)
     }
@@ -70,7 +69,7 @@ impl PixelConverter {
 
     fn launch(&self, function: *mut c_void, width: u32, height: u32, arguments: &mut [*mut c_void]) -> io::Result<()> {
         // SAFETY: each caller supplies arguments matching its CUDA entrypoint and retains both images until sync.
-        let result = check("Convert GPU pixels", unsafe { cuLaunchKernel(function, width.div_ceil(16), height.div_ceil(16), 1, 16, 16, 1, 0, self.device.stream, arguments.as_mut_ptr(), ptr::null_mut()) });
+        let result = cuda_result("Convert GPU pixels", unsafe { cuLaunchKernel(function, width.div_ceil(16), height.div_ceil(16), 1, 16, 16, 1, 0, self.device.stream, arguments.as_mut_ptr(), ptr::null_mut()) });
         let completion = self.device.synchronize();
         result?;
         completion
@@ -84,16 +83,4 @@ impl Drop for PixelConverter {
             unsafe { cuModuleUnload(self.module) };
         }
     }
-}
-
-fn check(operation: &str, status: i32) -> io::Result<()> {
-    if status == 0 { Ok(()) } else { Err(io::Error::other(format!("{operation}: CUDA status {status}"))) }
-}
-
-#[link(name = "nvcuda", kind = "raw-dylib")]
-unsafe extern "system" {
-    fn cuModuleLoadData(module: *mut *mut c_void, image: *const c_void) -> i32;
-    fn cuModuleGetFunction(function: *mut *mut c_void, module: *mut c_void, name: *const c_char) -> i32;
-    fn cuModuleUnload(module: *mut c_void) -> i32;
-    fn cuLaunchKernel(function: *mut c_void, grid_x: u32, grid_y: u32, grid_z: u32, block_x: u32, block_y: u32, block_z: u32, shared_bytes: u32, stream: ffi::CUstream, arguments: *mut *mut c_void, extra: *mut *mut c_void) -> i32;
 }
