@@ -21,17 +21,15 @@ pub struct ResolutionEnhancer {
     stages: Vec<EffectStage>,
     input: Option<EnhancedFrame>,
     job: VideoEnhancementJob,
-    ready: bool,
 }
 
 impl ResolutionEnhancer {
     pub fn new(job: &VideoEnhancementJob) -> Self {
-        Self { stages: Vec::new(), input: None, job: job.clone(), ready: false }
+        Self { stages: Vec::new(), input: None, job: job.clone() }
     }
 
     pub fn enhance(&mut self, frame: &DecodedFrame) -> io::Result<&EnhancedFrame> {
         if self.input.is_none() { self.initialize(frame)?; }
-        if !self.ready { return Err(io::Error::other("Resolution initialization failed; start a new job")); }
         let input = self.input.as_mut().unwrap();
         let device = Rc::clone(&input.device);
         let _context = device.enter()?;
@@ -40,9 +38,8 @@ impl ResolutionEnhancer {
         for stage in &mut self.stages {
             // SAFETY: the effect and its bound GPU buffers live for this job.
             let result = sdk_result("Run NVIDIA enhancement", unsafe { NvVFX_Run(stage.effect, 0) });
-            let completion = device.synchronize();
+            if result.is_err() { let _ = device.synchronize(); }
             result?;
-            completion?;
             stage.output.copy_metadata_from(frame);
         }
         Ok(self.stages.last().map_or(self.input.as_ref().unwrap(), |stage| &stage.output))
@@ -54,12 +51,12 @@ impl ResolutionEnhancer {
         device.synchronize()?;
         let width = frame.frame.width();
         let height = frame.frame.height();
-        self.input = Some(EnhancedFrame::allocate_space_on_gpu_for_frame(frame, Rc::clone(&device), width, height)?);
+        self.input = Some(EnhancedFrame::allocate_frame(frame, Rc::clone(&device), width, height)?);
         let settings = &self.job.enhancements;
         let modes = [(8, settings.denoise, 1), (12, settings.deblur, 1), (self.job.upscale_quality, 1.0, self.job.resolution_scale)];
         for (mode, strength, scale) in modes {
             if strength == 0.0 || (mode <= 4 && scale == 1) { continue; }
-            let output = EnhancedFrame::allocate_space_on_gpu_for_frame(frame, Rc::clone(&device), width * scale, height * scale)?;
+            let output = EnhancedFrame::allocate_frame(frame, Rc::clone(&device), width * scale, height * scale)?;
             self.stages.push(EffectStage { effect: ptr::null_mut(), output });
             let index = self.stages.len() - 1;
             let (previous, current) = self.stages.split_at_mut(index);
@@ -80,7 +77,6 @@ impl ResolutionEnhancer {
             result?;
             completion?;
         }
-        self.ready = true;
         Ok(())
     }
 }

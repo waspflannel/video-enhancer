@@ -45,7 +45,7 @@ pub struct VideoEnhancementJob {
 }
 
 impl VideoEnhancementJob {
-    pub fn validate(&self, source: &FileData) -> io::Result<()> {
+    fn validate(&self, source: &FileData) -> io::Result<()> {
         if !(1..=4).contains(&self.resolution_scale) || !(1..=4).contains(&self.upscale_quality) {
             return Err(io::Error::other("Resolution scale and upscale quality must be between 1 and 4"));
         }
@@ -64,43 +64,42 @@ impl VideoEnhancementJob {
             ("Vibrance", settings.vibrance, -1.0, 1.0), ("Exposure", settings.exposure, -2.0, 2.0),
             ("Warmth", settings.warmth, -1.0, 1.0), ("Sharpening", settings.sharpening, 0.0, 2.0),
         ] {
-            if !value.is_finite() || !(low..=high).contains(&value) { return Err(io::Error::other(format!("{name} is outside its supported range"))); }
+            if !(low..=high).contains(&value) { return Err(io::Error::other(format!("{name} is outside its supported range"))); }
         }
         if !self.output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("mp4")) {
             return Err(io::Error::other("Choose an .mp4 output file"));
         }
-        if self.output.exists() { return Err(io::Error::other("Output already exists. Choose a new filename; source and existing videos are never overwritten.")); }
         Ok(())
     }
 
     pub fn run(&self, cancelled: &AtomicBool, mut progress: impl FnMut(u64, f64)) -> io::Result<u64> {
         let source = Parser::new(&self.input).get_video_information()?;
         self.validate(&source)?;
-        let mut resolution = ResolutionEnhancer::new(self);
-        let mut frame_rate = FrameRateEnhancer::new(self, source.video_end_time)?;
-        let mut adjuster = VideoAdjuster::new(self);
+        let mut resolution_enhancer = ResolutionEnhancer::new(self);
+        let mut frame_rate_enhancer = FrameRateEnhancer::new(self, source.video_end_time);
+        let mut video_adjuster = VideoAdjuster::new(self);
         let mut sharpener = Sharpener::new(self);
-        let mut encoder = VideoEncoder::new(&source, self)?;
-        let mut count = 0;
+        let mut video_encoder = VideoEncoder::new(&source, self)?;
+        let mut encoded_frames = 0;
         let result = (|| {
-            let mut encode = |timed: FrameForEncoder<'_>| {
+            let mut encode_frame = |timed_frame: FrameForEncoder<'_>| {
                 if cancelled.load(Ordering::Relaxed) { return Err(io::Error::new(io::ErrorKind::Interrupted, "Export cancelled")); }
-                let adjusted = adjuster.adjust(timed.frame)?;
-                let sharpened = sharpener.sharpen(adjusted)?;
-                encoder.encode(FrameForEncoder { frame: sharpened, ..timed })?;
-                count += 1;
-                let seconds = timed.presentation_timestamp as f64 * timed.time_base.0 as f64 / timed.time_base.1 as f64;
-                progress(count, seconds);
+                let adjusted_frame = video_adjuster.adjust(timed_frame.frame)?;
+                let sharpened_frame = sharpener.sharpen(adjusted_frame)?;
+                video_encoder.encode(FrameForEncoder { frame: sharpened_frame, ..timed_frame })?;
+                encoded_frames += 1;
+                let timestamp_seconds = timed_frame.presentation_timestamp as f64 * timed_frame.time_base.0 as f64 / timed_frame.time_base.1 as f64;
+                progress(encoded_frames, timestamp_seconds);
                 Ok(())
             };
-            video_decoder::decode(&source, |decoded| {
+            video_decoder::decode(&source, |decoded_frame| {
                 if cancelled.load(Ordering::Relaxed) { return Err(io::Error::new(io::ErrorKind::Interrupted, "Export cancelled")); }
-                let enhanced = resolution.enhance(&decoded)?;
-                frame_rate.enhance(enhanced, &mut encode)
+                let enhanced_frame = resolution_enhancer.enhance(&decoded_frame)?;
+                frame_rate_enhancer.enhance(enhanced_frame, &mut encode_frame)
             })?;
-            frame_rate.finish(&mut encode)?;
-            encoder.finish()?;
-            Ok(count)
+            frame_rate_enhancer.finish(&mut encode_frame)?;
+            video_encoder.finish()?;
+            Ok(encoded_frames)
         })();
         // An interrupted export is kept for diagnosis; it is never reported as complete.
         result.map_err(|error: io::Error| io::Error::new(error.kind(), format!("{error}. Incomplete output may remain at {}", self.output.display())))

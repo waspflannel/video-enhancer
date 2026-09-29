@@ -1,6 +1,5 @@
 // Colour controls operate on display-encoded SDR RGB, with clipping at the output.
-extern "C" __global__ void adjust(unsigned char* pixels, int pitch, int width, int height,
-    float contrast, float saturation, float vibrance, float exposure, float warmth) {
+extern "C" __global__ void adjust(unsigned char* pixels, int pitch, int width, int height, float contrast, float saturation, float vibrance, float exposure, float warmth) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;

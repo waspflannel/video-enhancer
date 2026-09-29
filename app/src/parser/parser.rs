@@ -51,30 +51,30 @@ impl Parser {
             .map(Vec::as_slice)
             .unwrap_or_default();
 
-        let video = streams
+        let video_stream = streams
             .iter()
-            .find(|s| s["codec_type"] == "video" && s["disposition"]["attached_pic"] != 1)
+            .find(|stream| stream["codec_type"] == "video" && stream["disposition"]["attached_pic"] != 1)
             .ok_or_else(|| io::Error::other("No video stream found"))?;
 
-        let fps = video["avg_frame_rate"]
+        let fps = video_stream["avg_frame_rate"]
             .as_str()
             .and_then(parse_fps_from_metadata);
         let audio_streams = streams
             .iter()
-            .filter(|s| s["codec_type"] == "audio")
+            .filter(|stream| stream["codec_type"] == "audio")
             .cloned()
             .collect();
 
         Ok(FileData {
             path,
-            width: serde_json::from_value(video["width"].clone())?,
-            height: serde_json::from_value(video["height"].clone())?,
+            width: serde_json::from_value(video_stream["width"].clone())?,
+            height: serde_json::from_value(video_stream["height"].clone())?,
             fps,
-            video_end_time: parse_video_end_time(video),
-            duration_seconds: video["duration"].as_str().and_then(|v| v.parse().ok()),
-            video_stream_index: serde_json::from_value(video["index"].clone())?,
-            codec: serde_json::from_value(video["codec_name"].clone())?,
-            pixel_format: serde_json::from_value(video["pix_fmt"].clone())?,
+            video_end_time: parse_video_end_time(video_stream),
+            duration_seconds: video_stream["duration"].as_str().and_then(|duration| duration.parse().ok()),
+            video_stream_index: serde_json::from_value(video_stream["index"].clone())?,
+            codec: serde_json::from_value(video_stream["codec_name"].clone())?,
+            pixel_format: serde_json::from_value(video_stream["pix_fmt"].clone())?,
             audio_streams,
             metadata,
         })
@@ -88,8 +88,8 @@ fn parse_fps_from_metadata(rate: &str) -> Option<f64> {
     (fps.is_finite() && fps > 0.0).then_some(fps)
 }
 
-fn parse_video_end_time(video: &Value) -> Option<(i64, (i32, i32))> {
-    let (numerator, denominator) = video["time_base"].as_str()?.split_once('/')?;
-    let end_timestamp = video["start_pts"].as_i64()?.checked_add(video["duration_ts"].as_i64()?)?;
+fn parse_video_end_time(video_stream: &Value) -> Option<(i64, (i32, i32))> {
+    let (numerator, denominator) = video_stream["time_base"].as_str()?.split_once('/')?;
+    let end_timestamp = video_stream["start_pts"].as_i64()?.checked_add(video_stream["duration_ts"].as_i64()?)?;
     Some((end_timestamp, (numerator.parse().ok()?, denominator.parse().ok()?)))
 }

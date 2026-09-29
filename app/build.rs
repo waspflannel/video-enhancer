@@ -2,25 +2,22 @@ use std::{env, fs, path::PathBuf};
 
 fn main() {
     println!("cargo:rerun-if-env-changed=FFMPEG_DIR");
-    let bin = PathBuf::from(
+    let ffmpeg_bin_directory = PathBuf::from(
         env::var_os("FFMPEG_DIR").expect("Set FFMPEG_DIR; see documents/development.md"),
     )
     .join("bin");
-    // Windows needs the shared libraries beside both the executable and test binaries.
-    let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    let profile = out.ancestors().nth(3).unwrap();
-    for entry in fs::read_dir(&bin).expect("Install the shared FFmpeg build in tools/") {
+    // Windows loads the shared libraries beside the executable.
+    let build_output_directory = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let executable_directory = build_output_directory.ancestors().nth(3).unwrap();
+    for entry in fs::read_dir(&ffmpeg_bin_directory).expect("Install the shared FFmpeg build in tools/") {
         let path = entry.unwrap().path();
         if path.extension().is_some_and(|ext| ext == "dll") {
             println!("cargo:rerun-if-changed={}", path.display());
-            for destination in [profile.to_path_buf(), profile.join("deps")] {
-                fs::create_dir_all(&destination).unwrap();
-                fs::copy(&path, destination.join(path.file_name().unwrap())).unwrap();
-            }
+            fs::copy(&path, executable_directory.join(path.file_name().unwrap())).unwrap();
         }
     }
 
-    let sdk = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../sdk/VFXSDK_windows_1.3.0.0/VideoFX");
+    let sdk_directory = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../sdk/VFXSDK_windows_1.3.0.0/VideoFX");
     for file in [
         "bin/NVVideoEffects.dll",
         "bin/NVCVImage.dll",
@@ -32,10 +29,8 @@ fn main() {
         "features/nvvfxvideosuperres/bin/nvngx_vsr.dll",
         "features/nvvfxvideoframegeneration/bin/nvVFXVideoFrameGeneration.dll",
     ] {
-        let path = sdk.join(file);
+        let path = sdk_directory.join(file);
         println!("cargo:rerun-if-changed={}", path.display());
-        for destination in [profile.to_path_buf(), profile.join("deps")] {
-            fs::copy(&path, destination.join(path.file_name().unwrap())).expect("Copy NVIDIA video effect runtime DLL");
-        }
+        fs::copy(&path, executable_directory.join(path.file_name().unwrap())).expect("Copy NVIDIA video effect runtime DLL");
     }
 }

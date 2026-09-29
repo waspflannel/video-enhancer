@@ -14,15 +14,15 @@ impl CudaDevice {
     pub(crate) fn configure_cuda_device(frame: &DecodedFrame) -> io::Result<Rc<Self>> {
         // SAFETY: the decoder owns a CUDA AVFrame with live hardware frame/device contexts.
         unsafe {
-            let native = &*frame.frame.as_ptr();
-            let frames = &*(*native.hw_frames_ctx).data.cast::<ffi::AVHWFramesContext>();
-            let device = &*(*frames.device_ref).data.cast::<ffi::AVHWDeviceContext>();
-            let cuda = &*device.hwctx.cast::<ffi::AVCUDADeviceContext>();
-            let reference = ffi::av_buffer_ref(frames.device_ref);
+            let decoded_frame = &*frame.frame.as_ptr();
+            let gpu_frames = &*(*decoded_frame.hw_frames_ctx).data.cast::<ffi::AVHWFramesContext>();
+            let device = &*(*gpu_frames.device_ref).data.cast::<ffi::AVHWDeviceContext>();
+            let cuda_device = &*device.hwctx.cast::<ffi::AVCUDADeviceContext>();
+            let reference = ffi::av_buffer_ref(gpu_frames.device_ref);
             if reference.is_null() {
                 return Err(io::Error::other("Retain CUDA device: out of memory"));
             }
-            Ok(Rc::new(Self { reference, context: cuda.cuda_ctx, stream: cuda.stream }))
+            Ok(Rc::new(Self { reference, context: cuda_device.cuda_ctx, stream: cuda_device.stream }))
         }
     }
 
@@ -51,12 +51,12 @@ pub(crate) struct CurrentContext<'a> {
 
 impl Drop for CurrentContext<'_> {
     fn drop(&mut self) {
-        let mut previous = ptr::null_mut();
+        let mut popped_context = ptr::null_mut();
         // SAFETY: this guard balances one successful push on the current thread.
-        unsafe { cuCtxPopCurrent_v2(&mut previous) };
+        unsafe { cuCtxPopCurrent_v2(&mut popped_context) };
     }
 }
 
-fn cuda_result(operation: &str, status: i32) -> io::Result<()> {
+pub(crate) fn cuda_result(operation: &str, status: i32) -> io::Result<()> {
     if status == 0 { Ok(()) } else { Err(io::Error::other(format!("{operation}: CUDA status {status}"))) }
 }

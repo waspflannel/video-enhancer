@@ -54,6 +54,10 @@ unsafe extern "C" {
 
 #[link(name = "nvcuda", kind = "raw-dylib")]
 unsafe extern "system" {
+    pub(crate) fn cuModuleLoadData(module: *mut *mut c_void, image: *const c_void) -> i32;
+    pub(crate) fn cuModuleGetFunction(function: *mut *mut c_void, module: *mut c_void, name: *const c_char) -> i32;
+    pub(crate) fn cuModuleUnload(module: *mut c_void) -> i32;
+    pub(crate) fn cuLaunchKernel(function: *mut c_void, grid_x: u32, grid_y: u32, grid_z: u32, block_x: u32, block_y: u32, block_z: u32, shared_bytes: u32, stream: ffi::CUstream, arguments: *mut *mut c_void, extra: *mut *mut c_void) -> i32;
     pub(crate) fn cuCtxPushCurrent_v2(context: ffi::CUcontext) -> i32;
     pub(crate) fn cuCtxPopCurrent_v2(context: *mut ffi::CUcontext) -> i32;
     pub(crate) fn cuStreamSynchronize(stream: ffi::CUstream) -> i32;

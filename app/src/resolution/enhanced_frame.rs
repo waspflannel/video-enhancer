@@ -10,7 +10,6 @@ pub struct EnhancedFrame {
     pub presentation_timestamp: i64,
     pub time_base: (i32, i32),
     pub duration: i64,
-    pub timestamp_seconds: f64,
     pub color_primaries: ffi::AVColorPrimaries,
     pub color_transfer: ffi::AVColorTransferCharacteristic,
     pub sample_aspect_ratio: (i32, i32),
@@ -20,7 +19,7 @@ pub struct EnhancedFrame {
 }
 
 impl EnhancedFrame {
-    pub(super) fn allocate_space_on_gpu_for_frame(frame: &DecodedFrame, device: Rc<CudaDevice>, width: u32, height: u32) -> io::Result<Self> {
+    pub(super) fn allocate_frame(frame: &DecodedFrame, device: Rc<CudaDevice>, width: u32, height: u32) -> io::Result<Self> {
         let image = allocate_rgba_image(width, height)?;
         // SAFETY: the decoded frame owns its native metadata for this borrow.
         let native = unsafe { &*frame.frame.as_ptr() };
@@ -30,7 +29,6 @@ impl EnhancedFrame {
             presentation_timestamp: frame.presentation_timestamp,
             time_base: frame.time_base,
             duration: frame.duration,
-            timestamp_seconds: frame.timestamp_seconds,
             color_primaries: native.color_primaries,
             color_transfer: native.color_trc,
             sample_aspect_ratio: (native.sample_aspect_ratio.num, native.sample_aspect_ratio.den),
@@ -43,7 +41,7 @@ impl EnhancedFrame {
         Ok(Self {
             width: frame.width, height: frame.height,
             presentation_timestamp: frame.presentation_timestamp, time_base: frame.time_base,
-            duration: frame.duration, timestamp_seconds: frame.timestamp_seconds,
+            duration: frame.duration,
             color_primaries: frame.color_primaries, color_transfer: frame.color_transfer,
             sample_aspect_ratio: frame.sample_aspect_ratio,
             image: allocate_rgba_image(frame.width, frame.height)?, device: Rc::clone(&frame.device),
@@ -65,7 +63,6 @@ impl EnhancedFrame {
         self.presentation_timestamp = frame.presentation_timestamp;
         self.time_base = frame.time_base;
         self.duration = frame.duration;
-        self.timestamp_seconds = frame.timestamp_seconds;
         self.color_primaries = frame.color_primaries;
         self.color_transfer = frame.color_transfer;
         self.sample_aspect_ratio = frame.sample_aspect_ratio;
@@ -77,7 +74,6 @@ impl EnhancedFrame {
         self.presentation_timestamp = frame.presentation_timestamp;
         self.time_base = frame.time_base;
         self.duration = frame.duration;
-        self.timestamp_seconds = frame.timestamp_seconds;
         self.color_primaries = native.color_primaries;
         self.color_transfer = native.color_trc;
         self.sample_aspect_ratio = (native.sample_aspect_ratio.num, native.sample_aspect_ratio.den);

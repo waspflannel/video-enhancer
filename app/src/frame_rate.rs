@@ -1,21 +1,6 @@
-//! Converts enhanced GPU frames to a requested frame rate, using NVIDIA AI.
-//!
-//! Flow:
-//! 1. Keep the first enhanced frame on the GPU. AI interpolation needs two source
-//!    frames: the previous image and the next image surrounding an output time.
-//! 2. Copy the next enhanced frame before resolution enhancement can overwrite it.
-//! 3. Walk the output timeline between their timestamps. Deliver a source frame at
-//!    an exact source time, or use NVIDIA AI to generate an intermediate image.
-//! 4. Call on_frame_ready_for_encoding for each timed output, then keep the newer
-//!    source frame for the next pair. The callback must finish using its GPU pixels
-//!    before returning: all image buffers are reused.
-//! 5. At EOF, finish repeats the last source image through its remaining duration.
-//!
-//! One effect/model is loaded per job. Work is sequential on the decoder's CUDA
-//! context and stream. Owned buffers outlive the effect, including on errors.
-//! Stop the job on a processing error; retrying a partially configured effect is unsupported.
-//! The encoder converts the borrowed image into its own GPU buffer before returning,
-//! so these images can be reused while NVENC retains its independent frame references.
+//! Schedules output timestamps and generates intermediate GPU frames with NVIDIA VFG.
+//! Source and generated buffers are reused; consumers finish using their pixels before returning.
+//! Call finish after decoder EOF to hold the last image through its remaining duration.
 
 use std::{ffi::c_void, io, ptr, rc::Rc};
 use ffmpeg_next::{ffi, Rescale};
@@ -32,8 +17,7 @@ pub struct FrameForEncoder<'a> {
 }
 
 pub struct FrameRateEnhancer {
-    keep_source_timing: bool,
-    target_frame_rate: (i32, i32),
+    target_fps: Option<u32>,
     video_end_time: Option<(i64, (i32, i32))>,
     effect: *mut c_void,
     previous_frame: Option<EnhancedFrame>,
@@ -46,29 +30,24 @@ pub struct FrameRateEnhancer {
 }
 
 impl FrameRateEnhancer {
-    /// Use a rational rate, such as (60, 1) or (60000, 1001).
-    pub fn new(job: &VideoEnhancementJob, video_end_time: Option<(i64, (i32, i32))>) -> io::Result<Self> {
-        let target_frame_rate = (job.target_fps.unwrap_or(1) as i32, 1);
-        if target_frame_rate.0 <= 0 || target_frame_rate.1 <= 0 {
-            return Err(io::Error::other("Target frame rate must be positive"));
-        }
-        Ok(Self {
-            keep_source_timing: job.target_fps.is_none(),
-            target_frame_rate, video_end_time, effect: ptr::null_mut(),
+    pub fn new(job: &VideoEnhancementJob, video_end_time: Option<(i64, (i32, i32))>) -> Self {
+        Self {
+            target_fps: job.target_fps,
+            video_end_time, effect: ptr::null_mut(),
             previous_frame: None, current_frame: None, generated_frame: None,
             output_time_base: (1, 1), output_frame_duration: 0,
             next_output_timestamp: 0, last_source_frame_interval: 0,
-        })
+        }
     }
 
     pub fn enhance(&mut self, frame: &EnhancedFrame, on_frame_ready_for_encoding: &mut impl FnMut(FrameForEncoder<'_>) -> io::Result<()>) -> io::Result<()> {
-        if self.keep_source_timing {
+        let Some(target_fps) = self.target_fps else {
             return on_frame_ready_for_encoding(FrameForEncoder { frame, presentation_timestamp: frame.presentation_timestamp, time_base: frame.time_base, duration: frame.duration });
-        }
+        };
         let device = Rc::clone(&frame.device);
         let _context = device.enter()?;
         if self.previous_frame.is_none() {
-            self.configure_output_timeline(frame)?;
+            self.configure_output_timeline(frame, target_fps)?;
             self.previous_frame = Some(EnhancedFrame::allocate_matching_frame(frame)?);
             return self.previous_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame);
         }
@@ -82,7 +61,6 @@ impl FrameRateEnhancer {
             self.current_frame = Some(EnhancedFrame::allocate_matching_frame(frame)?);
         }
         self.current_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame)?;
-        if self.effect.is_null() { self.configure_video_frame_generation()?; }
         let end_timestamp = self.video_end_time.map(|(timestamp, time_base)| timestamp.rescale(time_base, self.output_time_base));
         while self.next_output_timestamp < current_timestamp && end_timestamp.is_none_or(|end| self.next_output_timestamp < end) {
             let output_frame = if self.next_output_timestamp > previous_timestamp {
@@ -124,14 +102,14 @@ impl FrameRateEnhancer {
         Ok(())
     }
 
-    fn configure_output_timeline(&mut self, first_frame: &EnhancedFrame) -> io::Result<()> {
-        // A common tick rate represents both source timestamps and fractional target FPS exactly.
+    fn configure_output_timeline(&mut self, first_frame: &EnhancedFrame, target_fps: u32) -> io::Result<()> {
+        // A common tick rate represents both source timestamps and target intervals exactly.
         let source_denominator = i64::from(first_frame.time_base.1);
-        let target_numerator = i64::from(self.target_frame_rate.0);
-        let divisor = unsafe { ffi::av_gcd(source_denominator, target_numerator) };
-        let ticks_per_second = source_denominator / divisor * target_numerator;
+        let target_fps = i64::from(target_fps);
+        let divisor = unsafe { ffi::av_gcd(source_denominator, target_fps) };
+        let ticks_per_second = source_denominator / divisor * target_fps;
         self.output_time_base = (1, i32::try_from(ticks_per_second).map_err(|_| io::Error::other("Frame-rate time base exceeds supported range"))?);
-        self.output_frame_duration = ticks_per_second / target_numerator * i64::from(self.target_frame_rate.1);
+        self.output_frame_duration = ticks_per_second / target_fps;
         self.next_output_timestamp = self.source_timestamp(first_frame);
         Ok(())
     }
@@ -160,7 +138,7 @@ impl FrameRateEnhancer {
             sdk_result("Set frame generation height", NvVFX_SetU32(self.effect, c"InputHeight".as_ptr(), previous_frame.height))?;
             sdk_result("Set frame generation model", NvVFX_SetU32(self.effect, c"Mode".as_ptr(), 1))?;
             sdk_result("Set explicit interpolation timing", NvVFX_SetU32(self.effect, c"FrameMultiplier".as_ptr(), 0))?;
-            sdk_result("Enable scene-cut detection", NvVFX_SetU32(self.effect, c"AutomaticShotChangeDetectionEnabled".as_ptr(), 1))?;
+            sdk_result("Set scene-cut detection", NvVFX_SetU32(self.effect, c"AutomaticShotChangeDetectionEnabled".as_ptr(), 1))?;
             sdk_result("Bind previous frame", NvVFX_SetImage(self.effect, c"SrcImage0".as_ptr(), &mut previous_frame.image))?;
             sdk_result("Bind current frame", NvVFX_SetImage(self.effect, c"SrcImage1".as_ptr(), &mut current_frame.image))?;
             sdk_result("Bind generated frame", NvVFX_SetImage(self.effect, c"DstImage0".as_ptr(), &mut generated_frame.image))?;
@@ -172,14 +150,14 @@ impl FrameRateEnhancer {
     }
 
     fn generate_intermediate_frame(&mut self, timestep: f32) -> io::Result<()> {
+        if self.effect.is_null() { self.configure_video_frame_generation()?; }
         self.generated_frame.as_mut().unwrap().copy_metadata_from_enhanced_frame(self.previous_frame.as_ref().unwrap());
         // f32 rounding can reach an endpoint; the SDK requires a value strictly between 0 and 1.
         let timestep = timestep.clamp(f32::EPSILON, 1.0 - f32::EPSILON);
         sdk_result("Set interpolation position", unsafe { NvVFX_SetF32(self.effect, c"Timestep".as_ptr(), timestep) })?;
         let result = sdk_result("Generate intermediate GPU frame", unsafe { NvVFX_Run(self.effect, 0) });
-        let completion = self.previous_frame.as_ref().unwrap().device.synchronize();
-        result?;
-        completion
+        if result.is_err() { let _ = self.previous_frame.as_ref().unwrap().device.synchronize(); }
+        result
     }
 }
 

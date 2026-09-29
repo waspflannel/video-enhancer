@@ -69,16 +69,32 @@ for(const [id,label,min,max,step,group] of specs){
  const wrapper=document.createElement('div');
  wrapper.innerHTML=`<div class="slider-head"><label for="${id}">${label}</label><output id="${id}-value" for="${id}"></output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
  $(group).append(wrapper);
- $(id).addEventListener('input',()=>{displayValue(id); $('preset-label').textContent='Custom'; $('preset-description').textContent='Your adjustments. Resolution and FPS stay as selected.'; document.querySelectorAll('.presets button').forEach(b=>b.classList.remove('selected'));});
+ $(id).addEventListener('input',()=>{displayValue(id); $('preset-label').textContent='Custom'; $('preset-description').textContent='Your adjustments. Resolution and FPS stay as selected.'; document.querySelectorAll('.presets button').forEach(button=>button.classList.remove('selected'));});
 }
-function displayValue(id){let v=Number($(id).value); $(id+'-value').textContent = id==='exposure'?`${v.toFixed(2)} EV`:v.toFixed(2);}
-function applyPreset(name,settings){for(const [id] of specs){$(id).value=settings[id];displayValue(id);} $('preset-label').textContent=name;$('preset-description').textContent=descriptions[name];document.querySelectorAll('.presets button').forEach(b=>b.classList.toggle('selected',b.textContent===name));}
+function displayValue(id){const value=Number($(id).value); $(id+'-value').textContent = id==='exposure'?`${value.toFixed(2)} EV`:value.toFixed(2);}
+function applyPreset(name,settings){for(const [id] of specs){$(id).value=settings[id];displayValue(id);} $('preset-label').textContent=name;$('preset-description').textContent=descriptions[name];document.querySelectorAll('.presets button').forEach(button=>button.classList.toggle('selected',button.textContent===name));}
 function updateState(){
  $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);$('lock').hidden=!!source;
  $('load').disabled=busy;$('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy||!source||downloading;
  $('download-settings').disabled=busy;$('download').disabled=busy;$('download-cancel').hidden=!downloading;
  $('quality').disabled=$('scale').value==='1';
  if(source){const scale=Number($('scale').value);$('summary').textContent=`${source.width*scale} × ${source.height*scale} · ${$('target_fps').value || 'Original'} FPS`;}
+ else $('summary').textContent='Waiting for a video';
+}
+function displayLoadedVideo(){
+ $('name').textContent=source.name;
+ $('dimensions').textContent=`${source.width} × ${source.height}`;
+ $('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable / unknown';
+ $('duration').textContent=source.duration?`${Math.floor(source.duration/60)}:${String(Math.floor(source.duration%60)).padStart(2,'0')}`:'Unknown';
+ $('audio').textContent=source.audio?`${source.audio} track${source.audio>1?'s':''}`:'No audio';
+ $('scale').value='1';
+ $('target_fps').value='';
+ for(const option of $('scale').options){
+  const width=source.width*Number(option.value),height=source.height*Number(option.value);
+  option.disabled=width>4096||height>4096||width%2!==0||height%2!==0;
+ }
+ for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;
+ message('Ready. Choose your settings, then Generate.');
 }
 function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
 function downloadMessage(text,error=false){$('download-status').textContent=text;$('download-status').classList.toggle('error',error);}
@@ -95,10 +111,9 @@ window.receive = event => {
  case 'download-progress':if(!$('download-cancel').disabled)downloadMessage(event.message);break;
  case 'downloaded':busy=false;downloading=false;downloadMessage(`Saved. Use Load video to open it.\n${event.path}`);break;
  case 'download-error':busy=false;downloading=false;downloadMessage(event.message,true);break;
- case 'presets':presets=event.presets;for(const [name,settings] of presets){const b=document.createElement('button');b.textContent=name;b.onclick=()=>applyPreset(name,settings);$('presets').append(b);}applyPreset(...presets[0]);break;
+ case 'presets':presets=event.presets;for(const [name,settings] of presets){const button=document.createElement('button');button.textContent=name;button.onclick=()=>applyPreset(name,settings);$('presets').append(button);}applyPreset(...presets[0]);break;
  case 'loading':source=null;busy=true;$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
- case 'loaded':source=event.source;busy=false;$('name').textContent=source.name;$('dimensions').textContent=`${source.width} × ${source.height}`;$('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable / unknown';$('duration').textContent=source.duration?`${Math.floor(source.duration/60)}:${String(Math.floor(source.duration%60)).padStart(2,'0')}`:'Unknown';$('audio').textContent=source.audio?`${source.audio} track${source.audio>1?'s':''}`:'No audio';
- $('scale').value='1';$('target_fps').value='';for(const option of $('scale').options)option.disabled=source.width*Number(option.value)>4096||source.height*Number(option.value)>4096;for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;message('Ready. Choose your settings, then Generate.');break;
+ case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
  case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
  case 'progress':if(source.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
  case 'finished':busy=false;$('progress').value=1;message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
