@@ -6,7 +6,7 @@ Import a video, choose its output resolution and frame rate, generate intermedia
 
 ## Status
 
-Rust/Cargo console application targeting Windows x64. The parser reads metadata with ffprobe and decodes through in-process FFmpeg/NVIDIA CUVID, handing timestamped GPU frames directly to the next stage. GPU decoding and frame lifetime have been tested on the RTX 5070 with H.264, 10-bit HEVC, AV1, and variable-frame-rate fixtures. NVIDIA VSR now enhances 8-bit SDR NV12 frames on the GPU, with timestamps retained and manual preview checks on the RTX 5070. The console progressively applies gentle NVIDIA deblur at source resolution before Ultra upscaling at 2x resolution. Both models load once, and their GPU buffers are reused. A sequential FPS stage now generates intermediate frames with NVIDIA VFG. Timed GPU outputs now feed an in-process NVIDIA H.264 encoder. RGBA-to-NV12 conversion stays on the GPU, and FFmpeg saves MP4 with copied source audio and preserved timestamps. Short exports have been manually verified on the RTX 5070. P010/HDR enhancement, audio transcoding, and desktop UI are not implemented.
+Windows x64 desktop application built with Rust, Tao and Wry. Import or download a video, choose cleanup, colour, resolution and frame-rate settings, then export H.264 MP4 with copied source audio. FFmpeg/NVDEC decodes on the GPU; NVIDIA VSR, VFG and NVENC keep video processing local. Models and GPU buffers are reused throughout each job. The same job can run from JSON through the command line. Enhancement on this branch supports 8-bit SDR input; P010/HDR enhancement and audio transcoding are not implemented.
 
 Build one complete working pipeline first, then optimize its speed and polish the UI.
 
@@ -26,6 +26,6 @@ components.md              Component roadmap and learning resources
 NVIDIA_LOCAL_PIPELINE.md   NVIDIA processing pipeline design
 ```
 
-The project uses one Git repository at the root. Keep downloaded models, SDK archives, sample videos, and exports outside Git. Set `test_file` and a new `output_file` path in `app/src/main.rs`, choose `target_frame_rate`, then run `cargo run` from `app/`. FFmpeg and ffprobe are loaded from the local `tools/` directory. Run `./scripts/setup-media.ps1` from `app/` to install the pinned shared FFmpeg build and binding-generation dependency. See the development guide for validation commands.
+The project uses one Git repository at the root. Keep downloaded models, SDK archives, sample videos, and exports outside Git. From `app/`, run `cargo run --release` to open the UI, or `cargo run --release -- path/to/job.json` to replay a job. FFmpeg and ffprobe use the project-local `tools/` directory. Run `./scripts/setup-media.ps1` from `app/` to install the pinned shared FFmpeg build and binding-generation dependency. See the development guide for validation commands.
 
 Exports currently use H.264 MP4 with compatible source audio copied unchanged. Existing output files are refused. A failed job can leave an incomplete output; choose a new path or remove that incomplete file before retrying.

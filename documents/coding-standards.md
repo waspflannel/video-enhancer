@@ -56,11 +56,13 @@ failed probing, no video track, unavailable codecs, failed GPU/decoder creation,
 allocation failures, packet read/decode failures, and an empty decode result.
 Propagate these with `Result` and `?`, adding a short operation name where useful.
 
-Rely on FFmpeg's established contracts rather than checking them again after
-every successful call. Do not routinely compare every frame with the initial
-metadata, inspect corruption flags in addition to decoder errors, or validate
-the same pixel format at multiple stages. Revisit these decisions when an actual
-input or new feature requires it.
+Rely on FFmpeg's and NVIDIA's established contracts. Handle native call failures;
+do not inspect pixels to prove that a successful SDK call worked. Validate job
+settings before processing rather than repeating pipeline-owned format and size
+checks at each stage. Keep bounds checks needed for raw input-plane access and
+synchronization needed before buffers are reused or released. Do not routinely
+compare frames with initial metadata or inspect corruption flags in addition to
+decoder errors. Revisit these decisions when an actual input or feature requires it.
 
 Keep conversions needed to represent output correctly: identify the decoded
 pixel format and obtain the timestamp. An unsupported mapping or missing
