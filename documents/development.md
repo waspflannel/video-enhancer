@@ -33,7 +33,7 @@ It does not change machine-wide environment variables or the VFX SDK.
 
 `app/.cargo/config.toml` sets project-relative `FFMPEG_DIR` and `LIBCLANG_PATH`.
 Run Cargo from `app/` so this configuration is loaded. `build.rs` copies the
-FFmpeg and required VSR DLLs beside the executable and Cargo dependency outputs. Directly launching the release
+FFmpeg and required VSR/VFG DLLs beside the executable and Cargo dependency outputs. Directly launching the release
 executable requires those DLLs alongside it. Metadata inspection also needs
 the existing project-local ffprobe executable. CUDA/NVDEC is supplied by the
 installed NVIDIA driver; no CUDA toolkit or Video Codec SDK download is
@@ -50,8 +50,9 @@ app/
   src/lib.rs              Application module exports
   src/parser/parser.rs    Metadata and parser API
   src/parser/commands.rs  ffprobe command
-  src/gpu.rs       GPU decoding and frame ownership
-  src/resolution/         Resolution enhancer and direct NVIDIA SDK calls
+  src/video_decoder.rs       GPU decoding and frame ownership
+  src/resolution/         Resolution enhancer and shared NVIDIA/CUDA bindings
+  src/frame_rate.rs       Timestamp scheduling, VFG, and encoder handoff
   scripts/                Local dependency setup
   target/                 Generated build output, ignored
 ```
@@ -62,11 +63,11 @@ outputs out of Git. Cargo.lock belongs in Git.
 ## Parser
 
 ```rust
-use video_enhancer::{gpu, parser::Parser};
+use video_enhancer::{video_decoder, parser::Parser};
 
 let parser = Parser::new("video.mp4");
 let information = parser.get_video_information()?;
-gpu::decode(&information, |frame| {
+video_decoder::decode(&information, |frame| {
     // Consume this owned GPU frame here before decoding continues.
     println!("Frame timestamp: {}", frame.presentation_timestamp);
     Ok(())
@@ -80,7 +81,7 @@ require a GPU. It selects the first video stream that is not cover art.
 Missing FPS/duration remains `None`; average FPS does not imply constant
 frame rate. Rotation, colour, aspect ratio, and stream timing are retained.
 
-`gpu::decode(&information, on_frame_decoded)` returns `io::Result<()>` after
+`video_decoder::decode(&information, on_frame_decoded)` returns `io::Result<()>` after
 calling a fallible consumer for each owned GPU frame. Consumer errors stop
 decoding immediately. No frame vector is collected. It selects
 `h264_cuvid`, `hevc_cuvid`, or `av1_cuvid` on
@@ -142,7 +143,7 @@ missing startup dependencies are reported by Windows before Rust can run.
 `ResolutionEnhancer::new()` creates a VSR effect. `enhance(&frame, width, height)`
 is coordinated by `resolution/resolution.rs`, which owns and configures the VSR
 effect. `resolution/cuda.rs` manages the CUDA context and synchronization;
-`resolution/frame.rs` owns image buffers, conversion, and enhanced-frame metadata.
+`resolution/enhanced_frame.rs` owns image buffers, conversion, and enhanced-frame metadata.
 `resolution/commands.rs` contains only the native function declarations, image
 layout, and SDK constants. The enhancement call
 returns a borrowed RGBA GPU frame with original integer timestamps, time base,
@@ -212,3 +213,90 @@ verified preview byte-for-byte. Consumer failure stopped after one callback;
 missing-file and P010 errors propagated. Temporary inspection/download code was
 removed after verification; no automated suite or production download path was
 added. Encoding and audio synchronization remain unverified and unimplemented.
+
+## Frame-rate conversion and AI generation
+
+`main` connects decode -> resolution enhancement -> frame-rate conversion ->
+`on_frame_ready_for_encoding`. The last callback only counts outputs. No encoder,
+export, audio muxing, worker queues, or parallel scheduling has been added.
+Set `target_frame_rate` to a rational rate such as `(60, 1)` or `(60000, 1001)`.
+NVIDIA AI is the only interpolation path. Settings stay fixed for the job.
+
+Create `FrameRateEnhancer::new(target_frame_rate, file_data.video_end_time)`
+once, call `enhance` for each enhanced source image, and call `finish` after the
+decoder drains its final frames. AI interpolation needs two surrounding source
+frames. The first call retains an image; later calls supply the next one.
+Output times use actual source timestamps, not average FPS or frame indexes.
+A common integer time base preserves the source start offset and represents
+fractional output rates without accumulating drift.
+
+The FPS stage shares the existing `EnhancedFrame`, CUDA device, and SDK bindings.
+It retains images with GPU-to-GPU copies because resolution enhancement reuses
+its output buffer. AI mode owns two source buffers and one generated buffer for
+the job. It copies the current source into the retained previous buffer after
+each pair. No production
+image download, allocation swapping, or overlapping work is introduced.
+
+On the first pair, AI mode creates `VideoFrameGeneration`, sets the CUDA stream,
+input dimensions, Medium model, explicit-timestep mode, and automatic scene-cut
+detection, then binds RGBA input/output images and loads once. Each intermediate
+output sets `Timestep` and runs synchronously. Exact source-time outputs use the
+source image. Intermediate output times always use NVIDIA AI. At EOF, hold the
+final image for its remaining duration because there is no following frame.
+
+`FrameForEncoder` borrows GPU pixels and colour metadata from an `EnhancedFrame`
+and supplies a separate output presentation timestamp, time base, and duration.
+The consumer must use these output timing fields rather than the source image's
+original timing. Each callback must finish using the image before returning;
+we reuse its buffer. A future asynchronous encoder must respect native buffer
+completion before allowing reuse. Normal and EOF callbacks run with the CUDA
+context active. Errors stop the job; effect destruction precedes buffer release.
+
+The parser retains the track's exact `start_pts + duration_ts` and time base as
+`video_end_time` when provided. This limits output to the track end and shortens
+the final output duration if it covers only part of a target interval. CUVID did
+not provide useful duration in the checked clips, and the last observed interval
+overestimated the VFR tail. If track end is absent, finish falls back to decoded
+frame duration or the last observed interval. That fallback cannot guarantee an
+exact end for every variable-rate input. A single frame with neither track end
+nor decoded duration produces a clear error.
+
+### Installed runtime and verification (2026-09-28)
+
+The existing 1.3.0.0 installation contains the VFG header and
+`features/nvvfxvideoframegeneration/bin/nvVFXVideoFrameGeneration.dll`
+(207,321,712 bytes). No separate VFG model file was found in that installation.
+The installed runtime successfully loaded the selected Medium model and produced
+GPU interpolation results. `build.rs` copies this feature DLL alongside the
+existing runtime DLLs. No model download or additional dependency was needed.
+
+Initial RTX 5070 checks before removal of the non-AI option covered:
+
+- 3 source frames at 60 FPS -> 6 outputs at 120 FPS, with AI on and off.
+- 120 H.264 frames at 24 FPS -> 300 at 60 FPS with AI, 60 at 12 FPS without AI,
+  and 300 at 60000/1001 without AI.
+- 72 variable-rate frames -> 298 at 60 FPS with AI and 18 at 7/2 without AI.
+- 120 AV1 frames at 24 FPS -> 120 at 24 FPS.
+- Every output timestamp and duration compared with an independent rational-time
+  calculation using ffprobe metadata, including nonzero source start offsets.
+  The output durations sum to the source track duration, including partial tails.
+- A generated 1280x720 midpoint visually inspected and confirmed different from
+  both source images. AI-disabled output matched the preceding image.
+- Single-frame EOF, invalid target FPS, and callback failure after an AI output.
+  A single frame without any end/duration information reports an error.
+
+Automatic scene-cut detection missed a synthetic red-to-blue cut and generated
+an interpolation instead of a bypass. It remains enabled, but cut handling is
+not guaranteed; no custom detector was added. Broader temporal quality, long-video
+performance, and audio synchronization are not qualified by these checks.
+Temporary download/inspection code was removed. No automated suite was added.
+
+The initial Ponytail review removed an unused current-image allocation/copy from AI-disabled
+processing and replaced manual timestamp rescaling with the existing ffmpeg-next
+helper. No new dependencies or scheduling abstractions were added.
+
+Native API reference: [NVIDIA Video Frame Generation](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoFrameGeneration.html).
+
+The AI-only refactor removed the toggle and non-AI interpolation path. Build and
+Clippy passed; a manual 60-to-120 FPS check produced six outputs with the expected
+timestamps and durations. Original-frame pass-through and EOF tail holding remain.

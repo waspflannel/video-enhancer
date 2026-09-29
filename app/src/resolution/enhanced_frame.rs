@@ -1,7 +1,7 @@
 use std::{io, ptr, rc::Rc};
 
 use ffmpeg_next::ffi;
-use crate::gpu::DecodedFrame;
+use crate::video_decoder::DecodedFrame;
 use super::{commands::*, cuda::CudaDevice, sdk_result};
 
 pub struct EnhancedFrame {
@@ -9,13 +9,14 @@ pub struct EnhancedFrame {
     pub height: u32,
     pub presentation_timestamp: i64,
     pub time_base: (i32, i32),
+    pub duration: i64,
     pub timestamp_seconds: f64,
     pub color_primaries: ffi::AVColorPrimaries,
     pub color_transfer: ffi::AVColorTransferCharacteristic,
     pub sample_aspect_ratio: (i32, i32),
     // Own the GPU pixels until this result is dropped.
-    pub(super) image: NvImage,
-    device: Rc<CudaDevice>,
+    pub(crate) image: NvImage,
+    pub(crate) device: Rc<CudaDevice>,
 }
 
 impl EnhancedFrame {
@@ -28,6 +29,7 @@ impl EnhancedFrame {
             height: image.height,
             presentation_timestamp: frame.presentation_timestamp,
             time_base: frame.time_base,
+            duration: frame.duration,
             timestamp_seconds: frame.timestamp_seconds,
             color_primaries: native.color_primaries,
             color_transfer: native.color_trc,
@@ -37,11 +39,44 @@ impl EnhancedFrame {
         })
     }
 
+    pub(crate) fn allocate_matching_frame(frame: &Self) -> io::Result<Self> {
+        Ok(Self {
+            width: frame.width, height: frame.height,
+            presentation_timestamp: frame.presentation_timestamp, time_base: frame.time_base,
+            duration: frame.duration, timestamp_seconds: frame.timestamp_seconds,
+            color_primaries: frame.color_primaries, color_transfer: frame.color_transfer,
+            sample_aspect_ratio: frame.sample_aspect_ratio,
+            image: allocate_rgba_image(frame.width, frame.height)?, device: Rc::clone(&frame.device),
+        })
+    }
+
+    pub(crate) fn copy_pixels_and_metadata_from(&mut self, frame: &Self) -> io::Result<()> {
+        // SAFETY: the caller activates CUDA; both owned images stay alive through synchronization.
+        // This GPU-to-GPU copy keeps a source frame before VSR overwrites it.
+        let result = sdk_result("Copy enhanced frame on GPU", unsafe { NvCVImage_Transfer(&frame.image, &mut self.image, 1.0, self.device.stream, ptr::null_mut()) });
+        let completion = self.device.synchronize();
+        result?;
+        completion?;
+        self.copy_metadata_from_enhanced_frame(frame);
+        Ok(())
+    }
+
+    pub(crate) fn copy_metadata_from_enhanced_frame(&mut self, frame: &Self) {
+        self.presentation_timestamp = frame.presentation_timestamp;
+        self.time_base = frame.time_base;
+        self.duration = frame.duration;
+        self.timestamp_seconds = frame.timestamp_seconds;
+        self.color_primaries = frame.color_primaries;
+        self.color_transfer = frame.color_transfer;
+        self.sample_aspect_ratio = frame.sample_aspect_ratio;
+    }
+
     pub(super) fn copy_metadata_from(&mut self, frame: &DecodedFrame) {
         // SAFETY: the decoded frame owns its native metadata for this borrow.
         let native = unsafe { &*frame.frame.as_ptr() };
         self.presentation_timestamp = frame.presentation_timestamp;
         self.time_base = frame.time_base;
+        self.duration = frame.duration;
         self.timestamp_seconds = frame.timestamp_seconds;
         self.color_primaries = native.color_primaries;
         self.color_transfer = native.color_trc;

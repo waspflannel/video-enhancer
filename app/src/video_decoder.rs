@@ -12,6 +12,8 @@ pub struct DecodedFrame {
     /// Presentation timestamp in `time_base` units, retained without rounding.
     pub presentation_timestamp: i64,
     pub time_base: (i32, i32),
+    /// Source frame duration in time-base units, when provided by the decoder.
+    pub duration: i64,
     pub pixel_format: &'static str,
     pub(crate) frame: frame::Video,
 }
@@ -171,6 +173,8 @@ fn prepare_decoded_frame(decoded: frame::Video, time_base: ffmpeg::Rational) -> 
         presentation_timestamp,
         time_base: (time_base.numerator(), time_base.denominator()),
         pixel_format,
+        // SAFETY: decoded owns this live AVFrame; duration is scalar metadata.
+        duration: unsafe { (*decoded.as_ptr()).duration },
         frame: decoded,
     })
 }

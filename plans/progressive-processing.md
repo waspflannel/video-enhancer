@@ -14,7 +14,7 @@ stages, parallel chunks, encoding, and audio muxing are separate follow-up work.
 
 ## Current code
 
-- `app/src/gpu.rs` already receives individual frames. `receive_gpu_frames`
+- `app/src/video_decoder.rs` already receives individual frames. `receive_gpu_frames`
   prepares each frame and pushes it into a vector; `decode` returns that vector.
 - `app/src/resolution/resolution.rs` consumes an enhancer to process a frame
   slice, loads the model on the first frame, and collects all enhanced outputs.
@@ -45,7 +45,7 @@ next iteration. This proves bounded progressive enhancement, not saved output.
 
 ## 1. Hand off decoded frames directly
 
-Change `gpu::decode` to accept a fallible callback instead of returning a vector.
+Change `video_decoder::decode` to accept a fallible callback instead of returning a vector.
 The callback is simply the function the decoder calls for each available frame.
 Its proposed shape is `FnMut(DecodedFrame) -> io::Result<()>`.
 
@@ -94,11 +94,11 @@ Conceptual call site, showing the proposed API rather than implemented code:
 
 ```rust
 let file_data = parser.get_video_information()?;
-let mut enhancer = ResolutionEnhancer::new()?;
+let mut resolution_enhancer = ResolutionEnhancer::new()?;
 let mut enhanced_frame_count = 0;
 
-gpu::decode(&file_data, |decoded_frame| {
-    let enhanced_frame = enhancer.enhance(&decoded_frame, new_resolution_width, new_resolution_height)?;
+video_decoder::decode(&file_data, |decoded_frame| {
+    let enhanced_frame = resolution_enhancer.enhance(&decoded_frame, new_resolution_width, new_resolution_height)?;
     // Consume this frame here; encoding will be added in a later milestone.
     let _ = enhanced_frame;
     enhanced_frame_count += 1;

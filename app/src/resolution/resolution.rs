@@ -22,19 +22,19 @@
 
 use std::{ffi::{c_void, CStr}, io, ptr, rc::Rc};
 
-use crate::gpu::DecodedFrame;
+use crate::video_decoder::DecodedFrame;
 
 #[path = "commands.rs"]
-mod commands;
+pub(crate) mod commands;
 #[path = "cuda.rs"]
-mod cuda;
-#[path = "frame.rs"]
-mod frame;
+pub(crate) mod cuda;
+#[path = "enhanced_frame.rs"]
+mod enhanced_frame;
 
 use commands::*;
 use cuda::CudaDevice;
-use frame::{allocate_rgba_image, convert_frame_to_rgba};
-pub use frame::EnhancedFrame;
+use enhanced_frame::{allocate_rgba_image, convert_frame_to_rgba};
+pub use enhanced_frame::EnhancedFrame;
 
 // Own the NVIDIA effect and its buffers for one video; Drop releases the effect first.
 pub struct ResolutionEnhancer {
@@ -152,7 +152,7 @@ fn bind_video_super_resolution_images(effect: *mut c_void, input: &mut NvImage, 
     }
 }
 
-fn sdk_result(operation: &str, status: i32) -> io::Result<()> {
+pub(crate) fn sdk_result(operation: &str, status: i32) -> io::Result<()> {
     if status == 0 { return Ok(()); }
     // SAFETY: the SDK returns a static error description for its status codes.
     let description = unsafe { CStr::from_ptr(NvCV_GetErrorStringFromCode(status)) }.to_string_lossy();

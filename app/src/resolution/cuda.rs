@@ -1,17 +1,17 @@
 use std::{io, ptr, rc::Rc};
 
 use ffmpeg_next::ffi;
-use crate::gpu::DecodedFrame;
+use crate::video_decoder::DecodedFrame;
 use super::commands::{cuCtxPushCurrent_v2, cuCtxPopCurrent_v2, cuStreamSynchronize};
 
-pub(super) struct CudaDevice {
+pub(crate) struct CudaDevice {
     reference: *mut ffi::AVBufferRef,
-    pub(super) context: ffi::CUcontext,
-    pub(super) stream: ffi::CUstream,
+    pub(crate) context: ffi::CUcontext,
+    pub(crate) stream: ffi::CUstream,
 }
 
 impl CudaDevice {
-    pub(super) fn configure_cuda_device(frame: &DecodedFrame) -> io::Result<Rc<Self>> {
+    pub(crate) fn configure_cuda_device(frame: &DecodedFrame) -> io::Result<Rc<Self>> {
         // SAFETY: the decoder owns a CUDA AVFrame with live hardware frame/device contexts.
         unsafe {
             let native = &*frame.frame.as_ptr();
@@ -26,13 +26,13 @@ impl CudaDevice {
         }
     }
 
-    pub(super) fn enter(&self) -> io::Result<CurrentContext<'_>> {
+    pub(crate) fn enter(&self) -> io::Result<CurrentContext<'_>> {
         // SAFETY: reference keeps this CUDA context alive until the guard is dropped.
         cuda_result("Activate decoder CUDA context", unsafe { cuCtxPushCurrent_v2(self.context) })?;
         Ok(CurrentContext { _device: self })
     }
 
-    pub(super) fn synchronize(&self) -> io::Result<()> {
+    pub(crate) fn synchronize(&self) -> io::Result<()> {
         // SAFETY: callers activate this context and retain its device/stream.
         cuda_result("Wait for GPU frame processing", unsafe { cuStreamSynchronize(self.stream) })
     }
@@ -45,7 +45,7 @@ impl Drop for CudaDevice {
     }
 }
 
-pub(super) struct CurrentContext<'a> {
+pub(crate) struct CurrentContext<'a> {
     _device: &'a CudaDevice,
 }
 
