@@ -61,6 +61,35 @@ app/
 Use the root Git repository. Keep downloaded binaries, videos, and generated
 outputs out of Git. Cargo.lock belongs in Git.
 
+## YouTube downloads in the desktop UI
+
+The **Download from YouTube** section uses `yt-dlp` from PATH and the existing
+project-local FFmpeg. Choose maximum resolution, maximum frame rate, and MP4
+(H.264/AAC) or MKV (best supported SDR codec). These are download limits, not
+upscaling or frame generation. Audio is included. MP4 is the compatible default;
+MKV may select a 10-bit source that the enhancer cannot currently process.
+
+Downloads and resumable partial files go in the ignored `youtube-videos/` folder
+at the project root. **Load video** opens that folder, regardless of the process's
+working directory. Names include the video ID and selected format IDs so different
+quality downloads do not collide. Existing files are preserved. Cancel or close
+stops yt-dlp and its child processes. The UI ignores yt-dlp configuration files so
+their output paths and executable hooks cannot override the selected options.
+
+Manual check: download a short video, then use **Load video** to confirm the initial
+folder and import it. Repeat the download to check that the existing file stays
+unchanged; cancel a download and check that controls become available again.
+From `app/`, verify both downloaded streams decode with this runnable check:
+
+```powershell
+$video = Get-ChildItem ../youtube-videos/*.mp4 | Select-Object -Last 1
+if (!$video) { throw 'Download an MP4 first' }
+& ../tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin/ffmpeg.exe -v error -xerror -i $video.FullName -map 0:v:0 -map 0:a:0 -f null -
+if ($LASTEXITCODE -ne 0) { throw 'Downloaded video/audio verification failed' }
+```
+
+Options follow the [official yt-dlp documentation](https://github.com/yt-dlp/yt-dlp#usage-and-options).
+
 ## Parser
 
 ```rust

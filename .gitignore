@@ -20,6 +20,7 @@ target/
 # Downloaded assets and generated media
 tools/
 sample-videos/
+youtube-videos/
 .tmp-*/
 models/
 downloads/

@@ -2,12 +2,14 @@ use std::{path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Dur
 use serde_json::{json, Value};
 use tao::{event::{Event, WindowEvent}, event_loop::{ControlFlow, EventLoopBuilder}, window::WindowBuilder, dpi::LogicalSize};
 use video_enhancer::{job::{VideoEnhancementJob, EnhancementSettings}, parser::Parser};
+use crate::youtube::{self, DownloadOptions};
 
 enum AppEvent {
     Command(String),
     Loaded(Result<Value, String>),
     Progress(Value),
     Finished(Result<Value, String>),
+    Downloaded(Result<PathBuf, String>),
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -44,8 +46,30 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 match message["command"].as_str().unwrap_or("") {
                     "ready" => emit(json!({"type":"presets", "presets":EnhancementSettings::presets()})),
                     "cancel" => { cancelled.store(true, Ordering::Relaxed); }
+                    "download" if !busy => {
+                        let options = match serde_json::from_value::<DownloadOptions>(message["options"].clone()) {
+                            Ok(options) => options,
+                            Err(error) => { emit(json!({"type":"download-error", "message":error.to_string()})); return; }
+                        };
+                        busy = true;
+                        cancelled.store(false, Ordering::Relaxed);
+                        emit(json!({"type":"download-started"}));
+                        let sender = proxy.clone();
+                        let cancellation = Arc::clone(&cancelled);
+                        std::thread::spawn(move || {
+                            let result = youtube::download(options, &cancellation, |message| {
+                                let _ = sender.send_event(AppEvent::Progress(json!({"type":"download-progress", "message":message})));
+                            }).map_err(|error| error.to_string());
+                            let _ = sender.send_event(AppEvent::Downloaded(result));
+                        });
+                    }
                     "load" if !busy => {
-                        if let Some(path) = rfd::FileDialog::new().set_title("Load video").add_filter("Video", &["mp4", "mkv", "mov", "avi", "webm", "m4v"]).pick_file() {
+                        let directory = youtube::directory();
+                        if let Err(error) = std::fs::create_dir_all(&directory) {
+                            emit(json!({"type":"error", "message":format!("Could not create youtube-videos: {error}")}));
+                            return;
+                        }
+                        if let Some(path) = rfd::FileDialog::new().set_title("Load video").set_directory(directory).add_filter("Video", &["mp4", "mkv", "mov", "avi", "webm", "m4v"]).pick_file() {
                             busy = true;
                             loaded = None;
                             emit(json!({"type":"loading"}));
@@ -104,6 +128,14 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 if close_when_finished { *control_flow = ControlFlow::Exit; }
             }
             Event::UserEvent(AppEvent::Progress(value)) => emit(value),
+            Event::UserEvent(AppEvent::Downloaded(result)) => {
+                busy = false;
+                match result {
+                    Ok(path) => emit(json!({"type":"downloaded", "path":path})),
+                    Err(error) => emit(json!({"type":"download-error", "message":error})),
+                }
+                if close_when_finished { *control_flow = ControlFlow::Exit; }
+            }
             Event::UserEvent(AppEvent::Finished(result)) => {
                 busy = false;
                 emit(result.unwrap_or_else(|error| json!({"type":"error", "message":error})));
