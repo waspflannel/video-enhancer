@@ -80,7 +80,7 @@ require a GPU. It selects the first video stream that is not cover art.
 Missing FPS/duration remains `None`; average FPS does not imply constant
 frame rate. Rotation, colour, aspect ratio, and stream timing are retained.
 
-`gpu::decode(&information, consume_frame)` returns `io::Result<()>` after
+`gpu::decode(&information, on_frame_decoded)` returns `io::Result<()>` after
 calling a fallible consumer for each owned GPU frame. Consumer errors stop
 decoding immediately. No frame vector is collected. It selects
 `h264_cuvid`, `hevc_cuvid`, or `av1_cuvid` on

@@ -65,7 +65,7 @@ impl ResolutionEnhancer {
         let _context = device.enter()?;
         convert_frame_to_rgba(frame, &mut self.input, &device)?;
         self.enhance_frame(&device)?;
-        let output = self.output_frame_buffer.as_mut().unwrap();
+        let output: &mut EnhancedFrame = self.output_frame_buffer.as_mut().unwrap();
         output.copy_metadata_from(frame);
         Ok(output)
     }
