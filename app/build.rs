@@ -25,6 +25,8 @@ fn main() {
         "bin/NVVideoEffects.dll",
         "bin/NVCVImage.dll",
         "bin/cudart64_12.dll",
+        "bin/nvrtc64_120_0.dll",
+        "bin/nvrtc-builtins64_128.dll",
         "bin/nvngxruntime.dll",
         "features/nvvfxvideosuperres/bin/nvVFXVideoSuperRes.dll",
         "features/nvvfxvideosuperres/bin/nvngx_vsr.dll",

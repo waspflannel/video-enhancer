@@ -11,7 +11,8 @@
 //! Call finish after frame-rate conversion finishes to flush NVENC, copy remaining
 //! audio, and write the trailer. Stop on errors; an unfinished output is incomplete.
 
-use std::{fs::OpenOptions, io, path::Path, ptr};
+use std::{fs::OpenOptions, io, ptr};
+use crate::job::VideoEnhancementJob;
 use ffmpeg_next::{self as ffmpeg, ffi, Rescale};
 use crate::{frame_rate::FrameForEncoder, parser::FileData, resolution::{commands::*, sdk_result}};
 
@@ -25,7 +26,13 @@ pub struct VideoEncoder {
 }
 
 impl VideoEncoder {
-    pub fn new(source: &FileData, output_path: &Path, target_frame_rate: (i32, i32)) -> io::Result<Self> {
+    pub fn new(source: &FileData, job: &VideoEnhancementJob) -> io::Result<Self> {
+        let source_rate = source.metadata["streams"].as_array().and_then(|streams| streams.iter().find(|stream| stream["index"].as_u64() == Some(u64::from(source.video_stream_index))))
+            .and_then(|stream| stream["avg_frame_rate"].as_str()).and_then(|rate| rate.split_once('/'))
+            .and_then(|(n, d)| Some((n.parse::<i32>().ok()?, d.parse::<i32>().ok()?)))
+            .filter(|(n, d)| *n > 0 && *d > 0).unwrap_or((0, 1));
+        let target_frame_rate = job.target_fps.map_or(source_rate, |fps| (fps as i32, 1));
+        let output_path = &job.output;
         ffmpeg::init().map_err(|e| failure("Initialize FFmpeg encoder", e))?;
         let source_path = source.path.to_str().ok_or_else(|| io::Error::other("Source path is not valid UTF-8"))?;
         let output_path = output_path.to_str().ok_or_else(|| io::Error::other("Output path is not valid UTF-8"))?;

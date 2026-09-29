@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::os::windows::process::CommandExt;
 
 const FFMPEG_BIN: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -9,6 +10,7 @@ const FFMPEG_BIN: &str = concat!(
 pub fn video_information(file: &Path) -> Command {
     let mut command = Command::new(Path::new(FFMPEG_BIN).join("ffprobe.exe"));
     command
+        .creation_flags(0x08000000) // Keep ffprobe's console hidden in the desktop app.
         .args([
             "-v",
             "error",

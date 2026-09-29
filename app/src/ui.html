@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
+<title>Video Enhancer</title>
+<style>
+:root{color-scheme:dark;font:14px 'Segoe UI',sans-serif;color:#e9eeeb;background:#121615;--muted:#9ea9a3;--accent:#b7eb89;--line:#303933}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button,select{border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit;padding:10px 14px}button{cursor:pointer;transition:background .15s,transform .15s}button:hover:enabled{background:#354135}button:active:enabled{transform:translateY(1px)}button:disabled{cursor:default;opacity:.45}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:4px}header{display:flex;justify-content:space-between;align-items:center;padding:25px 34px;border-bottom:1px solid var(--line)}header strong{font-size:21px;font-weight:600;letter-spacing:-.5px}.local{font-size:12px;color:var(--accent);letter-spacing:1px}.local:before{content:'●';margin-right:8px}main{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 84px)}aside{padding:30px 26px 26px 34px;border-right:1px solid var(--line);background:#161c18}.eyebrow{font-size:11px;letter-spacing:1.6px;color:var(--muted);font-weight:600}h1{font-size:27px;letter-spacing:-.8px;margin:12px 0}p{color:var(--muted);line-height:1.6}.source-symbol{height:150px;margin:25px 0;display:grid;place-items:center;border:1px dashed #455147;border-radius:8px;color:#6d826e;background:#1b231d}.source-symbol svg{width:60px;height:60px}.load{width:100%;background:var(--accent);color:#192315;border:0;font-weight:600}.load:hover:enabled,.generate:hover:enabled{background:#c8f4a3}#name{font-weight:600;overflow-wrap:anywhere;margin-top:23px}dl{margin-top:20px}dl div{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #28312b}dt{color:var(--muted)}dd{margin:0}.note{font-size:12px;margin-top:25px}.workspace{padding:28px 34px;min-width:0}.intro{display:flex;justify-content:space-between;align-items:baseline}.intro h2{font-size:19px;font-weight:500;margin:0 0 5px}.intro p{font-size:12px;margin:0}.settings-wrap{position:relative;margin-top:24px}fieldset{margin:0;padding:0;border:0;min-width:0;transition:filter .25s,opacity .25s}fieldset.locked{filter:blur(3px);opacity:.40;pointer-events:none;user-select:none}.lock-message{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}.lock-message span{background:#202922;padding:16px 22px;border:1px solid #54634e;border-radius:8px;box-shadow:0 6px 32px #0005}.section{padding:19px 0;border-bottom:1px solid var(--line)}.section:first-child{padding-top:0}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}.section-title h3{font-size:13px;font-weight:600;margin:0}.section-title small{color:var(--muted);font-size:11px}.row{display:grid;grid-template-columns:1fr 1fr;gap:25px}.field{display:block;font-size:12px;color:var(--muted)}.field select{display:block;width:100%;margin-top:8px}.presets{display:flex;gap:7px;flex-wrap:wrap}.presets button{padding:7px 11px;font-size:12px}.presets .selected{border-color:var(--accent);color:var(--accent);background:#273421}.sliders{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;row-gap:18px}.slider-head{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px}.slider-head output{font-variant-numeric:tabular-nums;color:var(--accent)}input[type=range]{display:block;width:100%;height:4px;margin:12px 0 4px;accent-color:var(--accent)}.helper{font-size:11px;color:var(--muted);margin:12px 0 0}.footer{padding-top:23px;display:flex;align-items:center;justify-content:space-between;gap:20px}.generate{min-width:166px;background:var(--accent);color:#192315;font-weight:600;border:0}.summary{font-size:12px;color:var(--muted)}#status{font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:20px}#status.error{color:#ffb8ae}progress{width:100%;accent-color:var(--accent);height:5px;border:0;margin-top:15px}[hidden]{display:none!important}@media(max-width:900px){header{padding:20px}main{grid-template-columns:230px 1fr}aside{padding:25px 20px}.workspace{padding:25px 22px}.row,.sliders{column-gap:15px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex-shrink:0;padding-top:20px;padding-bottom:20px}main{flex:1;min-height:0}aside{overflow:auto}.workspace{display:flex;flex-direction:column;overflow:hidden}.intro,.footer{flex-shrink:0}.settings-wrap{overflow:auto;min-height:0;flex:1;padding-right:8px;margin-top:20px}.section{padding:16px 0}.section-title{margin-bottom:13px}.sliders{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}#status{flex-shrink:0;max-height:85px;overflow:auto;margin-top:12px}.footer{padding-top:17px}.lock-message{position:sticky;bottom:40%;height:0}.lock-message span{transform:translateY(-50%)}@media(max-width:900px){.sliders{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<header><strong>Video Enhancer<span style="color:var(--accent)">.</span></strong><span class="local">LOCAL · NVIDIA</span></header>
+<main>
+<aside>
+  <div class="eyebrow">YOUR SOURCE</div><h1>Choose a video.</h1><p>Load a video, choose your settings, and export locally.</p>
+  <div class="source-symbol" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="8" y="12" width="48" height="40" rx="5"/><path d="m27 24 13 8-13 8Z"/><path d="M16 12v40M48 12v40M8 22h8m-8 20h8m32-20h8m-8 20h8"/></svg></div>
+  <button id="load" class="load">Load video</button>
+  <div id="name">No video selected</div>
+  <dl><div><dt>Resolution</dt><dd id="dimensions">—</dd></div><div><dt>Frame rate</dt><dd id="fps">—</dd></div><div><dt>Duration</dt><dd id="duration">—</dd></div><div><dt>Audio</dt><dd id="audio">—</dd></div></dl>
+  <p class="note">Your original stays untouched.<br>Exports are saved as H.264 MP4 with the source audio.</p>
+</aside>
+<section class="workspace">
+  <div class="intro"><div><h2>Enhancement settings</h2><p>Start neutral. Adjust only what your video needs.</p></div><button id="reset" disabled>Reset</button></div>
+  <div class="settings-wrap">
+  <fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
+    <section class="section"><div class="section-title"><h3>Output</h3><small>Preserve aspect ratio</small></div>
+      <div class="row"><label class="field">Resolution<select id="scale"><option value="1">Original resolution</option><option value="2">2× resolution</option><option value="3">3× resolution</option><option value="4">4× resolution</option></select></label><label class="field">Frame rate<select id="target_fps"><option value="">Original FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select></label></div>
+      <label class="field" style="margin-top:14px">Upscale quality<select id="quality" disabled><option value="1">Low · fastest</option><option value="2">Medium</option><option value="3">High</option><option value="4" selected>Ultra · most detail</option></select></label>
+      <p class="helper">Higher FPS uses NVIDIA AI frame generation. Maximum output: 4096 pixels per side.</p>
+    </section>
+    <section class="section"><div class="section-title"><h3>Look presets</h3><small id="preset-label">Neutral</small></div><div class="presets" id="presets"></div><p class="helper" id="preset-description">All enhancements off. Resolution and FPS stay as selected.</p></section>
+    <section class="section"><div class="section-title"><h3>Detail & cleanup</h3><small>NVIDIA</small></div><div class="sliders" id="detail-controls"></div><p class="helper">Cleanup uses gentle AI modes. Too much sharpening can create halos.</p></section>
+    <section class="section"><div class="section-title"><h3>Colour & tone</h3><small>SDR</small></div><div class="sliders" id="colour-controls"></div></section>
+  </fieldset>
+  <div class="lock-message" id="lock"><span>Load a video to unlock settings</span></div>
+  </div>
+  <div class="footer"><span class="summary" id="summary">Waiting for a video</span><div><button id="cancel" hidden>Cancel</button> <button id="generate" class="generate" disabled>Generate →</button></div></div>
+  <progress id="progress" max="1" value="0" hidden></progress><div id="status" role="status" aria-live="polite"></div>
+</section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
+let source = null, busy = false, presets = [];
+const specs = [
+  ['denoise','Denoise',0,1,0.05,'detail-controls'],['deblur','Deblur',0,1,0.05,'detail-controls'],['sharpening','Sharpening',0,2,0.05,'detail-controls'],
+  ['contrast','Contrast',0.5,1.5,0.01,'colour-controls'],['vibrance','Vibrance',-1,1,0.01,'colour-controls'],['saturation','Saturation',0,2,0.01,'colour-controls'],['exposure','Exposure',-2,2,0.05,'colour-controls'],['warmth','Warmth',-1,1,0.01,'colour-controls']
+];
+const descriptions = {'Neutral':'All enhancements off. Resolution and FPS stay as selected.','Natural':'A subtle contrast, colour and detail lift.','Crisp':'Gentle deblur with a little extra edge definition.','Colour lift':'Richer colour and contrast without changing exposure.','Gentle cleanup':'Light denoise and deblur for slightly noisy or soft footage.'};
+for(const [id,label,min,max,step,group] of specs){
+ const wrapper=document.createElement('div');
+ wrapper.innerHTML=`<div class="slider-head"><label for="${id}">${label}</label><output id="${id}-value" for="${id}"></output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
+ $(group).append(wrapper);
+ $(id).addEventListener('input',()=>{displayValue(id); $('preset-label').textContent='Custom'; $('preset-description').textContent='Your adjustments. Resolution and FPS stay as selected.'; document.querySelectorAll('.presets button').forEach(b=>b.classList.remove('selected'));});
+}
+function displayValue(id){let v=Number($(id).value); $(id+'-value').textContent = id==='exposure'?`${v.toFixed(2)} EV`:v.toFixed(2);}
+function applyPreset(name,settings){for(const [id] of specs){$(id).value=settings[id];displayValue(id);} $('preset-label').textContent=name;$('preset-description').textContent=descriptions[name];document.querySelectorAll('.presets button').forEach(b=>b.classList.toggle('selected',b.textContent===name));}
+function updateState(){
+ $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);$('lock').hidden=!!source;
+ $('load').disabled=busy;$('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy||!source;
+ $('quality').disabled=$('scale').value==='1';
+ if(source){const scale=Number($('scale').value);$('summary').textContent=`${source.width*scale} × ${source.height*scale} · ${$('target_fps').value || 'Original'} FPS`;}
+}
+function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
+$('load').onclick=()=>send('load');
+$('reset').onclick=()=>{applyPreset(...presets[0]);$('scale').value='1';$('quality').value='4';$('target_fps').value='';updateState();};
+$('scale').onchange=updateState;$('target_fps').onchange=updateState;
+$('cancel').onclick=()=>{send('cancel');$('cancel').disabled=true;message('Stopping after the current frame…');};
+$('generate').onclick=()=>{const enhancements=Object.fromEntries(specs.map(([id])=>[id,Number($(id).value)]));send('generate',{job:{resolution_scale:Number($('scale').value),upscale_quality:Number($('quality').value),target_fps:$('target_fps').value?Number($('target_fps').value):null,enhancements}});};
+window.receive = event => {
+ switch(event.type){
+ case 'presets':presets=event.presets;for(const [name,settings] of presets){const b=document.createElement('button');b.textContent=name;b.onclick=()=>applyPreset(name,settings);$('presets').append(b);}applyPreset(...presets[0]);break;
+ case 'loading':source=null;busy=true;$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
+ case 'loaded':source=event.source;busy=false;$('name').textContent=source.name;$('dimensions').textContent=`${source.width} × ${source.height}`;$('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable / unknown';$('duration').textContent=source.duration?`${Math.floor(source.duration/60)}:${String(Math.floor(source.duration%60)).padStart(2,'0')}`:'Unknown';$('audio').textContent=source.audio?`${source.audio} track${source.audio>1?'s':''}`:'No audio';
+ $('scale').value='1';$('target_fps').value='';for(const option of $('scale').options)option.disabled=source.width*Number(option.value)>4096||source.height*Number(option.value)>4096;for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;message('Ready. Choose your settings, then Generate.');break;
+ case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
+ case 'progress':if(source.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
+ case 'finished':busy=false;$('progress').value=1;message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
+ case 'error':busy=false;$('progress').hidden=true;if(!source)$('name').textContent='No video selected';message(event.message,true);break;
+ case 'status':message(event.message);break;
+ }
+ updateState();
+};
+send('ready');
+</script>
+</html>

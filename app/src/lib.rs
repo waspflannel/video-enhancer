@@ -6,3 +6,6 @@ pub mod resolution;
 
 pub mod frame_rate;
 pub mod video_encoder;
+pub mod job;
+pub mod video_adjuster;
+pub mod sharpening;

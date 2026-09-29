@@ -20,6 +20,7 @@
 use std::{ffi::c_void, io, ptr, rc::Rc};
 use ffmpeg_next::{ffi, Rescale};
 use crate::resolution::{EnhancedFrame, commands::*, sdk_result};
+use crate::job::VideoEnhancementJob;
 
 /// The output timestamp belongs to the new FPS timeline, not the source image.
 /// The borrowed GPU image and its colour metadata are valid during the callback.
@@ -31,6 +32,7 @@ pub struct FrameForEncoder<'a> {
 }
 
 pub struct FrameRateEnhancer {
+    keep_source_timing: bool,
     target_frame_rate: (i32, i32),
     video_end_time: Option<(i64, (i32, i32))>,
     effect: *mut c_void,
@@ -45,11 +47,13 @@ pub struct FrameRateEnhancer {
 
 impl FrameRateEnhancer {
     /// Use a rational rate, such as (60, 1) or (60000, 1001).
-    pub fn new(target_frame_rate: (i32, i32), video_end_time: Option<(i64, (i32, i32))>) -> io::Result<Self> {
+    pub fn new(job: &VideoEnhancementJob, video_end_time: Option<(i64, (i32, i32))>) -> io::Result<Self> {
+        let target_frame_rate = (job.target_fps.unwrap_or(1) as i32, 1);
         if target_frame_rate.0 <= 0 || target_frame_rate.1 <= 0 {
             return Err(io::Error::other("Target frame rate must be positive"));
         }
         Ok(Self {
+            keep_source_timing: job.target_fps.is_none(),
             target_frame_rate, video_end_time, effect: ptr::null_mut(),
             previous_frame: None, current_frame: None, generated_frame: None,
             output_time_base: (1, 1), output_frame_duration: 0,
@@ -58,6 +62,9 @@ impl FrameRateEnhancer {
     }
 
     pub fn enhance(&mut self, frame: &EnhancedFrame, on_frame_ready_for_encoding: &mut impl FnMut(FrameForEncoder<'_>) -> io::Result<()>) -> io::Result<()> {
+        if self.keep_source_timing {
+            return on_frame_ready_for_encoding(FrameForEncoder { frame, presentation_timestamp: frame.presentation_timestamp, time_base: frame.time_base, duration: frame.duration });
+        }
         let device = Rc::clone(&frame.device);
         let _context = device.enter()?;
         if self.previous_frame.is_none() {
