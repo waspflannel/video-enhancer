@@ -2,6 +2,7 @@ use std::ffi::{c_char, c_void};
 
 use ffmpeg_next::ffi;
 
+pub(crate) const NVCV_RGB: i32 = 4;
 pub(crate) const NVCV_RGBA: i32 = 6;
 pub(crate) const NVCV_Y: i32 = 1;
 pub(crate) const NVCV_A: i32 = 2;

@@ -74,7 +74,7 @@ impl EffectStage {
 
     fn run(&self) -> io::Result<()> {
         // SAFETY: input, output, state and CUDA stream remain owned by this job.
-        sdk_result(&format!("Run NVIDIA {}", self.name.to_string_lossy()), unsafe { NvVFX_Run(self.handle, 0) })
+        sdk_result(&format!("Run NVIDIA {}", self.name.to_string_lossy()), unsafe { NvVFX_Run(self.handle, 1) })
     }
 }
 
@@ -159,9 +159,8 @@ impl VideoEffects {
             output.copy_metadata_from_enhanced_frame(frame);
             Ok(())
         })();
-        let completion = device.synchronize();
+        if result.is_err() { let _ = device.synchronize(); }
         result?;
-        completion?;
         Ok(self.output.as_ref().unwrap())
     }
 

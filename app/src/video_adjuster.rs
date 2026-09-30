@@ -29,7 +29,9 @@ impl VideoAdjuster {
             }
         }
         let output = self.output.as_mut().unwrap();
-        output.copy_pixels_and_metadata_from(frame)?;
+        output.copy_metadata_from_enhanced_frame(frame);
+        let mut source_pixels = frame.image.pixels;
+        let mut source_pitch = frame.image.pitch;
         let mut pixels = output.image.pixels;
         let mut pitch = output.image.pitch;
         let mut width = output.width as i32;
@@ -37,6 +39,7 @@ impl VideoAdjuster {
         let mut ten_bit = i32::from(output.image.pixel_format == NVCV_RGB10A2);
         let mut values = [settings.contrast, settings.saturation, settings.vibrance, settings.exposure, settings.warmth];
         let mut arguments = [
+            (&mut source_pixels as *mut *mut c_void).cast::<c_void>(), (&mut source_pitch as *mut i32).cast(),
             (&mut pixels as *mut *mut c_void).cast::<c_void>(), (&mut pitch as *mut i32).cast(),
             (&mut width as *mut i32).cast(), (&mut height as *mut i32).cast(),
             (&mut ten_bit as *mut i32).cast(),
@@ -45,9 +48,8 @@ impl VideoAdjuster {
         ];
         // SAFETY: arguments match the CUDA signature and owned output remains live until sync.
         let result = cuda_result("Adjust GPU colour", unsafe { cuLaunchKernel(self.function, output.width.div_ceil(16), output.height.div_ceil(16), 1, 16, 16, 1, 0, device.stream, arguments.as_mut_ptr(), ptr::null_mut()) });
-        let completion = device.synchronize();
+        if result.is_err() { let _ = device.synchronize(); }
         result?;
-        completion?;
         Ok(output)
     }
 }
@@ -55,6 +57,7 @@ impl VideoAdjuster {
 impl Drop for VideoAdjuster {
     fn drop(&mut self) {
         if !self.module.is_null() && let Some(output) = &self.output && let Ok(_context) = output.device.enter() {
+            let _ = output.device.synchronize();
             // SAFETY: all launches completed before unloading this module.
             unsafe { cuModuleUnload(self.module) };
         }

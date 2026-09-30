@@ -51,7 +51,7 @@ impl ResolutionEnhancer {
         }
         for stage in &mut self.stages {
             // SAFETY: the effect and its bound GPU buffers live for this job.
-            let result = sdk_result("Run NVIDIA enhancement", unsafe { NvVFX_Run(stage.effect, 0) });
+            let result = sdk_result("Run NVIDIA enhancement", unsafe { NvVFX_Run(stage.effect, 1) });
             if result.is_err() { let _ = device.synchronize(); }
             result?;
             stage.output.copy_metadata_from_enhanced_frame(cleaned);
@@ -101,6 +101,7 @@ fn configure_stages(stages: &mut Vec<EffectStage>, source: &EnhancedFrame, job: 
 impl Drop for ResolutionEnhancer {
     fn drop(&mut self) {
         if let Some(input) = &self.input && let Ok(_context) = input.device.enter() {
+            let _ = input.device.synchronize();
             // Destroy every effect before Rust frees any of their input/output buffers.
             for stage in self.stages.iter().rev() {
                 if !stage.effect.is_null() { unsafe { NvVFX_DestroyEffect(stage.effect) }; }

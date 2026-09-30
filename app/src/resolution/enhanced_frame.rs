@@ -99,7 +99,8 @@ fn allocate_image(width: u32, height: u32, format: i32, component_type: i32, lay
 impl Drop for EnhancedFrame {
     fn drop(&mut self) {
         if let Ok(_context) = self.device.enter() {
-            // SAFETY: processing is synchronous; this image uniquely owns its allocation.
+            let _ = self.device.synchronize();
+            // SAFETY: queued readers and writers finish before freeing this allocation.
             unsafe { NvCVImage_Dealloc(&mut self.image) };
         }
     }
