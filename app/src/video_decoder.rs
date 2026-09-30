@@ -1,5 +1,5 @@
 //! In-process CUVID decoding. Pixel storage never passes through host RAM.
-use std::{io, ptr};
+use std::{io, ptr, sync::mpsc, thread};
 
 use ffmpeg_next::{self as ffmpeg, ffi, frame};
 
@@ -21,11 +21,22 @@ fn failure(stage: &str, error: ffmpeg::Error) -> io::Error {
     io::Error::other(format!("{stage}: {error}"))
 }
 
-/// Hand each owned GPU frame to the consumer before decoding more output.
+/// Decode ahead on one worker, retaining at most two queued GPU frames.
 pub fn decode(video: &FileData, mut on_frame_decoded: impl FnMut(DecodedFrame) -> io::Result<()>) -> io::Result<()> {
-    let mut video_reader = open_video_reader(video)?;
-    let (mut video_decoder, time_base) = open_video_decoder(&video_reader, video)?;
-    decode_video_packets(&mut video_reader, &mut video_decoder, video.video_stream_index as usize, time_base, &mut on_frame_decoded)
+    thread::scope(|scope| {
+        let (sender, receiver) = mpsc::sync_channel(2);
+        let decoder = thread::Builder::new().name("video-decode".into()).spawn_scoped(scope, move || {
+            let mut video_reader = open_video_reader(video)?;
+            let (mut video_decoder, time_base) = open_video_decoder(&video_reader, video)?;
+            let mut send_frame = |frame| sender.send(frame).map_err(|_| io::Error::new(io::ErrorKind::Interrupted, "Frame consumer stopped"));
+            decode_video_packets(&mut video_reader, &mut video_decoder, video.video_stream_index as usize, time_base, &mut send_frame)
+        })?;
+        let processing = receiver.iter().try_for_each(&mut on_frame_decoded);
+        // Closing the queue unblocks a full producer on cancellation or consumer failure.
+        drop(receiver);
+        let decoding = decoder.join().unwrap_or_else(|_| Err(io::Error::other("Video decoder worker panicked")));
+        processing.and(decoding)
+    })
 }
 
 fn open_video_reader(video: &FileData) -> io::Result<ffmpeg::format::context::Input> {
