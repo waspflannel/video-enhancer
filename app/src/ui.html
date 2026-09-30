@@ -95,6 +95,7 @@ const defaults = {scale:1,quality:4,upscale_method:'vsr',upscale_strength:1,targ
 const neutralLook={denoise:0,denoise_quality:0,deblur:0,deblur_quality:0,contrast:1,saturation:1,vibrance:0,exposure:0,warmth:0,sharpening:0,temporal_denoise:'',portrait_mode:'off',segmentation_mode:0,blur_strength:0.5,relighting_mode:'off',hdr_enabled:false};
 const presets=[
  ['Neutral','Reset detail, colour, temporal denoise, portrait and HDR effects.',{}],
+ ['ultra-upscale','Testing: largest supported size, Ultra VSR, up to 120 FPS with High frame generation, and 10-bit SDR HEVC at P7 / quality 1. Gentle Ultra cleanup; very large files and slower rendering.',()=>({scale:[...$('scale').options].findLast(option=>!option.disabled)?.value||'1',upscale_method:'vsr',quality:4,upscale_strength:1,target_fps:[...$('target_fps').options].findLast(option=>!option.disabled).value,frame_quality:2,detect_scene_changes:true,output_encoding:'hevc10',encoder_preset:7,encoder_quality:1,denoise:0.1,denoise_quality:3,deblur:0.2,deblur_quality:3,contrast:1.03,vibrance:0.08})],
  ['Natural','A subtle colour lift with gentle VSR cleanup.',{contrast:1.04,vibrance:0.08,deblur:0.1}],
  ['Crisp','Medium VSR deblur and restrained sharpening for softer footage.',{deblur:0.25,deblur_quality:1,contrast:1.06,vibrance:0.1,sharpening:0.15}],
  ['Colour lift','Richer colour and contrast without increasing exposure.',{contrast:1.08,vibrance:0.2,saturation:1.03}],
@@ -112,7 +113,7 @@ for(const [id,label,min,max,step,group] of [...specs,...advancedSpecs]){
 function displayValue(id){const value=Number($(id).value);$(id+'-value').textContent=id==='exposure'?`${value.toFixed(2)} EV`:Number($(id).step)>=1?String(value):value.toFixed(2);}
 function markCustom(){$('preset-label').textContent='Custom';$('preset-description').textContent='Your detail and colour adjustments.';document.querySelectorAll('.presets button').forEach(button=>button.classList.remove('selected'));}
 function applyPreset(name,description,settings){
- const look={...neutralLook,...settings};
+ const look={...neutralLook,...(typeof settings==='function'?settings():settings)};
  for(const [id,value] of Object.entries(look)){if($(id).type==='checkbox')$(id).checked=value;else $(id).value=value;}
  for(const [id] of [...specs,...advancedSpecs])displayValue(id);
  $('preset-label').textContent=name;$('preset-description').textContent=description;
