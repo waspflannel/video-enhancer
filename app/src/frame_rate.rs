@@ -165,7 +165,7 @@ impl FrameRateEnhancer {
         // f32 rounding can reach an endpoint; the SDK requires a value strictly between 0 and 1.
         let timestep = timestep.clamp(f32::EPSILON, 1.0 - f32::EPSILON);
         sdk_result("Set interpolation position", unsafe { NvVFX_SetF32(self.effect, c"Timestep".as_ptr(), timestep) })?;
-        let result = sdk_result("Generate intermediate GPU frame", unsafe { NvVFX_Run(self.effect, 0) });
+        let result = sdk_result("Generate intermediate GPU frame", unsafe { NvVFX_Run(self.effect, 1) });
         if result.is_err() { let _ = self.previous_frame.as_ref().unwrap().device.synchronize(); }
         result
     }
@@ -175,6 +175,7 @@ impl Drop for FrameRateEnhancer {
     fn drop(&mut self) {
         if self.effect.is_null() { return; }
         if let Some(frame) = &self.previous_frame && let Ok(_context) = frame.device.enter() {
+            let _ = frame.device.synchronize();
             // Destroy the effect before Rust drops any of its bound image buffers.
             unsafe { NvVFX_DestroyEffect(self.effect) };
         }

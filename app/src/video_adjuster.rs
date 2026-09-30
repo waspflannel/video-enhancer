@@ -48,9 +48,8 @@ impl VideoAdjuster {
         ];
         // SAFETY: arguments match the CUDA signature and owned output remains live until sync.
         let result = cuda_result("Adjust GPU colour", unsafe { cuLaunchKernel(self.function, output.width.div_ceil(16), output.height.div_ceil(16), 1, 16, 16, 1, 0, device.stream, arguments.as_mut_ptr(), ptr::null_mut()) });
-        let completion = device.synchronize();
+        if result.is_err() { let _ = device.synchronize(); }
         result?;
-        completion?;
         Ok(output)
     }
 }
@@ -58,6 +57,7 @@ impl VideoAdjuster {
 impl Drop for VideoAdjuster {
     fn drop(&mut self) {
         if !self.module.is_null() && let Some(output) = &self.output && let Ok(_context) = output.device.enter() {
+            let _ = output.device.synchronize();
             // SAFETY: all launches completed before unloading this module.
             unsafe { cuModuleUnload(self.module) };
         }

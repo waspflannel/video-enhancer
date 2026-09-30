@@ -27,7 +27,7 @@ impl TrueHdr {
         // SAFETY: the descriptor stays at a stable address and its borrowed pixels stay live through the run.
         *self.input = unsafe { ptr::read(&frame.image) };
         unsafe { sdk_result("Bind TrueHDR input", NvVFX_SetImage(self.effect, c"SrcImage0".as_ptr(), &mut *self.input))?; }
-        let result = sdk_result("Convert SDR to HDR", unsafe { NvVFX_Run(self.effect, 0) });
+        let result = sdk_result("Convert SDR to HDR", unsafe { NvVFX_Run(self.effect, 1) });
         if result.is_err() { let _ = device.synchronize(); }
         result?;
         Ok(output)
@@ -61,6 +61,7 @@ impl TrueHdr {
 impl Drop for TrueHdr {
     fn drop(&mut self) {
         if !self.effect.is_null() && let Some(output) = &self.output && let Ok(_context) = output.device.enter() {
+            let _ = output.device.synchronize();
             // SAFETY: destroy the effect before dropping its bound output allocation.
             unsafe { NvVFX_DestroyEffect(self.effect) };
         }

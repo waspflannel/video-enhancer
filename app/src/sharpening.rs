@@ -29,9 +29,8 @@ impl Sharpener {
             sdk_result("Sharpen GPU frame", NvCVImage_Sharpen(self.strength, &self.rgb, &mut self.rgb, device.stream, &mut self.temporary))?;
             sdk_result("Convert sharpened RGB to RGBA", NvCVImage_Transfer(&self.rgb, &mut output.image, 1.0, device.stream, ptr::null_mut()))
         })();
-        let completion = device.synchronize();
+        if result.is_err() { let _ = device.synchronize(); }
         result?;
-        completion?;
         output.copy_metadata_from_enhanced_frame(frame);
         Ok(output)
     }
@@ -40,6 +39,7 @@ impl Sharpener {
 impl Drop for Sharpener {
     fn drop(&mut self) {
         if let Some(output) = &self.output && let Ok(_context) = output.device.enter() {
+            let _ = output.device.synchronize();
             // SAFETY: processing synchronized before these owned images are released.
             unsafe {
                 if !self.rgb.pixels.is_null() { NvCVImage_Dealloc(&mut self.rgb); }
