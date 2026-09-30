@@ -41,6 +41,17 @@ the existing project-local ffprobe executable. CUDA/NVDEC is supplied by the
 installed NVIDIA driver; no CUDA toolkit or Video Codec SDK download is
 needed for this FFmpeg integration.
 
+## Comparison check
+
+Run `cargo run` from `app/`, open **Compare videos**, and select a local video
+in each file input. **Play both** starts both at their current positions;
+**Pause both** pauses them; **Reset both** pauses and rewinds both to zero.
+Check each player's native seek, volume and playback controls independently.
+Replace either file, then go back and reopen comparison: the selections stay
+loaded and playback pauses when leaving. Files play locally in WebView2;
+format support depends on its installed codecs. Playback is simultaneous,
+without frame-accurate synchronization.
+
 ## Pipeline execution
 
 Each export uses a decoder worker, the existing job thread for enhancement, and

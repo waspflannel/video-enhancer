@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; media-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; media-src 'self' blob:;">
 <title>Video Enhancer</title>
 <style>
 :root{color-scheme:dark;font:14px 'Segoe UI',sans-serif;color:#e9eeeb;background:#121615;--muted:#9ea9a3;--accent:#b7eb89;--line:#303933}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button,select{border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit;padding:10px 14px}button{cursor:pointer;transition:background .15s,transform .15s}button:hover:enabled{background:#354135}button:active:enabled{transform:translateY(1px)}button:disabled{cursor:default;opacity:.45}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:4px}header{display:flex;justify-content:space-between;align-items:center;padding:25px 34px;border-bottom:1px solid var(--line)}header strong{font-size:21px;font-weight:600;letter-spacing:-.5px}.local{font-size:12px;color:var(--accent);letter-spacing:1px}.local:before{content:'●';margin-right:8px}main{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 84px)}aside{padding:30px 26px 26px 34px;border-right:1px solid var(--line);background:#161c18}.eyebrow{font-size:11px;letter-spacing:1.6px;color:var(--muted);font-weight:600}h1{font-size:27px;letter-spacing:-.8px;margin:12px 0}p{color:var(--muted);line-height:1.6}.source-symbol{height:150px;margin:25px 0;display:grid;place-items:center;border:1px dashed #455147;border-radius:8px;color:#6d826e;background:#1b231d}.source-symbol svg{width:60px;height:60px}.load{width:100%;background:var(--accent);color:#192315;border:0;font-weight:600}.load:hover:enabled,.generate:hover:enabled{background:#c8f4a3}#name{font-weight:600;overflow-wrap:anywhere;margin-top:23px}dl{margin-top:20px}dl div{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #28312b}dt{color:var(--muted)}dd{margin:0}.note{font-size:12px;margin-top:25px}.workspace{padding:28px 34px;min-width:0}.intro{display:flex;justify-content:space-between;align-items:baseline}.intro h2{font-size:19px;font-weight:500;margin:0 0 5px}.intro p{font-size:12px;margin:0}.settings-wrap{position:relative;margin-top:24px}fieldset{margin:0;padding:0;border:0;min-width:0;transition:filter .25s,opacity .25s}fieldset.locked{filter:blur(3px);opacity:.40;pointer-events:none;user-select:none}.lock-message{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}.lock-message span{background:#202922;padding:16px 22px;border:1px solid #54634e;border-radius:8px;box-shadow:0 6px 32px #0005}.section{padding:19px 0;border-bottom:1px solid var(--line)}.section:first-child{padding-top:0}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}.section-title h3{font-size:13px;font-weight:600;margin:0}.section-title small{color:var(--muted);font-size:11px}.row{display:grid;grid-template-columns:1fr 1fr;gap:25px}.field{display:block;font-size:12px;color:var(--muted)}.field select{display:block;width:100%;margin-top:8px}.presets{display:flex;gap:7px;flex-wrap:wrap}.presets button{padding:7px 11px;font-size:12px}.presets .selected{border-color:var(--accent);color:var(--accent);background:#273421}.sliders{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;row-gap:18px}.slider-head{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px}.slider-head output{font-variant-numeric:tabular-nums;color:var(--accent)}input[type=range]{display:block;width:100%;height:4px;margin:12px 0 4px;accent-color:var(--accent)}.helper{font-size:11px;color:var(--muted);margin:12px 0 0}.footer{padding-top:23px;display:flex;align-items:center;justify-content:space-between;gap:20px}.generate{min-width:166px;background:var(--accent);color:#192315;font-weight:600;border:0}.summary{font-size:12px;color:var(--muted)}#status{font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:20px}#status.error{color:#ffb8ae}progress{width:100%;accent-color:var(--accent);height:5px;border:0;margin-top:15px}[hidden]{display:none!important}@media(max-width:900px){header{padding:20px}main{grid-template-columns:230px 1fr}aside{padding:25px 20px}.workspace{padding:25px 22px}.row,.sliders{column-gap:15px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -13,7 +13,18 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
 .section .row+.row,.section .row+.sliders,.section .sliders+.row,.section .sliders+.sliders{margin-top:17px}.check{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:15px}.check input{accent-color:var(--accent)}.field input[type=color],.field input[type=number]{display:block;width:100%;height:39px;margin-top:8px;padding:8px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.field input[type=color]{padding:3px}.asset-picker{display:flex;align-items:center;gap:9px;margin-top:14px}.asset-picker button{font-size:12px;padding:8px 10px}.asset-name{color:var(--muted);font-size:12px;overflow-wrap:anywhere;min-width:0}input:disabled,select:disabled{opacity:.45}.section details>summary{font-size:13px;font-weight:600;cursor:pointer}.section details[open]>summary{margin-bottom:17px}.section fieldset{margin-top:15px}.section fieldset:disabled{opacity:.55}
 .sample-open{width:100%;margin-top:10px}.sample-mode{grid-template-columns:minmax(0,1.15fr) minmax(390px,1fr)}.sample-mode>aside{display:none}.sample-panel{min-width:0;min-height:0;padding:26px 30px;overflow:auto;border-right:1px solid var(--line);background:#161c18;display:flex;flex-direction:column;gap:18px}.sample-panel h2{margin:0;font-size:23px}.sample-panel p{margin:0}.sample-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}.sample-selection{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px}.sample-selection input{display:block;width:100%;min-width:0;background:#252d28;color:inherit;border:1px solid #465149;border-radius:6px;margin-top:8px;padding:10px}.sample-player{background:#080b09;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:220px;display:grid;place-items:center;flex:1}.sample-player video{width:100%;max-height:55vh;display:block}.sample-player p{padding:30px;text-align:center}.sample-tabs{display:flex;gap:8px}.sample-tabs button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}#sample-status{white-space:pre-wrap;line-height:1.5;color:var(--muted);font-size:12px}.sample-mode .row{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.sample-mode .sliders{grid-template-columns:repeat(2,minmax(0,1fr))}.sample-mode .intro{gap:12px}.sample-mode .workspace{padding:26px 22px}.sample-mode .field{min-width:0}.sample-mode .field select{min-width:0}.sample-mode .footer{flex-wrap:wrap}@media(max-width:900px){.sample-mode{grid-template-columns:minmax(0,1fr) minmax(360px,1fr)}.sample-panel{padding:22px 18px}.sample-selection{grid-template-columns:1fr 1fr}.sample-selection button{grid-column:1/-1}.sample-toolbar{flex-wrap:wrap}}
 </style>
-<header><strong>Video Enhancer<span style="color:var(--accent)">.</span></strong><span class="local">LOCAL · NVIDIA</span></header>
+<style>
+.comparison{flex:1;min-height:0;overflow:auto;padding:28px 34px}.comparison h1{margin:0}.comparison-actions{display:flex;gap:8px;margin:22px 0}.comparison-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.comparison-players input{display:block;width:100%;margin:12px 0;color:var(--muted)}.comparison-players video{display:block;width:100%;height: min(55vh,500px);background:#080b09;object-fit:contain;border:1px solid var(--line);border-radius:8px}.comparison-error{color:#ffb8ae;font-size:12px}
+</style>
+<header><strong>Video Enhancer<span style="color:var(--accent)">.</span></strong><button id="comparison-open">Compare videos</button><span class="local">LOCAL · NVIDIA</span></header>
+<section id="comparison" class="comparison" aria-label="Video comparison" hidden>
+  <div class="sample-toolbar"><h1>Compare videos</h1><button id="comparison-back">← Back to enhancer</button></div>
+  <div class="comparison-actions"><button id="comparison-play" disabled>Play both</button><button id="comparison-pause">Pause both</button><button id="comparison-reset">Reset both</button></div>
+  <div class="comparison-players">
+    <div><label for="comparison-file-1">Video 1</label><input id="comparison-file-1" type="file" accept="video/*"><video id="comparison-video-1" controls playsinline preload="auto" aria-label="Video 1"></video><p id="comparison-error-1" class="comparison-error" role="status"></p></div>
+    <div><label for="comparison-file-2">Video 2</label><input id="comparison-file-2" type="file" accept="video/*"><video id="comparison-video-2" controls playsinline preload="auto" aria-label="Video 2"></video><p id="comparison-error-2" class="comparison-error" role="status"></p></div>
+  </div>
+</section>
 <main id="main">
 <aside>
   <div class="eyebrow">YOUR SOURCE</div><h1>Choose a video.</h1><p>Load a video, choose your settings, and export locally.</p>
@@ -78,6 +89,37 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
 </main>
 <script>
 const $ = id => document.getElementById(id);
+const comparisonVideos=[$('comparison-video-1'),$('comparison-video-2')];
+function pauseComparison(){for(const video of comparisonVideos)video.pause();}
+function updateComparison(){ $('comparison-play').disabled=!comparisonVideos.every(video=>video.readyState>=2&&!video.error); }
+for(const [index,video] of comparisonVideos.entries()){
+ const error=$(`comparison-error-${index+1}`);
+ $(`comparison-file-${index+1}`).onchange=event=>{
+  const file=event.target.files[0];
+  if(!file)return;
+  pauseComparison();
+  if(video.src)URL.revokeObjectURL(video.src);
+  error.textContent='';
+  video.src=URL.createObjectURL(file);
+  $('comparison-play').disabled=true;
+ };
+ video.onloadeddata=updateComparison;
+ video.onerror=()=>{error.textContent='This video could not play. Try a supported format such as H.264 MP4.';updateComparison();};
+}
+$('comparison-play').onclick=()=>{
+ for(const [index,video] of comparisonVideos.entries())video.play().catch(error=>{if(error.name!=='AbortError')$(`comparison-error-${index+1}`).textContent=error.message;});
+};
+$('comparison-pause').onclick=pauseComparison;
+$('comparison-reset').onclick=()=>{pauseComparison();for(const video of comparisonVideos)video.currentTime=0;};
+$('comparison-open').onclick=()=>{
+ $('sample-original').pause();$('sample-enhanced').pause();
+ $('main').hidden=true;$('comparison').hidden=false;$('comparison-open').hidden=true;
+ $('comparison-back').focus();
+};
+$('comparison-back').onclick=()=>{
+ pauseComparison();$('comparison').hidden=true;$('main').hidden=false;$('comparison-open').hidden=false;
+ $('comparison-open').focus();
+};
 const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
 let source = null, busy = false, downloading = false, hdri = null;
 let samplePage=false, sampleSelection=null, renderedJob=null, renderingJob=null, sampleBusy=false, enhancedUrl=null;
