@@ -19,7 +19,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
 <header><strong>Video Enhancer<span style="color:var(--accent)">.</span></strong><button id="comparison-open">Compare videos</button><span class="local">LOCAL · NVIDIA</span></header>
 <section id="comparison" class="comparison" aria-label="Video comparison" hidden>
   <div class="sample-toolbar"><h1>Compare videos</h1><button id="comparison-back">← Back to enhancer</button></div>
-  <div class="comparison-actions"><button id="comparison-play" disabled>Play both</button><button id="comparison-pause">Pause both</button><button id="comparison-reset">Reset both</button></div>
+  <div class="comparison-actions"><button id="comparison-play" disabled>Play both</button><button id="comparison-pause">Pause both</button><button id="comparison-reset">Reset both</button><button id="comparison-clear">Clear both</button></div>
   <div class="comparison-players">
     <div><label for="comparison-file-1">Video 1</label><input id="comparison-file-1" type="file" accept="video/*"><video id="comparison-video-1" controls playsinline preload="auto" aria-label="Video 1"></video><p id="comparison-error-1" class="comparison-error" role="status"></p></div>
     <div><label for="comparison-file-2">Video 2</label><input id="comparison-file-2" type="file" accept="video/*"><video id="comparison-video-2" controls playsinline preload="auto" aria-label="Video 2"></video><p id="comparison-error-2" class="comparison-error" role="status"></p></div>
@@ -111,6 +111,16 @@ $('comparison-play').onclick=()=>{
 };
 $('comparison-pause').onclick=pauseComparison;
 $('comparison-reset').onclick=()=>{pauseComparison();for(const video of comparisonVideos)video.currentTime=0;};
+$('comparison-clear').onclick=()=>{
+ pauseComparison();
+ for(const [index,video] of comparisonVideos.entries()){
+  if(video.src)URL.revokeObjectURL(video.src);
+  video.removeAttribute('src');video.load();
+  $(`comparison-file-${index+1}`).value='';
+  $(`comparison-error-${index+1}`).textContent='';
+ }
+ $('comparison-play').disabled=true;
+};
 $('comparison-open').onclick=()=>{
  $('sample-original').pause();$('sample-enhanced').pause();
  $('main').hidden=true;$('comparison').hidden=false;$('comparison-open').hidden=true;

@@ -46,6 +46,8 @@ needed for this FFmpeg integration.
 Run `cargo run` from `app/`, open **Compare videos**, and select a local video
 in each file input. **Play both** starts both at their current positions;
 **Pause both** pauses them; **Reset both** pauses and rewinds both to zero.
+**Clear both** unloads both players and clears both inputs; select files again
+to resume comparison, including the same files you just cleared.
 Check each player's native seek, volume and playback controls independently.
 Replace either file, then go back and reopen comparison: the selections stay
 loaded and playback pauses when leaving. Files play locally in WebView2;
