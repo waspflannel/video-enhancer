@@ -29,7 +29,9 @@ impl VideoAdjuster {
             }
         }
         let output = self.output.as_mut().unwrap();
-        output.copy_pixels_and_metadata_from(frame)?;
+        output.copy_metadata_from_enhanced_frame(frame);
+        let mut source_pixels = frame.image.pixels;
+        let mut source_pitch = frame.image.pitch;
         let mut pixels = output.image.pixels;
         let mut pitch = output.image.pitch;
         let mut width = output.width as i32;
@@ -37,6 +39,7 @@ impl VideoAdjuster {
         let mut ten_bit = i32::from(output.image.pixel_format == NVCV_RGB10A2);
         let mut values = [settings.contrast, settings.saturation, settings.vibrance, settings.exposure, settings.warmth];
         let mut arguments = [
+            (&mut source_pixels as *mut *mut c_void).cast::<c_void>(), (&mut source_pitch as *mut i32).cast(),
             (&mut pixels as *mut *mut c_void).cast::<c_void>(), (&mut pitch as *mut i32).cast(),
             (&mut width as *mut i32).cast(), (&mut height as *mut i32).cast(),
             (&mut ten_bit as *mut i32).cast(),

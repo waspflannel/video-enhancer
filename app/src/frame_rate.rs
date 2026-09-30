@@ -21,8 +21,8 @@ pub struct FrameRateEnhancer {
     target_fps: Option<u32>,
     video_end_time: Option<(i64, (i32, i32))>,
     effect: *mut c_void,
-    previous_frame: Option<EnhancedFrame>,
-    current_frame: Option<EnhancedFrame>,
+    previous_frame: Option<Box<EnhancedFrame>>,
+    current_frame: Option<Box<EnhancedFrame>>,
     generated_frame: Option<EnhancedFrame>,
     output_time_base: (i32, i32),
     output_frame_duration: i64,
@@ -50,7 +50,7 @@ impl FrameRateEnhancer {
         let _context = device.enter()?;
         if self.previous_frame.is_none() {
             self.configure_output_timeline(frame, target_fps)?;
-            self.previous_frame = Some(EnhancedFrame::allocate_matching_frame(frame)?);
+            self.previous_frame = Some(Box::new(EnhancedFrame::allocate_matching_frame(frame)?));
             return self.previous_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame);
         }
         let previous_timestamp = self.source_timestamp(self.previous_frame.as_ref().unwrap());
@@ -60,9 +60,10 @@ impl FrameRateEnhancer {
         }
         self.last_source_frame_interval = current_timestamp - previous_timestamp;
         if self.current_frame.is_none() {
-            self.current_frame = Some(EnhancedFrame::allocate_matching_frame(frame)?);
+            self.current_frame = Some(Box::new(EnhancedFrame::allocate_matching_frame(frame)?));
         }
         self.current_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame)?;
+        if !self.effect.is_null() { self.bind_source_frames()?; }
         let end_timestamp = self.video_end_time.map(|(timestamp, time_base)| timestamp.rescale(time_base, self.output_time_base));
         while self.next_output_timestamp < current_timestamp && end_timestamp.is_none_or(|end| self.next_output_timestamp < end) {
             let output_frame = if self.next_output_timestamp > previous_timestamp {
@@ -75,8 +76,9 @@ impl FrameRateEnhancer {
             on_frame_ready_for_encoding(self.frame_for_encoder(output_frame, end_timestamp))?;
             self.next_output_timestamp += self.output_frame_duration;
         }
-        // Stable allocations keep NVIDIA's image bindings valid across pairs and on failure.
-        self.previous_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame)
+        // Rotate owners, preserving descriptor addresses and avoiding a second pixel copy.
+        std::mem::swap(&mut self.previous_frame, &mut self.current_frame);
+        Ok(())
     }
 
     /// Call once after decoder EOF. No future frame exists, so hold the last image.
@@ -128,7 +130,6 @@ impl FrameRateEnhancer {
 
     fn configure_video_frame_generation(&mut self) -> io::Result<()> {
         let previous_frame = self.previous_frame.as_mut().unwrap();
-        let current_frame = self.current_frame.as_mut().unwrap();
         let device = Rc::clone(&previous_frame.device);
         self.generated_frame = Some(EnhancedFrame::allocate_matching_frame(previous_frame)?);
         let generated_frame = self.generated_frame.as_mut().unwrap();
@@ -141,14 +142,21 @@ impl FrameRateEnhancer {
             sdk_result("Set frame generation model", NvVFX_SetU32(self.effect, c"Mode".as_ptr(), self.settings.quality))?;
             sdk_result("Set explicit interpolation timing", NvVFX_SetU32(self.effect, c"FrameMultiplier".as_ptr(), 0))?;
             sdk_result("Set scene-cut detection", NvVFX_SetU32(self.effect, c"AutomaticShotChangeDetectionEnabled".as_ptr(), u32::from(self.settings.detect_scene_changes)))?;
-            sdk_result("Bind previous frame", NvVFX_SetImage(self.effect, c"SrcImage0".as_ptr(), &mut previous_frame.image))?;
-            sdk_result("Bind current frame", NvVFX_SetImage(self.effect, c"SrcImage1".as_ptr(), &mut current_frame.image))?;
             sdk_result("Bind generated frame", NvVFX_SetImage(self.effect, c"DstImage0".as_ptr(), &mut generated_frame.image))?;
         }
+        self.bind_source_frames()?;
         let result = sdk_result("Load NVIDIA Video Frame Generation model", unsafe { NvVFX_Load(self.effect) });
         let completion = device.synchronize();
         result?;
         completion
+    }
+
+    fn bind_source_frames(&mut self) -> io::Result<()> {
+        // SAFETY: both heap-owned descriptors and their GPU buffers outlive the effect.
+        unsafe {
+            sdk_result("Bind previous frame", NvVFX_SetImage(self.effect, c"SrcImage0".as_ptr(), &mut self.previous_frame.as_mut().unwrap().image))?;
+            sdk_result("Bind current frame", NvVFX_SetImage(self.effect, c"SrcImage1".as_ptr(), &mut self.current_frame.as_mut().unwrap().image))
+        }
     }
 
     fn generate_intermediate_frame(&mut self, timestep: f32) -> io::Result<()> {
