@@ -2,12 +2,91 @@
 //! NVENC owns converted GPU frames until compression finishes; borrowed input buffers can be reused.
 //! Audio is copied progressively with its source timestamps. Call finish to flush and write the trailer.
 
-use std::{fs::OpenOptions, io, ptr, rc::Rc};
+use std::{fs::OpenOptions, io, ptr, rc::Rc, sync::mpsc, thread};
 use crate::{job::{EncoderSettings, OutputEncoding, VideoEnhancementJob}, pixel_conversion::PixelConverter};
 use ffmpeg_next::{self as ffmpeg, ffi, Rescale};
 use crate::{frame_rate::FrameForEncoder, parser::FileData, resolution::{commands::*, sdk_result}};
 
 pub struct VideoEncoder {
+    pending_worker: Option<EncoderWorker>,
+    sender: Option<mpsc::SyncSender<EncoderCommand>>,
+    worker: Option<thread::JoinHandle<io::Result<()>>>,
+    frame_pool: *mut ffi::AVBufferRef,
+    time_base: ffmpeg::Rational,
+    converter: Option<PixelConverter>,
+}
+
+enum EncoderCommand { Frame(ffmpeg::frame::Video), Finish }
+
+impl VideoEncoder {
+    pub fn new(source: &FileData, job: &VideoEnhancementJob) -> io::Result<Self> {
+        Ok(Self { pending_worker: Some(EncoderWorker::new(source, job)?), sender: None, worker: None, frame_pool: ptr::null_mut(), time_base: (1, 1).into(), converter: None })
+    }
+
+    pub fn encode(&mut self, frame: FrameForEncoder<'_>) -> io::Result<()> {
+        let _context = frame.frame.device.enter()?;
+        if self.worker.is_none() { self.start_worker(&frame)?; }
+        // Conversion completes before handing an independently owned GPU buffer to NVENC.
+        let gpu_frame = prepare_encoder_frame(self.frame_pool, self.time_base, &frame, self.converter.as_ref())?;
+        self.send_command(EncoderCommand::Frame(gpu_frame))
+    }
+
+    /// Flush queued frames and audio before reporting a successful export.
+    pub fn finish(mut self) -> io::Result<()> {
+        if self.sender.is_none() { return Err(io::Error::other("No frames were sent to the encoder")); }
+        self.send_command(EncoderCommand::Finish)?;
+        self.join_worker()
+    }
+
+    fn start_worker(&mut self, first_frame: &FrameForEncoder<'_>) -> io::Result<()> {
+        let mut worker = self.pending_worker.take().unwrap();
+        worker.open_video_encoder(first_frame)?;
+        if worker.ten_bit { self.converter = Some(PixelConverter::new(Rc::clone(&first_frame.frame.device))?); }
+        let video_encoder = worker.video_encoder.as_ref().unwrap();
+        self.time_base = video_encoder.time_base();
+        // SAFETY: retain the initialized, fixed-format pool before moving the codec. FFmpeg's
+        // buffer pool is thread-safe; the producer never accesses the worker's codec again.
+        self.frame_pool = unsafe { ffi::av_buffer_ref((*video_encoder.as_ptr()).hw_frames_ctx) };
+        if self.frame_pool.is_null() { return Err(io::Error::other("Retain encoder GPU frame pool")); }
+        let (sender, receiver) = mpsc::sync_channel(2);
+        self.worker = Some(thread::Builder::new().name("video-encode".into()).spawn(move || {
+            for command in receiver {
+                match command {
+                    EncoderCommand::Frame(frame) => worker.encode(frame)?,
+                    EncoderCommand::Finish => return worker.finish(),
+                }
+            }
+            Err(io::Error::new(io::ErrorKind::Interrupted, "Frame producer stopped"))
+        })?);
+        self.sender = Some(sender);
+        Ok(())
+    }
+
+    fn send_command(&mut self, command: EncoderCommand) -> io::Result<()> {
+        if self.sender.as_ref().unwrap().send(command).is_err() {
+            self.join_worker()?;
+            return Err(io::Error::other("Video encoder worker stopped"));
+        }
+        Ok(())
+    }
+
+    fn join_worker(&mut self) -> io::Result<()> {
+        self.sender.take();
+        self.worker.take().unwrap().join().unwrap_or_else(|_| Err(io::Error::other("Video encoder worker panicked")))
+    }
+}
+
+impl Drop for VideoEncoder {
+    fn drop(&mut self) {
+        // Closing the queue also releases the worker on cancellation and upstream failures.
+        self.sender.take();
+        if let Some(worker) = self.worker.take() { let _ = worker.join(); }
+        // SAFETY: this reference owns the pool independently of the codec and queued frames.
+        unsafe { ffi::av_buffer_unref(&mut self.frame_pool); }
+    }
+}
+
+struct EncoderWorker {
     video_encoder: Option<ffmpeg::encoder::Video>,
     output_file: ffmpeg::format::context::Output,
     audio_reader: ffmpeg::format::context::Input,
@@ -16,10 +95,9 @@ pub struct VideoEncoder {
     target_frame_rate: ffmpeg::Rational,
     settings: EncoderSettings,
     ten_bit: bool,
-    converter: Option<PixelConverter>,
 }
 
-impl VideoEncoder {
+impl EncoderWorker {
     pub fn new(source: &FileData, job: &VideoEnhancementJob) -> io::Result<Self> {
         ffmpeg::init().map_err(|e| failure("Initialize FFmpeg encoder", e))?;
         let source_path = source.path.to_str().ok_or_else(|| io::Error::other("Source path is not valid UTF-8"))?;
@@ -49,17 +127,11 @@ impl VideoEncoder {
             }
             audio_stream_mapping[source_stream.index()] = Some(output_stream.index());
         }
-        Ok(Self { video_encoder: None, output_file, audio_reader, audio_stream_mapping, pending_audio_packet: None, target_frame_rate, settings: job.encoder.clone(), ten_bit, converter: None })
+        Ok(Self { video_encoder: None, output_file, audio_reader, audio_stream_mapping, pending_audio_packet: None, target_frame_rate, settings: job.encoder.clone(), ten_bit })
     }
 
-    pub fn encode(&mut self, frame: FrameForEncoder<'_>) -> io::Result<()> {
-        let _context = frame.frame.device.enter()?;
-        if self.video_encoder.is_none() {
-            self.open_video_encoder(&frame)?;
-        }
-        let video_encoder = self.video_encoder.as_mut().unwrap();
-        let gpu_frame = prepare_encoder_frame(video_encoder, &frame, self.converter.as_ref())?;
-        video_encoder.send_frame(&gpu_frame).map_err(|e| failure("Send GPU frame to NVENC", e))?;
+    fn encode(&mut self, gpu_frame: ffmpeg::frame::Video) -> io::Result<()> {
+        self.video_encoder.as_mut().unwrap().send_frame(&gpu_frame).map_err(|e| failure("Send GPU frame to NVENC", e))?;
         self.write_available_video_packets(false)
     }
 
@@ -77,7 +149,6 @@ impl VideoEncoder {
         let encoder_implementation = ffmpeg::encoder::find_by_name(encoder_name).ok_or_else(|| io::Error::other(format!("FFmpeg lacks {encoder_name}")))?;
         let mut encoder_context = ffmpeg::codec::Context::new_with_codec(encoder_implementation).encoder().video().map_err(|e| failure("Create NVENC context", e))?;
         let image = first_frame.frame;
-        if self.ten_bit { self.converter = Some(PixelConverter::new(Rc::clone(&image.device))?); }
         encoder_context.set_width(image.width);
         encoder_context.set_height(image.height);
         encoder_context.set_format(ffmpeg::format::Pixel::CUDA);
@@ -188,16 +259,16 @@ fn configure_encoder_gpu_buffers(encoder_context: &mut ffmpeg::codec::encoder::v
     Ok(())
 }
 
-fn prepare_encoder_frame(video_encoder: &ffmpeg::encoder::Video, frame: &FrameForEncoder<'_>, converter: Option<&PixelConverter>) -> io::Result<ffmpeg::frame::Video> {
+fn prepare_encoder_frame(frame_pool: *mut ffi::AVBufferRef, time_base: ffmpeg::Rational, frame: &FrameForEncoder<'_>, converter: Option<&PixelConverter>) -> io::Result<ffmpeg::frame::Video> {
     let mut gpu_frame = ffmpeg::frame::Video::empty();
     let device = &frame.frame.device;
     // SAFETY: the pipeline reuses fixed-size images matching this CUDA pool. AVFrame owns its
     // allocation; FFmpeg retains another reference when NVENC needs delayed access.
     unsafe {
-        native_result("Allocate encoder GPU frame", ffi::av_hwframe_get_buffer((*video_encoder.as_ptr()).hw_frames_ctx, gpu_frame.as_mut_ptr(), 0))?;
+        native_result("Allocate encoder GPU frame", ffi::av_hwframe_get_buffer(frame_pool, gpu_frame.as_mut_ptr(), 0))?;
         let native = &mut *gpu_frame.as_mut_ptr();
-        native.pts = frame.presentation_timestamp.rescale(frame.time_base, video_encoder.time_base());
-        native.duration = frame.duration.rescale(frame.time_base, video_encoder.time_base());
+        native.pts = frame.presentation_timestamp.rescale(frame.time_base, time_base);
+        native.duration = frame.duration.rescale(frame.time_base, time_base);
         native.sample_aspect_ratio = ffmpeg::Rational::from(frame.frame.sample_aspect_ratio).into();
         native.color_primaries = frame.frame.color_primaries;
         native.color_trc = frame.frame.color_transfer;
@@ -216,7 +287,7 @@ fn prepare_encoder_frame(video_encoder: &ffmpeg::encoder::Video, frame: &FrameFo
     };
     // Complete even a failed conversion before either GPU buffer can be released/reused.
     let completion = device.synchronize();
-    sdk_result("Convert RGBA to encoder NV12 on GPU", conversion)?;
+    sdk_result("Convert RGB to encoder NV12 on GPU", conversion)?;
     completion?;
     Ok(gpu_frame)
 }
