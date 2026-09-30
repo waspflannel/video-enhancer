@@ -23,18 +23,6 @@ impl Default for EnhancementSettings {
     }
 }
 
-impl EnhancementSettings {
-    pub fn presets() -> Vec<(&'static str, Self)> {
-        vec![
-            ("Neutral", Self::default()),
-            ("Natural", Self { contrast: 1.04, vibrance: 0.08, sharpening: 0.15, ..Self::default() }),
-            ("Crisp", Self { deblur: 0.2, contrast: 1.06, vibrance: 0.10, sharpening: 0.25, ..Self::default() }),
-            ("Colour lift", Self { contrast: 1.08, vibrance: 0.20, saturation: 1.03, ..Self::default() }),
-            ("Gentle cleanup", Self { denoise: 0.2, deblur: 0.15, ..Self::default() }),
-        ]
-    }
-}
-
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum UpscaleMethod { #[default] Vsr, Lightweight }

@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod ui;
 mod youtube;
+mod sample;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The same job can be replayed without opening the desktop UI.
