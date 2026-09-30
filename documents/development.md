@@ -41,6 +41,19 @@ the existing project-local ffprobe executable. CUDA/NVDEC is supplied by the
 installed NVIDIA driver; no CUDA toolkit or Video Codec SDK download is
 needed for this FFmpeg integration.
 
+## Pipeline execution
+
+Each export uses a decoder worker, the existing job thread for enhancement, and
+an encoder/audio-mux worker. Standard-library channels hold at most two queued
+GPU frames at each boundary. The job thread owns NVIDIA effect state and queues
+dependent work on one CUDA stream. Keep completion waits before releasing decoded
+frames, before encoder handoff, and during GPU resource teardown.
+
+Selected models, quality and encoding settings are unchanged. The completed
+structural changes and manual verification are recorded in the
+[performance plan](../plans/performance-optimization.md). Further tuning starts
+with pipeline measurements.
+
 ## Layout
 
 ```text

@@ -2,6 +2,86 @@
 
 Date: 2026-09-29. Audit base: `9f3f187`.
 
+## Structural optimizations completed - 2026-09-30
+
+Branch: `optimizations`, based on `a5d0c65`. Current quality is preserved.
+The broad implementation pass is complete; stop here until pipeline measurements
+identify the next bottleneck. No dependency, quality preset, model, effect order,
+encoder setting, or automated test suite changed.
+
+| Commit | Change |
+| --- | --- |
+| `a80a16d` | Decode on a scoped worker with a channel bounded to two GPU frames. |
+| `3fd0954` | Rotate VFG source buffers; read colour input directly instead of copying it first. |
+| `d20b500` | Queue NVIDIA effects, colour and sharpening on the existing CUDA stream without waiting after each stage. Drain pending work before releasing images, effects or kernels. |
+| `59a656d` | Run NVENC submission, packet writing and audio copying on an encoder worker with a two-frame queue. |
+| `6dcc91b` | Feed sharpened RGB directly into NV12 conversion; retain RGBA conversion when TrueHDR requires it. |
+
+The job thread keeps all effect state and CUDA image owners. Decoder and encoder
+queues transfer FFmpeg-owned GPU frame handles; pixels never travel through CPU
+memory. Both queues apply backpressure and both workers are joined on exit.
+Worker failures propagate to the job. Finishing waits for queued frames, the
+encoder flush, remaining audio and the MP4 trailer.
+
+Synchronization remains before decoded storage is released, after copying a
+source into VFG storage, and before handing an independently owned NV12/P010
+frame to the encoder worker. Initialization and CPU environment-image uploads
+also retain their waits. GPU effects share one stream, preserving temporal order
+without adding event rings or concurrent model instances. FFmpeg retains the
+encoder frames for as long as NVENC needs them.
+
+### Verification
+
+Release build and Clippy passed, run from `app/`:
+
+```powershell
+cargo build --release --target-dir target/performance-audit
+cargo clippy --all-targets --release --target-dir target/performance-audit -- -D warnings
+```
+
+Fourteen final exports were **byte-identical** to the saved `a5d0c65` executable:
+
+- The 30.04-second 720p-to-1440p/60 job with cleanup, colour and sharpening.
+- P010 input to HEVC 10-bit SDR/60, and P010 input to sharpened H.264.
+- Original FPS, equal-FPS AV1 input, and a single-frame source with no audio.
+- TrueHDR with sharpening; temporal denoise plus background blur; background
+  replacement; segmentation mask plus lightweight upscale; relighting; combined
+  AI Green Screen and relighting.
+- Variable-frame-rate video with two audio tracks, one delayed, at original FPS
+  and 60 FPS.
+
+Every export passed a complete software video/audio decode. Copied audio packet
+payload hashes and rational PTS/DTS/durations matched its source. Output video
+PTS were increasing; every converted-FPS timestamp, interval and exact final
+track end was checked, including partial final frames. Whole-file identity also
+covers video pixels, encoding and metadata for these comparisons.
+
+One-off Rust checks exercised a full decoder queue, a decoder failure, HDR export
+cancellation after three submitted frames, an error immediately after queuing VFG
+work, and a real encoder-worker mux error caused by non-monotonic timestamps.
+All returned with the expected errors and no hangs. Attempting to overwrite the
+source was rejected, and its hash stayed unchanged.
+
+Jobs, clips, outputs, `verify_variants.py`, `verify_media.py`,
+`verify_boundaries.rs`, and the result files `structural-verification.json`,
+`structural-verification-runs.json`, and `verify-boundaries.log` are kept only in
+ignored `sample-videos/performance-pass-20260930/`. These are local manual checks,
+not a restored repository test suite. The normal desktop executable remained
+open, so the separate build directory avoided its locked DLLs.
+
+These are correctness checks, not a controlled performance study. No reliable
+speedup percentage is claimed. The next step is recording representative runs
+and a GPU/CPU timeline. Use that evidence before changing queue sizes, adding
+inference streams, CUDA graphs, kernel fusion, model/PTX caches, or a shared
+video/audio demuxer. Proprietary effects may still synchronize internally.
+
+## Original audit and measurement plan - 2026-09-29
+
+The findings and source line references below describe the original audit base,
+not the completed branch above. Implementation steps 2-4 have now been applied
+where they preserve current quality without speculative scheduling machinery.
+Stage instrumentation and further tuning remain deferred.
+
 ## Objective
 
 Minimize complete export time and unnecessary GPU memory traffic on the RTX
@@ -12,9 +92,9 @@ The owner explicitly chose to preserve current quality. Lower model modes,
 lower resolutions/FPS, reduced encoding quality, frame dropping, reordered
 effects, and approximate replacement filters are outside this plan.
 
-## What the current implementation does
+## What the implementation did at audit time
 
-`job.rs` coordinates a synchronous callback chain:
+`job.rs` coordinated a synchronous callback chain:
 
 ```text
 NVDEC -> NV12-to-RGBA -> optional denoise -> optional deblur -> optional VSR
@@ -210,9 +290,10 @@ but returned a quota error; official NVIDIA documentation was used instead:
 - [Synchronous and asynchronous effect execution](https://docs.nvidia.com/maxine/vfx/latest/API/Architecture/RunaVideoEffectFilter.html)
 - [CUDA stream execution order](https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html)
 - [VFG modes, batch limit, and one output per run](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoFrameGeneration.html)
+- [FFmpeg buffer pool ownership and thread safety](https://ffmpeg.org/doxygen/trunk/group__lavu__bufferpool.html)
 - [Nsight Systems analysis](https://docs.nvidia.com/nsight-systems/AnalysisGuide/index.html)
 
-The README and parts of the development guide describe an older console-only
-pipeline. Their historical 65.74-second export is not a baseline for the current
+At audit time, parts of the documentation described an older console-only
+pipeline. The historical 65.74-second export is not a baseline for current
 UI/job settings. Current stage costs and a defensible speedup target require the
 measurement work above.
