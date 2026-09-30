@@ -45,8 +45,41 @@ timing; source audio bypasses image processing and keeps its relative timing.
 
 The UI switches to HEVC when enabling TrueHDR and chooses HEVC by default on
 10-bit import. Selecting 10-bit SDR clears and disables incompatible 8-bit
-effects. Look presets update basic detail/colour settings; Reset restores every
-setting, including HDR, portrait and relighting selections.
+effects. Enhancement presets replace the complete settings. Reset and importing
+a new source restore original resolution/FPS and neutral effects, choosing HEVC
+for 10-bit input. Manual changes mark the selection as Custom.
+
+## Enhancement presets
+
+All presets use NVIDIA VSR at full strength, original source timing and P7 /
+quality 16 encoding. The four footage presets keep neutral colour and 10-bit SDR
+HEVC; Clean + colour uses 8-bit H.264 to support SDK sharpening, with a stronger
+Colour lift treatment. They choose the largest supported
+scale up to 2×, preserving aspect ratio and the 4096-pixel limit. For example,
+1080p becomes 4K and 1440p becomes 2160p; a 4K source stays at its original size.
+At original size VSR upscaling is skipped, which the preset description explains.
+Selected cleanup, colour and sharpening stages still work at the original size.
+
+| Preset | Use when | NVIDIA settings |
+| --- | --- | --- |
+| Clean footage | Sharp camera footage or clean, detailed recordings | High-Bitrate Ultra (`19`); no extra cleanup. |
+| Clean + colour | Clean footage needs richer colour and crisper edges | High-Bitrate Ultra (`19`), sharpening `0.15`, contrast `1.08`, vibrance `0.3`, saturation `1.06`; no denoise/deblur or exposure change. H.264 8-bit export. |
+| Compressed footage | Downloaded footage has compression artifacts | Standard Ultra (`4`); no extra denoise or deblur. |
+| Soft footage | Clean footage has mild focus or lens softness | High-Bitrate Ultra (`19`), deblur strength `0.15`, Medium cleanup mode (`1`). |
+| Noisy footage | Low-light digital footage has visible noise | Standard Ultra (`4`), denoise strength `0.2`, Medium cleanup mode (`1`). |
+
+These are starting points, not measured quality winners for every source. Preview
+moving detail before a full export. Avoid Soft for severe motion blur or heavy
+compression, and avoid Noisy when preserving intentional film grain. Medium
+cleanup modes restrain the treatment; higher cleanup modes can soften texture or
+emphasize artifacts. HDR conversion, portraits, relighting and temporal denoise
+are off. Extra sharpening is enabled only by Clean + colour. Temporal denoise remains incompatible with the app's
+10-bit SDR path. Frame-generation quality is set to High if the user subsequently
+chooses a higher FPS; the presets themselves do not generate intermediate frames.
+
+Preset names and use cases are visible together. The selected description explains
+the treatment and chosen scale. Adjusting any setting marks it Custom; reselecting
+a preset restores all its settings, including clearing the HDR environment image.
 
 ## Output, upscaling and frame generation
 
@@ -221,6 +254,16 @@ TrueHDR, add `hdr = @{ enabled = $true }`; verify `color_primaries=bt2020`,
 `color_transfer=smpte2084` and `color_space=bt2020nc`, then view on an HDR display.
 
 ## Verification status
+
+On 2026-09-30, the rebuilt presets passed browser checks for their job payloads,
+switching from custom HDR/relighting settings, Reset/import behavior, manual
+Custom labeling, and scale selection for 1080p, 1440p, 4K and portrait sources.
+Descriptions fit the 780 × 650 minimum window and sample mode. `cargo check`
+and the release build passed. All four actual UI preset payloads exported both
+an 8-bit and a 10-bit source to 1280 × 720 HEVC Main10, preserving frame counts,
+duration, source hashes and all copied audio packet bytes/timestamps. All eight
+outputs decoded cleanly. These checks validate operation, not a universal
+subjective quality improvement; cleanup strength should be previewed per source.
 
 The UI passed JavaScript syntax validation and browser checks for settings payloads,
 reset/presets, busy state, HDR/10-bit compatibility and portrait option dependencies.
