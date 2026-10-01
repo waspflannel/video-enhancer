@@ -1,8 +1,8 @@
 # Video Enhancer
 
-A Windows desktop app for enhancing videos locally with NVIDIA AI. Upscale video, increase frame rate, clean up footage, and export an MP4 with the original audio. Video processing stays on your GPU.
+An app for enhancing videos locally. Upscale video, increase frame rate, clean up footage, and export an MP4 with the original audio. Video processing stays on your GPU.
 
-Built with Rust, Tao, Wry, FFmpeg, and NVIDIA's Video Effects SDK. Developed and tested on an RTX 5070.
+Built with Rust and tested on an RTX 5070.
 
 ## Features
 
@@ -10,7 +10,7 @@ Built with Rust, Tao, Wry, FFmpeg, and NVIDIA's Video Effects SDK. Developed and
 - Denoising, deblurring, sharpening, and colour adjustments.
 - Portrait background effects, relighting, and SDR-to-HDR conversion.
 - Short sample previews and side-by-side video comparison.
-- YouTube downloads with optional start/end times, using `yt-dlp`.
+- YouTube downloads with optional start/end times.
 - H.264 or 10-bit HEVC MP4 export with source audio preserved.
 
 ## Setup
@@ -42,11 +42,5 @@ The setup script installs the additional shared FFmpeg libraries and libclang ne
 2. Choose a preset or adjust the resolution, frame rate, and effects.
 3. Open **Sample** to preview a short section before processing the full video.
 4. Export to a new MP4 file. Your original stays untouched.
-
-Use **Download** to save a video locally, or **Compare** to view two local videos side by side.
-
-## Limitations
-
-Supports SDR H.264, HEVC, and AV1 sources. Existing PQ/HLG HDR inputs, subtitles, and rotation handling are not supported. Full exports copy audio without converting it, so the source audio codec must be compatible with MP4. Some effects cannot be combined or have size limits; see [supported settings](documents/sdk-capabilities.md).
-
-A failed export may leave an incomplete file. Remove that file or choose a new output name before retrying.
+   
+**Compare** to view two local videos side by side.
