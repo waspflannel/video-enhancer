@@ -107,7 +107,7 @@ pub struct VideoEffects {
     background_color: Option<EnhancedFrame>,
     composite: Option<EnhancedFrame>,
     portrait_output: Option<EnhancedFrame>,
-    output: Option<EnhancedFrame>,
+    output: Option<Box<EnhancedFrame>>,
 }
 
 impl VideoEffects {
@@ -115,7 +115,7 @@ impl VideoEffects {
         Self { job: job.clone(), blur: None, relighting: None, segmentation: None, denoising: None, input: None, environment: None, projected_environment: None, background_color: None, composite: None, portrait_output: None, output: None }
     }
 
-    pub fn enhance<'a>(&'a mut self, frame: &'a EnhancedFrame) -> io::Result<&'a EnhancedFrame> {
+    pub fn enhance<'a>(&'a mut self, frame: &'a mut Box<EnhancedFrame>) -> io::Result<&'a mut Box<EnhancedFrame>> {
         if self.job.temporal_denoise.is_none() && self.job.portrait.mode == PortraitMode::Off && self.job.relighting.mode == RelightingMode::Off { return Ok(frame); }
         let device = std::rc::Rc::clone(&frame.device);
         let _context = device.enter()?;
@@ -161,13 +161,13 @@ impl VideoEffects {
         })();
         if result.is_err() { let _ = device.synchronize(); }
         result?;
-        Ok(self.output.as_ref().unwrap())
+        Ok(self.output.as_mut().unwrap())
     }
 
     fn initialize(&mut self, frame: &EnhancedFrame) -> io::Result<()> {
         let portrait = self.job.portrait.mode != PortraitMode::Off || self.job.relighting.mode != RelightingMode::Off;
         self.input = Some(EnhancedFrame::allocate_format(frame, frame.width, frame.height, NVCV_BGR, NVCV_U8, 0)?);
-        self.output = Some(EnhancedFrame::allocate_matching_frame(frame)?);
+        self.output = Some(Box::new(EnhancedFrame::allocate_matching_frame(frame)?));
         if let Some(strength) = self.job.temporal_denoise {
             self.denoising = Some(EffectStage::new(c"Denoising", self.input.as_mut().unwrap(), NVCV_BGR)?);
             let stage = self.denoising.as_mut().unwrap();
@@ -183,7 +183,8 @@ impl VideoEffects {
             stage.load("AI Green Screen")?;
             stage.allocate_segmentation_state()?;
         }
-        if self.job.relighting.mode != RelightingMode::Off {
+        // Mask output only uses segmentation; the relit image would be discarded.
+        if self.job.relighting.mode != RelightingMode::Off && self.job.portrait.mode != PortraitMode::Mask {
             let settings = &self.job.relighting;
             let path = settings.hdri.as_deref().ok_or_else(|| io::Error::other("Choose an HDR environment image for relighting"))?;
             self.environment = Some(load_environment(path, frame)?);

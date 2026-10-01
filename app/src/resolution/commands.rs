@@ -79,4 +79,11 @@ unsafe extern "system" {
     pub(crate) fn cuCtxPushCurrent_v2(context: ffi::CUcontext) -> i32;
     pub(crate) fn cuCtxPopCurrent_v2(context: *mut ffi::CUcontext) -> i32;
     pub(crate) fn cuStreamSynchronize(stream: ffi::CUstream) -> i32;
+    pub(crate) fn cuStreamCreate(stream: *mut ffi::CUstream, flags: u32) -> i32;
+    pub(crate) fn cuStreamDestroy_v2(stream: ffi::CUstream) -> i32;
+    pub(crate) fn cuStreamWaitEvent(stream: ffi::CUstream, event: *mut c_void, flags: u32) -> i32;
+    pub(crate) fn cuEventCreate(event: *mut *mut c_void, flags: u32) -> i32;
+    pub(crate) fn cuEventRecord(event: *mut c_void, stream: ffi::CUstream) -> i32;
+    pub(crate) fn cuEventSynchronize(event: *mut c_void) -> i32;
+    pub(crate) fn cuEventDestroy_v2(event: *mut c_void) -> i32;
 }

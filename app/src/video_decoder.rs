@@ -4,6 +4,7 @@ use std::{io, ptr, sync::mpsc, thread};
 use ffmpeg_next::{self as ffmpeg, ffi, frame};
 
 use crate::parser::FileData;
+use crate::resolution::cuda::CudaEvent;
 
 /// Owns a CUDA frame and the references keeping its GPU allocation/context alive.
 /// Dropping this value releases its frame; there is no CPU pixel buffer.
@@ -14,6 +15,8 @@ pub struct DecodedFrame {
     /// Source frame duration in time-base units, when provided by the decoder.
     pub duration: i64,
     pub pixel_format: &'static str,
+    // Drop the event first, finishing conversion before releasing its decoded pixels.
+    pub(crate) completion: CudaEvent,
     pub(crate) frame: frame::Video,
 }
 
@@ -172,6 +175,14 @@ fn prepare_decoded_frame(decoded_frame: frame::Video, time_base: ffmpeg::Rationa
         }
     };
     let presentation_timestamp = decoded_frame.timestamp().or_else(|| decoded_frame.pts()).ok_or_else(|| io::Error::other("Missing frame timestamp"))?;
+    let completion = unsafe {
+        let frames = &*(*(*decoded_frame.as_ptr()).hw_frames_ctx).data.cast::<ffi::AVHWFramesContext>();
+        let device = &*(*frames.device_ref).data.cast::<ffi::AVHWDeviceContext>();
+        let cuda = &*device.hwctx.cast::<ffi::AVCUDADeviceContext>();
+        let completion = CudaEvent::new(frames.device_ref)?;
+        completion.record(cuda.stream)?;
+        completion
+    };
     // CUVID copies output into independently owned CUDA buffers, so
     // retaining these does not hold the limited NVDEC decode surfaces.
     Ok(DecodedFrame {
@@ -180,6 +191,7 @@ fn prepare_decoded_frame(decoded_frame: frame::Video, time_base: ffmpeg::Rationa
         pixel_format,
         // SAFETY: decoded_frame owns this live AVFrame; duration is scalar metadata.
         duration: unsafe { (*decoded_frame.as_ptr()).duration },
+        completion,
         frame: decoded_frame,
     })
 }

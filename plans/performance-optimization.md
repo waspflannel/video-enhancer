@@ -2,6 +2,74 @@
 
 Date: 2026-09-29. Audit base: `9f3f187`.
 
+## Further pipeline optimization - 2026-09-30
+
+Branch: `codex/gpu-pipeline-overlap`, based on `fd998c6`. Presets, model modes,
+strengths, effect order, encoder settings and frame scheduling are unchanged.
+
+- GPU completion events carry decoded-frame readiness into the enhancement
+  stream. A decoded frame waits only for its conversion before releasing pixels.
+- Three reusable completion events bound encoder conversions in flight. The
+  encoder worker waits for its own frame; the producer can queue subsequent
+  work. Queued frames drain before release on cancellation and worker errors.
+- VFG exchanges boxed source-frame owners with the enhancement output, removing
+  the retained-source pixel copy. Final enhancement bindings are updated without
+  moving descriptors. VFG is destroyed while all exchanged owners are still live.
+- Fixed colour and pixel-conversion PTX is compiled once per process. Failed
+  compilation remains retryable; CUDA modules remain owned by their contexts.
+- Mask-only exports skip unused relighting models, environment-image loading,
+  inference and compositing while retaining denoise and segmentation.
+
+The enhancement stream preserves CUDA's legacy default-stream ordering. A
+nonblocking stream changed all 1,803 decoded frames in the primary comparison,
+even after restoring the source copies and encoder waits. Using a blocking
+stream restored byte-identical output. The specific native operation requiring
+that ordering was not isolated; independent GPU execution is not claimed.
+
+Release build and Clippy with warnings denied passed. Fifteen representative
+exports were byte-identical to the unchanged release executable, including the
+new mask-plus-relighting case. Every export passed a complete software decode,
+copied audio payload/timestamp checks and video timeline checks. Source assets
+were unchanged. One-off checks also passed for full-queue consumer failure,
+decoder failure, HDR cancellation, an error with VFG work in flight, an actual
+encoder-worker mux failure, and four repeated HDR/10-bit jobs in one process.
+
+Original-FPS VFR exports already end about 5.534 ms later than the fixture's
+source track because of the nominal final decoded duration. The baseline and
+candidate have identical timestamps and durations, including that existing tail.
+Converted-FPS exports retain the exact source track end.
+
+### Measured results
+
+Each case ran five measured pairs after one excluded warm-up pair, alternating
+baseline/candidate order. Times cover the complete process, including startup
+and finalization. Every benchmark export was byte-identical to its baseline.
+
+| Job | Baseline median | Branch median | Time reduction |
+| --- | ---: | ---: | ---: |
+| 30.04 s, 720p to 1440p/60 with cleanup, colour and sharpening | 10.611 s | 10.551 s | 0.6% |
+| 1.25 s, 10-bit export | 1.625 s | 1.580 s | 2.8% |
+| 2.04 s, mask output with relighting selected | 3.366 s | 2.067 s | 38.6% |
+
+The main and 10-bit timing ranges overlap, so these runs do not establish a
+general export speedup. The short 10-bit case includes startup, so it should not
+be extrapolated to long exports.
+The mask case has a clear reduction: baseline 3.289-3.492 s versus branch
+2.048-2.081 s, from skipping work whose pixels were discarded. PTX reuse was
+verified across repeated jobs but its timing benefit was not isolated here.
+Raw timings and executable hashes are in the ignored
+`sample-videos/gpu-overlap-20260930/benchmark/results.json`.
+
+Local jobs, failed experiments, verification scripts and boundary checks are in
+ignored `sample-videos/gpu-overlap-20260930/`. No automated repository test suite
+was introduced. Build and inspect the branch with:
+
+```powershell
+# From app/
+cargo build --release --target-dir target/performance-audit
+cargo clippy --all-targets --release --target-dir target/performance-audit -- -D warnings
+```
+
 ## Structural optimizations completed - 2026-09-30
 
 Branch: `optimizations`, based on `a5d0c65`. Current quality is preserved.

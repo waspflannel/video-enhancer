@@ -20,7 +20,7 @@ struct EffectStage {
 
 pub struct ResolutionEnhancer {
     stages: Vec<EffectStage>,
-    input: Option<EnhancedFrame>,
+    input: Option<Box<EnhancedFrame>>,
     effects: VideoEffects,
     job: VideoEnhancementJob,
     stages_configured: bool,
@@ -31,13 +31,13 @@ impl ResolutionEnhancer {
         Self { stages: Vec::new(), input: None, effects: VideoEffects::new(job), job: job.clone(), stages_configured: false }
     }
 
-    pub fn enhance(&mut self, frame: &DecodedFrame) -> io::Result<&EnhancedFrame> {
+    pub fn enhance(&mut self, frame: &DecodedFrame) -> io::Result<&mut Box<EnhancedFrame>> {
         if self.input.is_none() {
             let device = CudaDevice::configure_cuda_device(frame)?;
             let _context = device.enter()?;
             device.synchronize()?;
             let ten_bit = self.job.output_encoding == OutputEncoding::Hevc10 && !self.job.hdr.enabled;
-            self.input = Some(EnhancedFrame::allocate_decoded_frame(frame, Rc::clone(&device), ten_bit)?);
+            self.input = Some(Box::new(EnhancedFrame::allocate_decoded_frame(frame, Rc::clone(&device), ten_bit)?));
         }
         let input = self.input.as_mut().unwrap();
         let device = Rc::clone(&input.device);
@@ -49,6 +49,10 @@ impl ResolutionEnhancer {
             configure_stages(&mut self.stages, cleaned, &self.job)?;
             self.stages_configured = true;
         }
+        if self.job.target_fps.is_some() && let Some(stage) = self.stages.last_mut() {
+            // VFG exchanges the final output owner for a spare after each source frame.
+            sdk_result("Rebind enhancement output", unsafe { NvVFX_SetImage(stage.effect, c"DstImage0".as_ptr(), &mut stage.output.image) })?;
+        }
         for stage in &mut self.stages {
             // SAFETY: the effect and its bound GPU buffers live for this job.
             let result = sdk_result("Run NVIDIA enhancement", unsafe { NvVFX_Run(stage.effect, 1) });
@@ -56,7 +60,7 @@ impl ResolutionEnhancer {
             result?;
             stage.output.copy_metadata_from_enhanced_frame(cleaned);
         }
-        Ok(self.stages.last().map_or(cleaned, |stage| &stage.output))
+        Ok(self.stages.last_mut().map_or(cleaned, |stage| &mut stage.output))
     }
 }
 

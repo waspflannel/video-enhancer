@@ -1,5 +1,5 @@
 //! Schedules output timestamps and generates intermediate GPU frames with NVIDIA VFG.
-//! Source and generated buffers are reused; consumers finish using their pixels before returning.
+//! Source owners rotate without copies; consumers queue GPU reads on the same stream before returning.
 //! Call finish after decoder EOF to hold the last image through its remaining duration.
 
 use std::{ffi::c_void, io, ptr, rc::Rc};
@@ -42,7 +42,7 @@ impl FrameRateEnhancer {
         }
     }
 
-    pub fn enhance(&mut self, frame: &EnhancedFrame, on_frame_ready_for_encoding: &mut impl FnMut(FrameForEncoder<'_>) -> io::Result<()>) -> io::Result<()> {
+    pub fn enhance(&mut self, frame: &mut Box<EnhancedFrame>, on_frame_ready_for_encoding: &mut impl FnMut(FrameForEncoder<'_>) -> io::Result<()>) -> io::Result<()> {
         let Some(target_fps) = self.target_fps else {
             return on_frame_ready_for_encoding(FrameForEncoder { frame, presentation_timestamp: frame.presentation_timestamp, time_base: frame.time_base, duration: frame.duration });
         };
@@ -51,7 +51,8 @@ impl FrameRateEnhancer {
         if self.previous_frame.is_none() {
             self.configure_output_timeline(frame, target_fps)?;
             self.previous_frame = Some(Box::new(EnhancedFrame::allocate_matching_frame(frame)?));
-            return self.previous_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame);
+            std::mem::swap(self.previous_frame.as_mut().unwrap(), frame);
+            return Ok(());
         }
         let previous_timestamp = self.source_timestamp(self.previous_frame.as_ref().unwrap());
         let current_timestamp = self.source_timestamp(frame);
@@ -62,7 +63,8 @@ impl FrameRateEnhancer {
         if self.current_frame.is_none() {
             self.current_frame = Some(Box::new(EnhancedFrame::allocate_matching_frame(frame)?));
         }
-        self.current_frame.as_mut().unwrap().copy_pixels_and_metadata_from(frame)?;
+        // Exchange owners without moving descriptors or copying GPU pixels.
+        std::mem::swap(self.current_frame.as_mut().unwrap(), frame);
         if !self.effect.is_null() { self.bind_source_frames()?; }
         let end_timestamp = self.video_end_time.map(|(timestamp, time_base)| timestamp.rescale(time_base, self.output_time_base));
         while self.next_output_timestamp < current_timestamp && end_timestamp.is_none_or(|end| self.next_output_timestamp < end) {
@@ -169,15 +171,20 @@ impl FrameRateEnhancer {
         if result.is_err() { let _ = self.previous_frame.as_ref().unwrap().device.synchronize(); }
         result
     }
+
+    pub(crate) fn release_effect(&mut self) {
+        if self.effect.is_null() { return; }
+        if let Some(frame) = &self.previous_frame && let Ok(_context) = frame.device.enter() {
+            let _ = frame.device.synchronize();
+            // The source enhancer still owns a spare that a failed rebinding may reference.
+            unsafe { NvVFX_DestroyEffect(self.effect) };
+            self.effect = ptr::null_mut();
+        }
+    }
 }
 
 impl Drop for FrameRateEnhancer {
     fn drop(&mut self) {
-        if self.effect.is_null() { return; }
-        if let Some(frame) = &self.previous_frame && let Ok(_context) = frame.device.enter() {
-            let _ = frame.device.synchronize();
-            // Destroy the effect before Rust drops any of its bound image buffers.
-            unsafe { NvVFX_DestroyEffect(self.effect) };
-        }
+        self.release_effect();
     }
 }
