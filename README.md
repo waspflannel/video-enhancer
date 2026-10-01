@@ -13,6 +13,14 @@ Built with Rust and tested on an RTX 5070.
 - YouTube downloads with optional start/end times.
 - H.264 or 10-bit HEVC MP4 export with source audio preserved.
 
+## NVIDIA SDK required
+
+You must install **NVIDIA Video Effects SDK 1.3.0.0** and its feature libraries/models before building or running this app. They are not included in this repository, and the GPU driver alone is not enough.
+
+Download the SDK through [NVIDIA's Windows installation guide](https://docs.nvidia.com/maxine/vfx/latest/WindowsVFXSDK/InstalltheVFXSDK.html). The core package does not include the feature libraries or models; install those separately using the SDK's feature installer and an NGC API key.
+
+Place the SDK in `sdk/VFXSDK_windows_1.3.0.0/VideoFX/`. The current build requires every feature DLL listed in [build.rs](app/build.rs), including Video Super Resolution, Video Frame Generation, and the optional effects. SDK files, models, and credentials stay local and are Git ignored.
+
 ## Setup
 
 This project currently requires a local development setup:
@@ -20,11 +28,10 @@ This project currently requires a local development setup:
 - Windows x64 and a compatible NVIDIA RTX GPU/driver.
 - Stable Rust with the MSVC toolchain, Visual Studio C++ build tools, and the Windows SDK.
 - Python with pip for the media setup script.
-- NVIDIA Video Effects SDK 1.3.0.0 and its feature packages/models in `sdk/VFXSDK_windows_1.3.0.0/VideoFX/`. The build expects all feature DLLs listed in [build.rs](app/build.rs), including the optional effects.
 - `ffmpeg.exe` and `ffprobe.exe` in `tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin/`, as currently expected by the app.
 - `yt-dlp` on PATH if you want to download videos.
 
-See [SDK downloads](components.md#downloads-we-will-use) and [development setup](documents/development.md) for details. SDKs, models, media tools, and videos are **not included in this repository**.
+Media tools and videos are also **not included in this repository**.
 
 From the repository root, run:
 

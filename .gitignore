@@ -1,3 +1,7 @@
+# Local project notes
+/documents/
+/components.md
+
 # Credentials and local configuration
 .env
 .env.*
