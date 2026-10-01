@@ -1,36 +1,52 @@
-# video-enhancer
+# Video Enhancer
 
-Enhance videos locally using NVIDIA's SDK and pretrained models on an RTX 5070.
+A Windows desktop app for enhancing videos locally with NVIDIA AI. Upscale video, increase frame rate, clean up footage, and export an MP4 with the original audio. Video processing stays on your GPU.
 
-Import or download a video, choose its enhancement settings, and save a new MP4 with the source audio. Processing runs locally on the GPU.
+Built with Rust, Tao, Wry, FFmpeg, and NVIDIA's Video Effects SDK. Developed and tested on an RTX 5070.
 
-## Status
+## Features
 
-Windows x64 desktop application built with Rust, Tao and Wry. The same job can run from a JSON file through the command line. FFmpeg/NVDEC decodes H.264, HEVC and AV1 SDR sources; NVIDIA effects process GPU frames; NVENC saves H.264 or 10-bit HEVC with copied audio.
+- AI upscaling and frame generation.
+- Denoising, deblurring, sharpening, and colour adjustments.
+- Portrait background effects, relighting, and SDR-to-HDR conversion.
+- Short sample previews and side-by-side video comparison.
+- YouTube downloads with optional start/end times, using `yt-dlp`.
+- H.264 or 10-bit HEVC MP4 export with source audio preserved.
 
-The UI exposes VSR modes and strengths, lightweight upscaling, cleanup and temporal denoising, frame-generation quality and scene detection, colour controls, portrait backgrounds and relighting, and TrueHDR conversion. SDK effects have format and source-size limits; see [SDK capabilities and settings](documents/sdk-capabilities.md) for supported combinations and verification status. PQ/HLG source videos, audio transcoding and rotation handling remain unsupported.
+## Setup
 
-## Start here
+This project currently requires a local development setup:
 
-- [Components and build order](components.md): what we build, with beginner reading links and SDK/model downloads.
-- [NVIDIA pipeline](NVIDIA_LOCAL_PIPELINE.md): the technical direction.
-- [Development setup](documents/development.md): Rust toolchain prerequisites, layout, and Cargo commands.
-- [SDK capabilities and settings](documents/sdk-capabilities.md): current UI/job settings, effect order, format limits, and a runnable manual export check.
+- Windows x64 and a compatible NVIDIA RTX GPU/driver.
+- Stable Rust with the MSVC toolchain, Visual Studio C++ build tools, and the Windows SDK.
+- Python with pip for the media setup script.
+- NVIDIA Video Effects SDK 1.3.0.0 and its feature packages/models in `sdk/VFXSDK_windows_1.3.0.0/VideoFX/`. The build expects all feature DLLs listed in [build.rs](app/build.rs), including the optional effects.
+- `ffmpeg.exe` and `ffprobe.exe` in `tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin/`, as currently expected by the app.
+- `yt-dlp` on PATH if you want to download videos.
 
-## Project layout
+See [SDK downloads](components.md#downloads-we-will-use) and [development setup](documents/development.md) for details. SDKs, models, media tools, and videos are **not included in this repository**.
 
-```text
-app/                       Application implementation goes here
-documents/                 Supporting project documents
-plans/                     Implementation plans
-components.md              Component roadmap and learning resources
-NVIDIA_LOCAL_PIPELINE.md   NVIDIA processing pipeline design
+From the repository root, run:
+
+```powershell
+cd app
+./scripts/setup-media.ps1
+cargo run --release
 ```
 
-The project uses one Git repository at the root. Keep downloaded models, SDK archives, sample videos, and exports outside Git. From `app/`, run `cargo run --release` to open the UI, or `cargo run --release -- path/to/job.json` to replay a job. FFmpeg and ffprobe use the project-local `tools/` directory; NVIDIA effects use the installed `sdk/VFXSDK_windows_1.3.0.0/VideoFX` packages. Run `./scripts/setup-media.ps1` from `app/` to install the pinned shared FFmpeg build and binding-generation dependency.
+The setup script installs the additional shared FFmpeg libraries and libclang needed to build. It does not install the NVIDIA packages or the separate FFmpeg tools listed above.
 
-Use the header to switch between **Enhance**, **Sample**, **Download**, and **Compare**. Enhance and Sample share your settings; progress and Cancel stay visible across pages.
+## Use
 
-The Download page uses `yt-dlp` from PATH and saves downloads in the ignored `youtube-videos/` directory. The Load video picker starts there. Existing source and output files are preserved. A failed job can leave an incomplete output; choose a new path or remove that incomplete file before retrying.
+1. Open **Enhance** and load a video.
+2. Choose a preset or adjust the resolution, frame rate, and effects.
+3. Open **Sample** to preview a short section before processing the full video.
+4. Export to a new MP4 file. Your original stays untouched.
 
-Check **Specific timings** to enable start and end times in seconds (decimals supported) and export only that section. The app downloads the full source first, then trims locally with progress updates; the source stays available for reuse. Clips retain the selected download resolution, frame rate, and MP4/MKV container; filenames include the time range. Exact cuts re-encode video to H.264 at high quality (CRF 18) and audio to AAC (192 kbps), avoiding extra footage or audio before the start. Times align to available video frames and audio samples. Leave the checkbox off to download the full video without re-encoding.
+Use **Download** to save a video locally, or **Compare** to view two local videos side by side.
+
+## Limitations
+
+Supports SDR H.264, HEVC, and AV1 sources. Existing PQ/HLG HDR inputs, subtitles, and rotation handling are not supported. Full exports copy audio without converting it, so the source audio codec must be compatible with MP4. Some effects cannot be combined or have size limits; see [supported settings](documents/sdk-capabilities.md).
+
+A failed export may leave an incomplete file. Remove that file or choose a new output name before retrying.
