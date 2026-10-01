@@ -29,6 +29,8 @@ NVIDIA_LOCAL_PIPELINE.md   NVIDIA processing pipeline design
 
 The project uses one Git repository at the root. Keep downloaded models, SDK archives, sample videos, and exports outside Git. From `app/`, run `cargo run --release` to open the UI, or `cargo run --release -- path/to/job.json` to replay a job. FFmpeg and ffprobe use the project-local `tools/` directory; NVIDIA effects use the installed `sdk/VFXSDK_windows_1.3.0.0/VideoFX` packages. Run `./scripts/setup-media.ps1` from `app/` to install the pinned shared FFmpeg build and binding-generation dependency.
 
-The YouTube panel uses `yt-dlp` from PATH and saves downloads in the ignored `youtube-videos/` directory. The Load video picker starts there. Existing source and output files are preserved. A failed job can leave an incomplete output; choose a new path or remove that incomplete file before retrying.
+Use the header to switch between **Enhance**, **Sample**, **Download**, and **Compare**. Enhance and Sample share your settings; progress and Cancel stay visible across pages.
+
+The Download page uses `yt-dlp` from PATH and saves downloads in the ignored `youtube-videos/` directory. The Load video picker starts there. Existing source and output files are preserved. A failed job can leave an incomplete output; choose a new path or remove that incomplete file before retrying.
 
 Check **Specific timings** to enable start and end times in seconds (decimals supported) and export only that section. The app downloads the full source first, then trims locally with progress updates; the source stays available for reuse. Clips retain the selected download resolution, frame rate, and MP4/MKV container; filenames include the time range. Exact cuts re-encode video to H.264 at high quality (CRF 18) and audio to AAC (192 kbps), avoiding extra footage or audio before the start. Times align to available video frames and audio samples. Leave the checkbox off to download the full video without re-encoding.

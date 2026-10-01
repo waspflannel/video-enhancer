@@ -11,29 +11,27 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
 <style>
 .youtube .check input{width:auto;margin:0;padding:0}
 .presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.presets button{text-align:left;padding:11px 12px;line-height:1.4}.presets strong,.presets small{display:block}.presets small{margin-top:4px;color:var(--muted);font-size:11px;font-weight:400}
-.youtube{margin-top:22px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.youtube summary{cursor:pointer;font-weight:600}.youtube .field{margin-top:13px}.youtube input{width:100%;min-width:0;margin-top:8px;padding:10px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.youtube .row{gap:10px}.youtube select{padding:9px 6px}.download-actions{display:flex;gap:8px;margin-top:15px}.download-actions button:first-child{flex:1}.download-status{font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap;max-height:110px;overflow:auto;margin-top:12px}.download-status.error{color:#ffb8ae}
+.youtube .field{margin-top:13px}.youtube input{width:100%;min-width:0;margin-top:8px;padding:10px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.youtube .row{gap:10px}.youtube select{padding:9px 6px}.download-actions{display:flex;gap:8px;margin-top:15px}
 .section .row+.row,.section .row+.sliders,.section .sliders+.row,.section .sliders+.sliders{margin-top:17px}.check{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:15px}.check input{accent-color:var(--accent)}.field input[type=color],.field input[type=number]{display:block;width:100%;height:39px;margin-top:8px;padding:8px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.field input[type=color]{padding:3px}.asset-picker{display:flex;align-items:center;gap:9px;margin-top:14px}.asset-picker button{font-size:12px;padding:8px 10px}.asset-name{color:var(--muted);font-size:12px;overflow-wrap:anywhere;min-width:0}input:disabled,select:disabled{opacity:.45}.section details>summary{font-size:13px;font-weight:600;cursor:pointer}.section details[open]>summary{margin-bottom:17px}.section fieldset{margin-top:15px}.section fieldset:disabled{opacity:.55}
-.sample-open{width:100%;margin-top:10px}.sample-mode{grid-template-columns:minmax(0,1.15fr) minmax(390px,1fr)}.sample-mode>aside{display:none}.sample-panel{min-width:0;min-height:0;padding:26px 30px;overflow:auto;border-right:1px solid var(--line);background:#161c18;display:flex;flex-direction:column;gap:18px}.sample-panel h2{margin:0;font-size:23px}.sample-panel p{margin:0}.sample-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}.sample-selection{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px}.sample-selection input{display:block;width:100%;min-width:0;background:#252d28;color:inherit;border:1px solid #465149;border-radius:6px;margin-top:8px;padding:10px}.sample-player{background:#080b09;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:220px;display:grid;place-items:center;flex:1}.sample-player video{width:100%;max-height:55vh;display:block}.sample-player p{padding:30px;text-align:center}.sample-tabs{display:flex;gap:8px}.sample-tabs button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}#sample-status{white-space:pre-wrap;line-height:1.5;color:var(--muted);font-size:12px}.sample-mode .row{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.sample-mode .sliders{grid-template-columns:repeat(2,minmax(0,1fr))}.sample-mode .intro{gap:12px}.sample-mode .workspace{padding:26px 22px}.sample-mode .field{min-width:0}.sample-mode .field select{min-width:0}.sample-mode .footer{flex-wrap:wrap}@media(max-width:900px){.sample-mode{grid-template-columns:minmax(0,1fr) minmax(360px,1fr)}.sample-panel{padding:22px 18px}.sample-selection{grid-template-columns:1fr 1fr}.sample-selection button{grid-column:1/-1}.sample-toolbar{flex-wrap:wrap}}
+.sample-mode{grid-template-columns:minmax(0,1.15fr) minmax(390px,1fr)}.sample-mode>aside{display:none}.sample-panel{min-width:0;min-height:0;padding:26px 30px;overflow:auto;border-right:1px solid var(--line);background:#161c18;display:flex;flex-direction:column;gap:18px}.sample-panel h2{margin:0;font-size:23px}.sample-panel p{margin:0}.sample-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}.sample-selection{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px}.sample-selection input{display:block;width:100%;min-width:0;background:#252d28;color:inherit;border:1px solid #465149;border-radius:6px;margin-top:8px;padding:10px}.sample-player{background:#080b09;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:220px;display:grid;place-items:center;flex:1}.sample-player video{width:100%;max-height:55vh;display:block}.sample-player p{padding:30px;text-align:center}.sample-tabs{display:flex;gap:8px}.sample-tabs button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}#sample-status{white-space:pre-wrap;line-height:1.5;color:var(--muted);font-size:12px}.sample-mode .row{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.sample-mode .sliders{grid-template-columns:repeat(2,minmax(0,1fr))}.sample-mode .intro{gap:12px}.sample-mode .workspace{padding:26px 22px}.sample-mode .field{min-width:0}.sample-mode .field select{min-width:0}.sample-mode .footer{flex-wrap:wrap}@media(max-width:900px){.sample-mode{grid-template-columns:minmax(0,1fr) minmax(360px,1fr)}.sample-panel{padding:22px 18px}.sample-selection{grid-template-columns:1fr 1fr}.sample-selection button{grid-column:1/-1}.sample-toolbar{flex-wrap:wrap}}
 </style>
 <style>
-.comparison{flex:1;min-height:0;overflow:auto;padding:28px 34px}.comparison h1{margin:0}.comparison-actions{display:flex;gap:8px;margin:22px 0}.comparison-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.comparison-players input{display:block;width:100%;margin:12px 0;color:var(--muted)}.comparison-players video{display:block;width:100%;height: min(55vh,500px);background:#080b09;object-fit:contain;border:1px solid var(--line);border-radius:8px}.comparison-error{color:#ffb8ae;font-size:12px}
+.comparison{flex:1;min-height:0;overflow:auto;padding:28px 34px}.comparison h1{margin:12px 0}.comparison-actions{display:flex;gap:8px;margin:22px 0}.comparison-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.comparison-players input{display:block;width:100%;margin:12px 0;color:var(--muted)}.comparison-players video{display:block;width:100%;aspect-ratio:16/9;max-height:55vh;background:#080b09;object-fit:contain;border:1px solid var(--line);border-radius:8px}.comparison-error{color:#ffb8ae;font-size:12px}
+header{gap:24px}header strong,.local{white-space:nowrap}nav{display:flex;gap:4px}nav button{border:0;background:transparent;color:var(--muted);padding:12px 15px;position:relative}nav button[aria-current=page]{background:#273421;color:var(--accent)}nav button[aria-current=page]:after{content:'';position:absolute;bottom:0;left:15px;right:15px;height:2px;background:var(--accent)}
+.download-page{flex:1;min-height:0;overflow:auto;padding:32px 34px}.page-content{max-width:680px;margin:0 auto}.download-page h1{margin-bottom:8px}.download-page .row{gap:20px}.download-page .field{margin-top:20px}.download-page .download-actions{margin-top:24px}.download-page .helper{max-width:600px}.download-page #download-timings{margin-top:6px}
+.sample-panel h2{margin-top:10px}.sample-panel #sample-source-name{margin-top:8px;overflow-wrap:anywhere}#sample-empty{text-align:center;padding:24px}#sample-empty p{padding:0 0 12px}
+.job-status{flex-shrink:0;display:flex;align-items:center;gap:24px;padding:12px 34px;border-top:1px solid var(--line);background:#161c18}.job-message{flex:1;min-width:0}.job-status #status{margin:0;max-height:64px}.job-status progress{margin:0 0 9px;display:block}.job-status button{flex-shrink:0}
+@media(max-width:900px){header{gap:12px}header strong{font-size:18px}nav button{padding:11px 12px}.local{font-size:10px;letter-spacing:.5px}.job-status{padding:12px 20px}.download-page{padding:26px 22px}}
 </style>
-<header><strong>Video Enhancer<span style="color:var(--accent)">.</span></strong><button id="comparison-open">Compare videos</button><span class="local">LOCAL · NVIDIA</span></header>
-<section id="comparison" class="comparison" aria-label="Video comparison" hidden>
-  <div class="sample-toolbar"><h1>Compare videos</h1><button id="comparison-back">← Back to enhancer</button></div>
-  <div class="comparison-actions"><button id="comparison-play" disabled>Play both</button><button id="comparison-pause">Pause both</button><button id="comparison-reset">Reset both</button><button id="comparison-clear">Clear both</button></div>
-  <div class="comparison-players">
-    <div><label for="comparison-file-1">Video 1</label><input id="comparison-file-1" type="file" accept="video/*"><video id="comparison-video-1" controls playsinline preload="auto" aria-label="Video 1"></video><p id="comparison-error-1" class="comparison-error" role="status"></p></div>
-    <div><label for="comparison-file-2">Video 2</label><input id="comparison-file-2" type="file" accept="video/*"><video id="comparison-video-2" controls playsinline preload="auto" aria-label="Video 2"></video><p id="comparison-error-2" class="comparison-error" role="status"></p></div>
-  </div>
-</section>
-<main id="main">
-<aside>
-  <div class="eyebrow">YOUR SOURCE</div><h1>Choose a video.</h1><p>Load a video, choose your settings, and export locally.</p>
-  <button id="load" class="load">Load video</button>
-  <button id="sample-open" class="sample-open" disabled>Preview a sample →</button>
-  <details class="youtube" open>
-    <summary>Download from YouTube</summary>
+<header>
+  <strong>Video Enhancer<span style="color:var(--accent)">.</span></strong>
+  <nav aria-label="Workspace"><button id="nav-enhance" data-page="enhance" aria-controls="main" aria-current="page">Enhance</button><button id="nav-sample" data-page="sample" aria-controls="main">Sample</button><button id="nav-download" data-page="download" aria-controls="download-page">Download</button><button id="nav-compare" data-page="compare" aria-controls="comparison">Compare</button></nav>
+  <span class="local">LOCAL · NVIDIA</span>
+</header>
+<section id="download-page" class="download-page" aria-labelledby="download-title" hidden>
+  <div class="page-content youtube">
+    <div class="eyebrow">DOWNLOAD</div><h1 id="download-title">Download from YouTube</h1>
+    <p>Save a video locally, then load it to start enhancing.</p>
     <form id="download-form">
       <fieldset id="download-settings" aria-label="YouTube download options">
         <label class="field">Video link<input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off" spellcheck="false"></label>
@@ -50,21 +48,34 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
         </fieldset>
         <p class="helper">Downloads the source, then saves this section at the selected resolution, frame rate and format. Exact cuts re-encode video and audio at high quality.</p>
       </fieldset>
-      <div class="download-actions"><button id="download" type="submit">Download video</button><button id="download-cancel" type="button" hidden>Cancel</button></div>
+      <div class="download-actions"><button id="download" class="generate" type="submit">Download video</button><button id="download-load" type="button">Load video</button></div>
     </form>
     <p class="helper">Saved in youtube-videos. Use Load video when ready.</p>
-    <div id="download-status" class="download-status" role="status" aria-live="polite"></div>
-  </details>
+  </div>
+</section>
+<section id="comparison" class="comparison" aria-label="Video comparison" hidden>
+  <div class="eyebrow">COMPARE</div><h1>Compare videos</h1><p>Play two local videos side by side. Each player keeps its own playback controls.</p>
+  <div class="comparison-actions"><button id="comparison-play" disabled>Play both</button><button id="comparison-pause">Pause both</button><button id="comparison-reset">Reset both</button><button id="comparison-clear">Clear both</button></div>
+  <div class="comparison-players">
+    <div><label for="comparison-file-1">Video 1</label><input id="comparison-file-1" type="file" accept="video/*"><video id="comparison-video-1" controls playsinline preload="auto" aria-label="Video 1"></video><p id="comparison-error-1" class="comparison-error" role="status"></p></div>
+    <div><label for="comparison-file-2">Video 2</label><input id="comparison-file-2" type="file" accept="video/*"><video id="comparison-video-2" controls playsinline preload="auto" aria-label="Video 2"></video><p id="comparison-error-2" class="comparison-error" role="status"></p></div>
+  </div>
+</section>
+<main id="main">
+<aside>
+  <div class="eyebrow">YOUR SOURCE</div><h1>Choose a video.</h1><p>Load a video, choose your settings, and export locally.</p>
+  <button id="load" class="load">Load video</button>
+
   <div id="name">No video selected</div>
   <dl><div><dt>Resolution</dt><dd id="dimensions">—</dd></div><div><dt>Frame rate</dt><dd id="fps">—</dd></div><div><dt>Duration</dt><dd id="duration">—</dd></div><div><dt>Audio</dt><dd id="audio">—</dd></div></dl>
   <p class="note">Your original stays untouched.<br>Export H.264 or 10-bit HEVC MP4 with the source audio.</p>
 </aside>
 <section id="sample-panel" class="sample-panel" aria-label="Sample preview" hidden>
-  <div class="sample-toolbar"><div><div class="eyebrow">TRY YOUR LOOK</div><h2>Sample preview</h2></div><button id="sample-back">← Full video</button></div>
+  <div><div class="eyebrow">SAMPLE</div><h2>Sample preview</h2><p class="helper" id="sample-source-name">No video selected</p></div>
   <p class="helper">Choose a section, adjust the settings on the right, then render to compare.</p>
   <fieldset id="sample-selection" class="sample-selection"><label class="field">Start · seconds<input id="sample-start" type="number" min="0" step="0.1" value="0" required></label><label class="field">Length · seconds<input id="sample-duration" type="number" min="1" max="15" step="1" value="5" required></label><button id="sample-load">Load section</button></fieldset>
   <div class="sample-toolbar"><div class="sample-tabs" role="group" aria-label="Compare sample"><button id="show-original" aria-pressed="true" disabled>Original</button><button id="show-enhanced" aria-pressed="false" disabled>Enhanced</button></div><span class="helper" id="sample-range">No section loaded</span></div>
-  <div class="sample-player"><p id="sample-empty">Load a short section to try your effects.</p><video id="sample-original" aria-label="Original sample" controls playsinline preload="metadata" hidden></video><video id="sample-enhanced" aria-label="Enhanced sample" controls playsinline preload="metadata" hidden></video></div>
+  <div class="sample-player"><div id="sample-empty"><p id="sample-empty-message">Load a video to preview a sample.</p><button id="sample-source">Load video</button></div><video id="sample-original" aria-label="Original sample" controls playsinline preload="metadata" hidden></video><video id="sample-enhanced" aria-label="Enhanced sample" controls playsinline preload="metadata" hidden></video></div>
   <div class="sample-toolbar"><button id="sample-render" class="generate" disabled>Render sample</button><button id="sample-external" disabled>Open rendered video</button></div>
   <p class="helper">Rendered at your chosen resolution, frame rate and output format. Original playback uses an 8-bit copy. HDR needs compatible playback and a display.</p>
   <div id="sample-status" role="status" aria-live="polite">Your full video stays unchanged.</div>
@@ -91,10 +102,10 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex
   </fieldset>
   <div class="lock-message" id="lock"><span>Load a video to unlock settings</span></div>
   </div>
-  <div class="footer"><span class="summary" id="summary">Waiting for a video</span><div><button id="cancel" hidden>Cancel</button> <button id="sample-use" class="generate" hidden disabled>Use these settings →</button><button id="generate" class="generate" disabled>Generate →</button></div></div>
-  <progress id="progress" max="1" value="0" hidden></progress><div id="status" role="status" aria-live="polite"></div>
+  <div class="footer"><span class="summary" id="summary">Waiting for a video</span><div><button id="sample-use" class="generate" hidden disabled>Enhance full video →</button><button id="generate" class="generate" disabled>Generate →</button></div></div>
 </section>
 </main>
+<footer id="job-status" class="job-status" hidden><div class="job-message"><progress id="progress" max="1" value="0" hidden></progress><div id="status" role="status" aria-live="polite"></div></div><button id="cancel" hidden>Cancel</button></footer>
 <script>
 const $ = id => document.getElementById(id);
 const comparisonVideos=[$('comparison-video-1'),$('comparison-video-2')];
@@ -129,18 +140,9 @@ $('comparison-clear').onclick=()=>{
  }
  $('comparison-play').disabled=true;
 };
-$('comparison-open').onclick=()=>{
- $('sample-original').pause();$('sample-enhanced').pause();
- $('main').hidden=true;$('comparison').hidden=false;$('comparison-open').hidden=true;
- $('comparison-back').focus();
-};
-$('comparison-back').onclick=()=>{
- pauseComparison();$('comparison').hidden=true;$('main').hidden=false;$('comparison-open').hidden=false;
- $('comparison-open').focus();
-};
 const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
 let source = null, busy = false, downloading = false, hdri = null;
-let samplePage=false, sampleSelection=null, renderedJob=null, renderingJob=null, sampleBusy=false, enhancedUrl=null;
+let sampleSelection=null, renderedJob=null, renderingJob=null, sampleBusy=false, enhancedUrl=null;
 const specs = [
   ['denoise','VSR denoise',0,1,0.05,'detail-controls'],['deblur','VSR deblur',0,1,0.05,'detail-controls'],['sharpening','Sharpening',0,2,0.05,'detail-controls'],
   ['contrast','Contrast',0.5,1.5,0.01,'colour-controls'],['vibrance','Vibrance',-1,1,0.01,'colour-controls'],['saturation','Saturation',0,2,0.01,'colour-controls'],['exposure','Exposure',-2,2,0.05,'colour-controls'],['warmth','Warmth',-1,1,0.01,'colour-controls']
@@ -192,8 +194,12 @@ function applyOutputFormat(){
 }
 function updateState(){
  $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);$('lock').hidden=!!source;
- $('load').disabled=busy;$('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy||!source||downloading;
- $('download-settings').disabled=busy;$('download').disabled=busy;$('download-cancel').hidden=!downloading;
+ for(const id of ['load','download-load','sample-source'])$(id).disabled=busy;
+ $('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy||(!source&&!downloading);
+ $('download-settings').disabled=busy;$('download').disabled=busy;
+ $('sample-source-name').textContent=source?source.name:'No video selected';
+ $('sample-empty-message').textContent=source?'Load a short section above to try your effects.':'Load a video to preview a sample.';
+ $('sample-source').hidden=!!source;
  $('download-timings').disabled=!$('download-specific-timings').checked;
  $('download').textContent=$('download-specific-timings').checked?'Download clip':'Download video';
  const portraitTooSmall=source&&(source.width<512||source.height<288);
@@ -233,8 +239,7 @@ function displayLoadedVideo(){
  resetSettings();
  message('Ready. Choose your settings, then Generate.');
 }
-function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
-function downloadMessage(text,error=false){$('download-status').textContent=text;$('download-status').classList.toggle('error',error);}
+function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('job-status').hidden=!text;}
 $('download-specific-timings').onchange=updateState;
 for(const id of ['download-start','download-end'])$(id).oninput=()=>{$('download-end').setCustomValidity('');};
 $('download-form').onsubmit=event=>{
@@ -243,15 +248,14 @@ $('download-form').onsubmit=event=>{
  if(timings&&timings.end<=timings.start){$('download-end').setCustomValidity('End time must be after the start time.');$('download-end').reportValidity();return;}
  send('download',{options:{url:$('youtube-url').value.trim(),height:Number($('download-height').value),fps:Number($('download-fps').value),format:$('download-format').value,timings}});
 };
-$('download-cancel').onclick=()=>{send('cancel');$('download-cancel').disabled=true;downloadMessage('Stopping download…');};
-$('load').onclick=()=>send('load');
+for(const id of ['load','download-load','sample-source'])$(id).onclick=()=>send('load');
 $('reset').onclick=resetSettings;
 for(const id of ['scale','target_fps','upscale_method','portrait_mode','relighting_mode','relighting_quality'])$(id).onchange=updateState;
 for(const id of ['output_encoding','hdr_enabled'])$(id).onchange=applyOutputFormat;
 $('environment_background').onchange=updateState;
 $('choose-hdri').onclick=()=>send('choose-hdri');
 $('clear-hdri').onclick=()=>{hdri=null;$('hdri-name').textContent='No environment selected';markCustom();updateState();};
-$('cancel').onclick=()=>{send('cancel');$('cancel').disabled=true;message('Stopping after the current frame…');};
+$('cancel').onclick=()=>{send('cancel');$('cancel').disabled=true;message(downloading?'Stopping download…':'Stopping after the current frame…');};
 function buildJob(){
  const number=id=>Number($(id).value),enhancements=Object.fromEntries(specs.map(([id])=>[id,number(id)]));
  enhancements.denoise_quality=number('denoise_quality');enhancements.deblur_quality=number('deblur_quality');
@@ -269,16 +273,27 @@ function currentSelection(){return {start:Number($('sample-start').value),durati
 function sampleMatchesSelection(){return sampleSelection&&JSON.stringify(sampleSelection)===JSON.stringify(currentSelection());}
 function updateSampleState(){
  const loaded=sampleMatchesSelection(),fresh=loaded&&renderedJob===JSON.stringify(buildJob());
- $('sample-open').disabled=!source||busy;$('sample-selection').disabled=!source||busy;
- $('sample-render').disabled=!loaded||busy;$('sample-use').disabled=!fresh||busy;
+ $('sample-selection').disabled=!source||busy;
+ $('sample-render').disabled=!loaded||busy;$('sample-use').disabled=!source||busy;
  $('sample-render').textContent=enhancedUrl?'Render again':'Render sample';
  $('show-original').disabled=!sampleSelection;$('show-enhanced').disabled=!enhancedUrl;$('sample-external').disabled=!enhancedUrl||busy;
  if(!sampleBusy&&sampleSelection)$('sample-status').textContent=!loaded?'Section changed. Load it to update the sample.':fresh?'Preview matches your settings. Keep this look or keep experimenting.':enhancedUrl?'Settings changed. Render again to preview this look.':'Adjust your effects, then render the sample.';
 }
-function showSamplePage(open){samplePage=open;$('main').classList.toggle('sample-mode',open);$('sample-panel').hidden=!open;$('generate').hidden=open;$('sample-use').hidden=!open;if(!open){$('sample-original').pause();$('sample-enhanced').pause();}updateSampleState();}
+function showPage(page){
+ pauseComparison();$('sample-original').pause();$('sample-enhanced').pause();
+ const sample=page==='sample';
+ $('main').hidden=page!=='enhance'&&!sample;$('main').classList.toggle('sample-mode',sample);
+ $('sample-panel').hidden=!sample;$('generate').hidden=sample;$('sample-use').hidden=!sample;
+ $('download-page').hidden=page!=='download';$('comparison').hidden=page!=='compare';
+ for(const button of document.querySelectorAll('nav [data-page]')){
+  if(button.dataset.page===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+ }
+ $('nav-'+page).focus();
+}
+for(const button of document.querySelectorAll('nav [data-page]'))button.onclick=()=>showPage(button.dataset.page);
 function clearSample(){for(const id of ['sample-original','sample-enhanced']){$(id).pause();$(id).removeAttribute('src');$(id).load();$(id).hidden=true;}sampleSelection=null;renderedJob=null;enhancedUrl=null;$('sample-empty').hidden=false;$('sample-range').textContent='No section loaded';}
 function showSampleVersion(enhanced){const next=$(enhanced?'sample-enhanced':'sample-original'),previous=$(enhanced?'sample-original':'sample-enhanced');const time=previous.currentTime,playing=!previous.paused;previous.pause();previous.hidden=true;next.hidden=false;if(next.readyState)next.currentTime=Math.min(time,next.duration||0);$('show-original').setAttribute('aria-pressed',String(!enhanced));$('show-enhanced').setAttribute('aria-pressed',String(enhanced));if(playing)next.play().catch(()=>{});}
-$('sample-open').onclick=()=>showSamplePage(true);$('sample-back').onclick=()=>showSamplePage(false);$('sample-use').onclick=()=>{showSamplePage(false);message('Sample settings kept. Generate exports the full original video.');};
+$('sample-use').onclick=()=>showPage('enhance');
 $('sample-load').onclick=()=>{for(const id of ['sample-start','sample-duration'])if(!$(id).reportValidity())return;clearSample();send('load-sample',{selection:currentSelection()});};
 $('sample-render').onclick=()=>{if(settingsAreValid()){renderingJob=JSON.stringify(buildJob());$('sample-original').pause();$('sample-enhanced').pause();send('render-sample',{job:buildJob()});}};
 $('show-original').onclick=()=>showSampleVersion(false);$('show-enhanced').onclick=()=>showSampleVersion(true);
@@ -288,21 +303,21 @@ $('settings').addEventListener('input',()=>{markCustom();updateState();});
 for(const id of ['sample-original','sample-enhanced'])$(id).onerror=()=>{if($(id).getAttribute('src'))$('sample-status').textContent='This video format could not play here. Use Open rendered video for external playback, or render H.264 SDR for an inline preview.';};
 window.receive = event => {
  switch(event.type){
- case 'sample-loading':busy=true;sampleBusy=true;$('cancel').disabled=false;$('sample-status').textContent='Preparing your section…';break;
- case 'sample-loaded':busy=false;sampleBusy=false;sampleSelection={start:event.start,duration:event.duration};$('sample-original').src=event.url;$('sample-empty').hidden=true;$('sample-range').textContent=`From ${event.start}s · up to ${event.duration}s`;showSampleVersion(false);break;
- case 'sample-rendering':busy=true;sampleBusy=true;$('cancel').disabled=false;$('sample-status').textContent='Rendering with your current settings…';break;
- case 'sample-progress':$('sample-status').textContent=`Rendering · ${event.frames.toLocaleString()} frames`;break;
- case 'sample-rendered':busy=false;sampleBusy=false;renderedJob=renderingJob;enhancedUrl=event.url;$('sample-enhanced').src=event.url;showSampleVersion(true);break;
- case 'sample-error':busy=false;sampleBusy=false;updateState();$('sample-status').textContent=event.message;return;
- case 'download-started':busy=true;downloading=true;$('download-cancel').disabled=false;downloadMessage('Connecting to YouTube…');break;
- case 'download-progress':if(!$('download-cancel').disabled)downloadMessage(event.message);break;
- case 'downloaded':busy=false;downloading=false;downloadMessage(`Saved. Use Load video to open it.\n${event.path}`);break;
- case 'download-error':busy=false;downloading=false;downloadMessage(event.message,true);break;
+ case 'sample-loading':busy=true;sampleBusy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Preparing your section…';message('Preparing sample…');break;
+ case 'sample-loaded':busy=false;sampleBusy=false;sampleSelection={start:event.start,duration:event.duration};$('sample-original').src=event.url;$('sample-empty').hidden=true;$('sample-range').textContent=`From ${event.start}s · up to ${event.duration}s`;showSampleVersion(false);message('Sample loaded. Adjust your settings, then render.');break;
+ case 'sample-rendering':busy=true;sampleBusy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Rendering with your current settings…';message('Rendering sample…');break;
+ case 'sample-progress':$('sample-status').textContent=`Rendering · ${event.frames.toLocaleString()} frames`;if(!$('cancel').disabled)message(`Rendering sample · ${event.frames.toLocaleString()} frames`);break;
+ case 'sample-rendered':busy=false;sampleBusy=false;renderedJob=renderingJob;enhancedUrl=event.url;$('sample-enhanced').src=event.url;showSampleVersion(true);message('Sample rendered. Review it in Sample.');break;
+ case 'sample-error':busy=false;sampleBusy=false;updateState();$('sample-status').textContent=event.message;message(event.message,true);return;
+ case 'download-started':busy=true;downloading=true;$('cancel').disabled=false;$('progress').hidden=true;message('Connecting to YouTube…');break;
+ case 'download-progress':if(!$('cancel').disabled)message(event.message);break;
+ case 'downloaded':busy=false;downloading=false;message(`Saved. Use Load video to open it.\n${event.path}`);break;
+ case 'download-error':busy=false;downloading=false;message(event.message,true);break;
  case 'hdri-selected':hdri=event.path;$('hdri-name').textContent=event.name;markCustom();break;
- case 'loading':clearSample();showSamplePage(false);source=null;busy=true;$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
+ case 'loading':clearSample();showPage('enhance');source=null;busy=true;$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
  case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
  case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
- case 'progress':if(source.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
+ case 'progress':if(source.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);if(!$('cancel').disabled)message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
  case 'finished':busy=false;$('progress').value=1;message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
  case 'error':busy=false;$('progress').hidden=true;if(!source)$('name').textContent='No video selected';message(event.message,true);break;
  case 'status':message(event.message);break;

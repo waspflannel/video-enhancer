@@ -41,15 +41,36 @@ the existing project-local ffprobe executable. CUDA/NVDEC is supplied by the
 installed NVIDIA driver; no CUDA toolkit or Video Codec SDK download is
 needed for this FFmpeg integration.
 
+## Desktop navigation check
+
+Run `cargo run` from `app/`. The header keeps **Enhance**, **Sample**,
+**Download**, and **Compare** together. Enhance and Sample share the same
+settings; switching pages preserves the source, sample, download options,
+and comparison selections. Job status and **Cancel** remain below every page
+while a sample, download, or full export runs.
+
+1. Resize the window to its minimum 780 × 650 size. Open all four pages using
+   the header, then repeat with Tab and Enter. Check the selected page indicator,
+   visible focus, scrolling, and access to each page's actions.
+2. Load a local video in Enhance, change a setting, and open Sample. Load and
+   render a short section. Visit Download and Enhance, then return to Sample:
+   settings and the sample should remain, and hidden players should be paused.
+   Change a setting and confirm the sample asks for another render.
+3. Enter a download link and options, switch pages, and return. Confirm the
+   entries remain. During a download or sample render, switch to Compare and
+   cancel from the shared status bar; controls should unlock when it stops.
+4. Load a different source in Enhance and confirm the old sample is cleared.
+   Leave original files untouched and use new filenames for any exports.
+
 ## Comparison check
 
-Run `cargo run` from `app/`, open **Compare videos**, and select a local video
+Run `cargo run` from `app/`, select **Compare** in the header, and select a local video
 in each file input. **Play both** starts both at their current positions;
 **Pause both** pauses them; **Reset both** pauses and rewinds both to zero.
 **Clear both** unloads both players and clears both inputs; select files again
 to resume comparison, including the same files you just cleared.
 Check each player's native seek, volume and playback controls independently.
-Replace either file, then go back and reopen comparison: the selections stay
+Replace either file, switch to Enhance, then return to Compare: the selections stay
 loaded and playback pauses when leaving. Files play locally in WebView2;
 format support depends on its installed codecs. Playback is simultaneous,
 without frame-accurate synchronization.
@@ -96,7 +117,7 @@ outputs out of Git. Cargo.lock belongs in Git.
 
 ## YouTube downloads in the desktop UI
 
-The **Download from YouTube** section uses `yt-dlp` from PATH and the existing
+The **Download** page uses `yt-dlp` from PATH and the existing
 project-local FFmpeg. Choose maximum resolution, maximum frame rate, and MP4
 (H.264/AAC) or MKV (best supported SDR codec). These are download limits, not
 upscaling or frame generation. Audio is included. MP4 is the compatible default;
