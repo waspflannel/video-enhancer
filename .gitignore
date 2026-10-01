@@ -1,6 +1,7 @@
 # Local project notes
 /documents/
 /components.md
+/plans/
 
 # Credentials and local configuration
 .env
