@@ -1,5 +1,5 @@
 //! One CUDA pass for SDR colour adjustments. No NVIDIA AI model is used here.
-use std::{ffi::{c_char, c_void, CStr, CString}, io, ptr, rc::Rc};
+use std::{ffi::{c_char, c_void, CStr, CString}, io, ptr, rc::Rc, sync::Mutex};
 use crate::{job::{VideoEnhancementJob, EnhancementSettings}, resolution::{EnhancedFrame, commands::*, cuda::cuda_result}};
 
 pub struct VideoAdjuster {
@@ -21,7 +21,10 @@ impl VideoAdjuster {
         let _context = device.enter()?;
         if self.output.is_none() {
             self.output = Some(EnhancedFrame::allocate_matching_frame(frame)?);
-            let ptx = compile_kernel(include_str!("video_adjuster.cu"), c"video_adjuster.cu")?;
+            static PTX: Mutex<Option<Vec<u8>>> = Mutex::new(None);
+            let mut ptx = PTX.lock().map_err(|_| io::Error::other("Colour kernel cache lock poisoned"))?;
+            if ptx.is_none() { *ptx = Some(compile_kernel(include_str!("video_adjuster.cu"), c"video_adjuster.cu")?); }
+            let ptx = ptx.as_ref().unwrap();
             // SAFETY: PTX is NUL-terminated; the module stays alive for every launch.
             unsafe {
                 cuda_result("Load colour kernel", cuModuleLoadData(&mut self.module, ptx.as_ptr().cast()))?;

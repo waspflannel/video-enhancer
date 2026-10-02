@@ -212,8 +212,9 @@ impl VideoEnhancementJob {
     pub fn run(&self, cancelled: &AtomicBool, mut progress: impl FnMut(u64, f64)) -> io::Result<u64> {
         let source = Parser::new(&self.input).get_video_information()?;
         self.validate(&source)?;
-        let mut resolution_enhancer = ResolutionEnhancer::new(self);
         let mut frame_rate_enhancer = FrameRateEnhancer::new(self, source.video_end_time);
+        // Source effects drop before the frames transferred into VFG storage.
+        let mut resolution_enhancer = ResolutionEnhancer::new(self);
         let mut video_adjuster = VideoAdjuster::new(self);
         let mut sharpener = Sharpener::new(self);
         let mut hdr_converter = crate::hdr::TrueHdr::new(self);
@@ -240,6 +241,7 @@ impl VideoEnhancementJob {
             video_encoder.finish()?;
             Ok(encoded_frames)
         })();
+        frame_rate_enhancer.release_effect();
         // An interrupted export is kept for diagnosis; it is never reported as complete.
         result.map_err(|error: io::Error| io::Error::new(error.kind(), format!("{error}. Incomplete output may remain at {}", self.output.display())))
     }

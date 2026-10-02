@@ -55,17 +55,6 @@ impl EnhancedFrame {
         })
     }
 
-    pub(crate) fn copy_pixels_and_metadata_from(&mut self, frame: &Self) -> io::Result<()> {
-        // SAFETY: the caller activates CUDA; both owned images stay alive through synchronization.
-        // This GPU-to-GPU copy keeps a source frame before VSR overwrites it.
-        let result = sdk_result("Copy enhanced frame on GPU", unsafe { NvCVImage_Transfer(&frame.image, &mut self.image, 1.0, self.device.stream, ptr::null_mut()) });
-        let completion = self.device.synchronize();
-        result?;
-        completion?;
-        self.copy_metadata_from_enhanced_frame(frame);
-        Ok(())
-    }
-
     pub(crate) fn copy_metadata_from_enhanced_frame(&mut self, frame: &Self) {
         self.presentation_timestamp = frame.presentation_timestamp;
         self.time_base = frame.time_base;
@@ -112,9 +101,11 @@ pub(super) fn convert_frame_to_rgba(frame: &DecodedFrame, input: &mut EnhancedFr
     if frame.frame.width() != input.width || frame.frame.height() != input.height {
         return Err(io::Error::other("RGBA conversion requires a fixed frame size for this video"));
     }
+    frame.completion.wait_on(input.device.stream)?;
     if frame.pixel_format == "p010le" || input.image.pixel_format == NVCV_RGB10A2 {
         if input.converter.is_none() { input.converter = Some(PixelConverter::new(Rc::clone(&input.device))?); }
-        return input.converter.as_ref().unwrap().decode_yuv(frame, &mut input.image, colorspace);
+        input.converter.as_ref().unwrap().decode_yuv(frame, &mut input.image, colorspace)?;
+        return frame.completion.record(input.device.stream);
     }
     let device = &input.device;
     // SAFETY: validated NV12 has Y and interleaved UV device planes; use their actual byte pitches.
@@ -122,9 +113,10 @@ pub(super) fn convert_frame_to_rgba(frame: &DecodedFrame, input: &mut EnhancedFr
         let native = &*frame.frame.as_ptr();
         NvCVImage_TransferFromYUV(native.data[0].cast(), 1, native.linesize[0], native.data[1].cast(), native.data[1].wrapping_add(1).cast(), 2, native.linesize[1], NVCV_YUV420, NVCV_U8, colorspace, NVCV_GPU, &mut input.image, ptr::null(), 1.0, device.stream, ptr::null_mut())
     };
-    let completion = device.synchronize();
-    sdk_result("Convert NV12 to RGBA on GPU", status)?;
-    completion
+    let result = sdk_result("Convert NV12 to RGBA on GPU", status);
+    if result.is_err() { let _ = device.synchronize(); }
+    result?;
+    frame.completion.record(device.stream)
 }
 
 fn source_colorspace(frame: &DecodedFrame) -> io::Result<u32> {

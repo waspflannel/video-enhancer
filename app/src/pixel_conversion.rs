@@ -1,5 +1,5 @@
 //! GPU conversion for packed 10-bit images, which NvCV's raw YUV transfer does not support.
-use std::{ffi::c_void, io, ptr, rc::Rc};
+use std::{ffi::c_void, io, ptr, rc::Rc, sync::Mutex};
 use crate::{resolution::{commands::*, cuda::{CudaDevice, cuda_result}}, video_adjuster::compile_kernel, video_decoder::DecodedFrame};
 
 pub(crate) struct PixelConverter {
@@ -11,9 +11,12 @@ pub(crate) struct PixelConverter {
 
 impl PixelConverter {
     pub(crate) fn new(device: Rc<CudaDevice>) -> io::Result<Self> {
-        let ptx = compile_kernel(include_str!("pixel_conversion.cu"), c"pixel_conversion.cu")?;
+        static PTX: Mutex<Option<Vec<u8>>> = Mutex::new(None);
+        let mut ptx = PTX.lock().map_err(|_| io::Error::other("Pixel conversion kernel cache lock poisoned"))?;
+        if ptx.is_none() { *ptx = Some(compile_kernel(include_str!("pixel_conversion.cu"), c"pixel_conversion.cu")?); }
+        let ptx = ptx.as_ref().unwrap();
         let mut converter = Self { module: ptr::null_mut(), decode: ptr::null_mut(), encode: ptr::null_mut(), device };
-        // SAFETY: the caller activates this device; the module stays live through every synchronized launch.
+        // SAFETY: the caller activates this device; Drop drains launches before unloading the module.
         unsafe {
             cuda_result("Load pixel conversion kernel", cuModuleLoadData(&mut converter.module, ptx.as_ptr().cast()))?;
             cuda_result("Find YUV conversion kernel", cuModuleGetFunction(&mut converter.decode, converter.module, c"decode_yuv".as_ptr()))?;
@@ -23,7 +26,7 @@ impl PixelConverter {
     }
 
     pub(crate) fn decode_yuv(&self, frame: &DecodedFrame, destination: &mut NvImage, colorspace: u32) -> io::Result<()> {
-        // SAFETY: the decoded AVFrame owns both CUDA plane pointers throughout this synchronous conversion.
+        // SAFETY: the decoded frame's completion event keeps both planes live through conversion.
         let native = unsafe { &*frame.frame.as_ptr() };
         let mut y = native.data[0];
         let mut uv = native.data[1];
@@ -70,15 +73,15 @@ impl PixelConverter {
     fn launch(&self, function: *mut c_void, width: u32, height: u32, arguments: &mut [*mut c_void]) -> io::Result<()> {
         // SAFETY: each caller supplies arguments matching its CUDA entrypoint and retains both images until sync.
         let result = cuda_result("Convert GPU pixels", unsafe { cuLaunchKernel(function, width.div_ceil(16), height.div_ceil(16), 1, 16, 16, 1, 0, self.device.stream, arguments.as_mut_ptr(), ptr::null_mut()) });
-        let completion = self.device.synchronize();
-        result?;
-        completion
+        if result.is_err() { let _ = self.device.synchronize(); }
+        result
     }
 }
 
 impl Drop for PixelConverter {
     fn drop(&mut self) {
         if !self.module.is_null() && let Ok(_context) = self.device.enter() {
+            let _ = self.device.synchronize();
             // SAFETY: all launches finished before unloading the module.
             unsafe { cuModuleUnload(self.module) };
         }

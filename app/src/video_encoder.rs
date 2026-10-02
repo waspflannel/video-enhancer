@@ -6,29 +6,45 @@ use std::{fs::OpenOptions, io, ptr, rc::Rc, sync::mpsc, thread};
 use crate::{job::{EncoderSettings, OutputEncoding, VideoEnhancementJob}, pixel_conversion::PixelConverter};
 use ffmpeg_next::{self as ffmpeg, ffi, Rescale};
 use crate::{frame_rate::FrameForEncoder, parser::FileData, resolution::{commands::*, sdk_result}};
+use crate::resolution::cuda::CudaEvent;
 
 pub struct VideoEncoder {
     pending_worker: Option<EncoderWorker>,
     sender: Option<mpsc::SyncSender<EncoderCommand>>,
     worker: Option<thread::JoinHandle<io::Result<()>>>,
+    available_events: Option<mpsc::Receiver<CudaEvent>>,
     frame_pool: *mut ffi::AVBufferRef,
     time_base: ffmpeg::Rational,
     converter: Option<PixelConverter>,
 }
 
-enum EncoderCommand { Frame(ffmpeg::frame::Video), Finish }
+struct PendingFrame {
+    // Field order ensures completion is awaited before pixels are freed on a closed queue.
+    completion: CudaEvent,
+    frame: ffmpeg::frame::Video,
+}
+
+enum EncoderCommand { Frame(PendingFrame), Finish }
 
 impl VideoEncoder {
     pub fn new(source: &FileData, job: &VideoEnhancementJob) -> io::Result<Self> {
-        Ok(Self { pending_worker: Some(EncoderWorker::new(source, job)?), sender: None, worker: None, frame_pool: ptr::null_mut(), time_base: (1, 1).into(), converter: None })
+        Ok(Self { pending_worker: Some(EncoderWorker::new(source, job)?), sender: None, worker: None, available_events: None, frame_pool: ptr::null_mut(), time_base: (1, 1).into(), converter: None })
     }
 
     pub fn encode(&mut self, frame: FrameForEncoder<'_>) -> io::Result<()> {
         let _context = frame.frame.device.enter()?;
         if self.worker.is_none() { self.start_worker(&frame)?; }
-        // Conversion completes before handing an independently owned GPU buffer to NVENC.
+        let completion = match self.available_events.as_ref().unwrap().recv() {
+            Ok(completion) => completion,
+            Err(_) => {
+                self.join_worker()?;
+                return Err(io::Error::other("Video encoder worker stopped"));
+            }
+        };
         let gpu_frame = prepare_encoder_frame(self.frame_pool, self.time_base, &frame, self.converter.as_ref())?;
-        self.send_command(EncoderCommand::Frame(gpu_frame))
+        // Record failure drains the stream before the unqueued GPU allocation is released.
+        completion.record(frame.frame.device.stream)?;
+        self.send_command(EncoderCommand::Frame(PendingFrame { completion, frame: gpu_frame }))
     }
 
     /// Flush queued frames and audio before reporting a successful export.
@@ -48,17 +64,27 @@ impl VideoEncoder {
         // buffer pool is thread-safe; the producer never accesses the worker's codec again.
         self.frame_pool = unsafe { ffi::av_buffer_ref((*video_encoder.as_ptr()).hw_frames_ctx) };
         if self.frame_pool.is_null() { return Err(io::Error::other("Retain encoder GPU frame pool")); }
+        let (completed, available) = mpsc::channel();
+        // Two queued frames plus the worker's frame bound conversion work in flight.
+        for _ in 0..3 {
+            completed.send(CudaEvent::new(first_frame.frame.device.reference)?).map_err(|_| io::Error::other("Initialize encoder completion slots"))?;
+        }
         let (sender, receiver) = mpsc::sync_channel(2);
         self.worker = Some(thread::Builder::new().name("video-encode".into()).spawn(move || {
             for command in receiver {
                 match command {
-                    EncoderCommand::Frame(frame) => worker.encode(frame)?,
+                    EncoderCommand::Frame(pending) => {
+                        pending.completion.synchronize()?;
+                        worker.encode(pending.frame)?;
+                        if completed.send(pending.completion).is_err() { break; }
+                    }
                     EncoderCommand::Finish => return worker.finish(),
                 }
             }
             Err(io::Error::new(io::ErrorKind::Interrupted, "Frame producer stopped"))
         })?);
         self.sender = Some(sender);
+        self.available_events = Some(available);
         Ok(())
     }
 
@@ -280,15 +306,14 @@ fn prepare_encoder_frame(frame_pool: *mut ffi::AVBufferRef, time_base: ffmpeg::R
         converter.encode_p010(&frame.frame.image, &mut gpu_frame, frame.frame.color_transfer == ffi::AVColorTransferCharacteristic::AVCOL_TRC_SMPTE2084)?;
         return Ok(gpu_frame);
     }
-    // SAFETY: both images remain owned through conversion and stream synchronization.
+    // SAFETY: same-stream consumers preserve the input; the queued frame owns converted pixels.
     let conversion = unsafe {
         let native = &*gpu_frame.as_ptr();
         NvCVImage_TransferToYUV(&frame.frame.image, ptr::null(), native.data[0].cast(), 1, native.linesize[0], native.data[1].cast(), native.data[1].wrapping_add(1).cast(), 2, native.linesize[1], NVCV_YUV420, NVCV_U8, 1, NVCV_GPU, 1.0, device.stream, ptr::null_mut())
     };
-    // Complete even a failed conversion before either GPU buffer can be released/reused.
-    let completion = device.synchronize();
-    sdk_result("Convert RGB to encoder NV12 on GPU", conversion)?;
-    completion?;
+    let result = sdk_result("Convert RGB to encoder NV12 on GPU", conversion);
+    if result.is_err() { let _ = device.synchronize(); }
+    result?;
     Ok(gpu_frame)
 }
 
