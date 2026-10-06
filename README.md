@@ -9,7 +9,7 @@ Built with Rust and tested on an RTX 5070.
 - AI upscaling and frame generation.
 - Denoising, deblurring, sharpening, and colour adjustments.
 - Portrait background effects, relighting, and SDR-to-HDR conversion.
-- One video workspace for the source, short previews, and finished exports.
+- Separate Full video, Preview, Compare, and Download tabs with a shared video viewer.
 - Synchronized original/enhanced, wipe, and side-by-side views with shared seeking, looping, zoom, and pan.
 - YouTube downloads with optional start/end times.
 - H.264 or 10-bit HEVC MP4 export with source audio preserved.
@@ -46,16 +46,16 @@ The setup script installs the additional shared FFmpeg libraries and libclang ne
 
 ## Use
 
-1. Open **Workspace** and load a video.
+1. Open **Full video** and load a video.
 2. Choose a preset or adjust the resolution, frame rate, and effects.
-3. Drag the **Preview range** handles to select 1–15 seconds, then choose **Render preview**. The result opens beside its input in the same viewer.
+3. Drag the **Preview range** handles to select 1–15 seconds, then choose **Render preview**. The **Preview** tab opens with the clip and enhancement settings. Render again there after changing settings; use **Change range** to return to the full video.
 4. Choose **Original**, **Enhanced**, **Wipe**, or **Side by side**. Use the shared timeline and **Loop** to inspect motion. At **100%** or **200%**, drag the image to pan both views together; zoom uses the enhanced image's pixel dimensions.
-5. **Export full video** to a new MP4. The completed export opens for comparison automatically; **Play export** and **Show in folder** open the saved file. Your original stays untouched.
+5. Return to **Full video** and choose **Export full video** to save a new MP4. The completed export opens for comparison automatically; **Play export** and **Show in folder** open the saved file. Your original stays untouched.
 
 To combine presets, apply **Noisy footage**, turn **Stack presets** on, then choose **Clean + colour**. This keeps the denoising and adds colour and sharpening in one processing pass. Stacking preserves other effects, resolution and FPS; overlapping settings use the latest preset's values, subject to format compatibility. Turn stacking off to replace settings with a complete preset again. **Reset** or loading another video also turns stacking off.
 
-**Compare files** uses the same viewer for any two local videos. **Download** can open a completed YouTube download directly in the workspace.
+**Compare** is a standalone tab for any two local videos, with no enhancement settings. **Download** can open a completed YouTube download directly in **Full video**.
 
-With the viewer focused, **Space** toggles playback, **Left/Right** step through the timeline, and **Escape** resets zoom. Steps use the video's nominal frame rate (a 30 FPS grid for comparison files with unknown rates); variable-rate video is not frame-exact. Only one video plays audio at a time. In **Full video**, Loop repeats the selected preview range; in **Preview** or **Compare files**, it repeats the displayed clip.
+With the viewer focused, **Space** toggles playback, **Left/Right** step through the timeline, and **Escape** resets zoom. Steps use the video's nominal frame rate (a 30 FPS grid for comparison files with unknown rates); variable-rate video is not frame-exact. Only one video plays audio at a time. In **Full video**, Loop repeats the selected preview range; in **Preview** or **Compare**, it repeats the displayed clip.
 
 Playback uses the actual source and result files, without a separate lossy display copy. Browser codec support determines which formats play inside the workspace; use **Open source**, **Open preview**, or **Play export** if needed. HDR playback also needs a compatible player and display.
