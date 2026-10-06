@@ -2,36 +2,26 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; media-src 'self' blob:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; media-src 'self' blob: https://media.localhost;">
 <title>Video Enhancer</title>
 <style>
-:root{color-scheme:dark;font:14px 'Segoe UI',sans-serif;color:#e9eeeb;background:#121615;--muted:#9ea9a3;--accent:#b7eb89;--line:#303933}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button,select{border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit;padding:10px 14px}button{cursor:pointer;transition:background .15s,transform .15s}button:hover:enabled{background:#354135}button:active:enabled{transform:translateY(1px)}button:disabled{cursor:default;opacity:.45}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:4px}header{display:flex;justify-content:space-between;align-items:center;padding:25px 34px;border-bottom:1px solid var(--line)}header strong{font-size:21px;font-weight:600;letter-spacing:-.5px}.local{font-size:12px;color:var(--accent);letter-spacing:1px}.local:before{content:'●';margin-right:8px}main{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 84px)}aside{padding:30px 26px 26px 34px;border-right:1px solid var(--line);background:#161c18}.eyebrow{font-size:11px;letter-spacing:1.6px;color:var(--muted);font-weight:600}h1{font-size:27px;letter-spacing:-.8px;margin:12px 0}p{color:var(--muted);line-height:1.6}.source-symbol{height:150px;margin:25px 0;display:grid;place-items:center;border:1px dashed #455147;border-radius:8px;color:#6d826e;background:#1b231d}.source-symbol svg{width:60px;height:60px}.load{width:100%;background:var(--accent);color:#192315;border:0;font-weight:600}.load:hover:enabled,.generate:hover:enabled{background:#c8f4a3}#name{font-weight:600;overflow-wrap:anywhere;margin-top:23px}dl{margin-top:20px}dl div{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #28312b}dt{color:var(--muted)}dd{margin:0}.note{font-size:12px;margin-top:25px}.workspace{padding:28px 34px;min-width:0}.intro{display:flex;justify-content:space-between;align-items:baseline}.intro h2{font-size:19px;font-weight:500;margin:0 0 5px}.intro p{font-size:12px;margin:0}.settings-wrap{position:relative;margin-top:24px}fieldset{margin:0;padding:0;border:0;min-width:0;transition:filter .25s,opacity .25s}fieldset.locked{filter:blur(3px);opacity:.40;pointer-events:none;user-select:none}.lock-message{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}.lock-message span{background:#202922;padding:16px 22px;border:1px solid #54634e;border-radius:8px;box-shadow:0 6px 32px #0005}.section{padding:19px 0;border-bottom:1px solid var(--line)}.section:first-child{padding-top:0}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}.section-title h3{font-size:13px;font-weight:600;margin:0}.section-title small{color:var(--muted);font-size:11px}.row{display:grid;grid-template-columns:1fr 1fr;gap:25px}.field{display:block;font-size:12px;color:var(--muted)}.field select{display:block;width:100%;margin-top:8px}.presets{display:flex;gap:7px;flex-wrap:wrap}.presets button{padding:7px 11px;font-size:12px}.presets .selected{border-color:var(--accent);color:var(--accent);background:#273421}.sliders{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;row-gap:18px}.slider-head{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px}.slider-head output{font-variant-numeric:tabular-nums;color:var(--accent)}input[type=range]{display:block;width:100%;height:4px;margin:12px 0 4px;accent-color:var(--accent)}.helper{font-size:11px;color:var(--muted);margin:12px 0 0}.footer{padding-top:23px;display:flex;align-items:center;justify-content:space-between;gap:20px}.generate{min-width:166px;background:var(--accent);color:#192315;font-weight:600;border:0}.summary{font-size:12px;color:var(--muted)}#status{font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:20px}#status.error{color:#ffb8ae}progress{width:100%;accent-color:var(--accent);height:5px;border:0;margin-top:15px}[hidden]{display:none!important}@media(max-width:900px){header{padding:20px}main{grid-template-columns:230px 1fr}aside{padding:25px 20px}.workspace{padding:25px 22px}.row,.sliders{column-gap:15px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
-body{height:100vh;overflow:hidden;display:flex;flex-direction:column}header{flex-shrink:0;padding-top:20px;padding-bottom:20px}main{flex:1;min-height:0}aside{overflow:auto}.workspace{display:flex;flex-direction:column;overflow:hidden}.intro,.footer{flex-shrink:0}.settings-wrap{overflow:auto;min-height:0;flex:1;padding-right:8px;margin-top:20px}.section{padding:16px 0}.section-title{margin-bottom:13px}.sliders{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}#status{flex-shrink:0;max-height:85px;overflow:auto;margin-top:12px}.footer{padding-top:17px}.lock-message{position:sticky;bottom:40%;height:0}.lock-message span{transform:translateY(-50%)}@media(max-width:900px){.sliders{grid-template-columns:repeat(2,minmax(0,1fr))}}
+:root{color-scheme:dark;font:13px 'Segoe UI',sans-serif;color:#e9eeeb;background:#121615;--muted:#9ca9a1;--accent:#b7eb89;--line:#303a33}
+*{box-sizing:border-box}body{margin:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}button,input,select{font:inherit}button,select,input[type=number],input[type=url]{border:1px solid #465149;border-radius:5px;background:#252d28;color:inherit;padding:8px 11px}button{cursor:pointer;transition:background .15s}button:hover:enabled{background:#354135}button:disabled,input:disabled,select:disabled{opacity:.45;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,#viewport:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button[aria-pressed=true]{color:var(--accent);border-color:#7c9c62;background:#283522}button.primary,.generate{background:var(--accent);color:#192315;border-color:transparent;font-weight:600}.primary:hover:enabled,.generate:hover:enabled{background:#c8f4a3}[hidden]{display:none!important}
+header{display:flex;align-items:center;gap:26px;flex-shrink:0;height:65px;padding:0 24px;border-bottom:1px solid var(--line)}header strong{font-size:20px;font-weight:600;letter-spacing:-.6px}header strong span{color:var(--accent)}nav{display:flex;gap:4px}nav button{border:0;background:transparent;color:var(--muted)}nav button[aria-current=page]{color:var(--accent);background:#283522}.local{margin-left:auto;color:var(--muted);font-size:11px;letter-spacing:1px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}.viewer{min-width:0;min-height:0;display:flex;flex-direction:column;padding:20px 24px;gap:14px}.source-bar{display:flex;align-items:center;gap:12px;min-height:38px}.source-info{min-width:0;flex:1}#name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metadata{display:flex;gap:13px;color:var(--muted);font-size:11px;margin-top:5px}.viewer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.viewer-tabs{display:flex;gap:5px}.viewer-toolbar label{color:var(--muted);font-size:11px}.viewer-toolbar select{padding:6px 8px;margin-left:4px}.view-options{display:flex;align-items:center;gap:10px}
+#viewport{position:relative;flex:1;min-height:200px;overflow:hidden;background:#080b09;border:1px solid #242c26;touch-action:none;--wipe:50%;user-select:none}.pane{position:absolute;inset:0;overflow:hidden}.pane video{position:absolute;left:50%;top:50%;max-width:none;object-fit:contain;pointer-events:none}.pane-label{position:absolute;top:14px;padding:5px 8px;background:#101611cb;color:#cbd6ce;font-size:10px;letter-spacing:1px;z-index:2;pointer-events:none}#label-original{left:14px}#label-enhanced{right:14px}#viewport[data-mode=wipe] #pane-enhanced{clip-path:inset(0 0 0 var(--wipe))}#viewport[data-mode=side] .pane{width:50%}#viewport[data-mode=side] #pane-enhanced{left:50%;border-left:1px solid var(--line)}#viewport[data-mode=original] #pane-enhanced,#viewport[data-mode=original] #label-enhanced{display:none}#viewport[data-mode=enhanced] #pane-original,#viewport[data-mode=enhanced] #label-original{display:none}
+#wipe-handle{position:absolute;top:0;bottom:0;left:var(--wipe);width:24px;transform:translateX(-50%);padding:0;border:0;border-radius:0;background:transparent;cursor:ew-resize;touch-action:none;z-index:3}#wipe-handle:before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:#e1eddbb0}#wipe-handle:after{content:'↔';position:absolute;left:0;top:50%;width:24px;height:38px;display:grid;place-items:center;border:1px solid #829b74;border-radius:4px;background:#253122;color:#def6ca}
+#viewer-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:12px;text-align:center;padding:24px}#viewer-empty svg{width:52px;height:52px;color:#819277}#viewer-empty h1{font-size:21px;font-weight:500;color:#dce7df;margin:6px 0 0}#viewer-empty p{max-width:350px;margin:0;line-height:1.6}#viewer-error{position:absolute;left:20px;right:20px;bottom:18px;z-index:4;background:#201c19e8;color:#ffc5b6;padding:12px;white-space:pre-line;font-size:12px;line-height:1.5}
+.transport{display:flex;align-items:center;gap:8px}.transport button{min-width:36px;padding:7px 10px}.transport input{flex:1;min-width:70px}.timecode{font:11px Consolas,monospace;color:#c0cbc3;white-space:nowrap}.transport label{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}input[type=range]{accent-color:var(--accent);cursor:pointer}input[type=checkbox]{accent-color:var(--accent)}.viewer-note{color:var(--muted);font-size:11px;line-height:1.5;min-height:16px}.preview-range{border-top:1px solid var(--line);padding-top:13px}.range-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.range-heading strong{font-size:12px;font-weight:500}.range-heading output{font:11px Consolas,monospace;color:var(--muted)}.range-track{height:30px;position:relative;margin:6px 3px}.range-track:before{content:'';position:absolute;left:0;right:0;top:13px;height:4px;background:#303a33}.range-fill{position:absolute;top:12px;height:6px;left:var(--start,0%);right:calc(100% - var(--end,100%));background:#8eae6d}.range-track input{position:absolute;inset:0;width:100%;margin:0;background:transparent;appearance:none;pointer-events:none}.range-track input::-webkit-slider-runnable-track{background:transparent;height:6px}.range-track input::-webkit-slider-thumb{appearance:none;pointer-events:auto;cursor:ew-resize;height:22px;width:11px;border:2px solid #d5ebbc;background:#60784e;border-radius:2px;margin-top:-8px}.range-actions{display:flex;align-items:center;gap:10px}.range-actions .helper{flex:1;margin:0}.range-actions button{white-space:nowrap}.compare-files{display:flex;gap:16px;flex-wrap:wrap;padding-bottom:3px}.compare-files label{font-size:11px;color:var(--muted);flex:1;min-width:160px}.compare-files input{display:block;width:100%;font-size:11px;margin-top:6px}.result-actions{display:flex;gap:8px;flex-wrap:wrap}
+.workspace{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid var(--line);background:#171d19;padding:20px}.intro{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.intro h2{font-size:15px;font-weight:600;margin:0}.settings-wrap{overflow:auto;flex:1;min-height:0;padding-right:7px}fieldset{border:0;padding:0;margin:0;min-width:0}fieldset.locked{opacity:.5}.section{padding:17px 0;border-bottom:1px solid var(--line)}.section:first-child{padding-top:0}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px}.section-title h3,summary{font-size:12px;font-weight:600;margin:0}.section-title small{font-size:10px;color:var(--muted)}summary{cursor:pointer}details[open]>summary{margin-bottom:14px}.row,.sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.row+.row,.row+.sliders,.sliders+.row,.sliders+.sliders{margin-top:15px}.field{display:block;font-size:11px;color:var(--muted);min-width:0}.field select,.field input[type=number],.field input[type=color]{display:block;width:100%;margin-top:7px;font-size:12px}.field select{padding:8px 5px}.field input[type=color]{height:34px;background:#252d28;border:1px solid #465149}.slider-head{display:flex;justify-content:space-between;gap:5px;font-size:11px;margin-bottom:5px}.slider-head output{font-variant-numeric:tabular-nums;color:var(--accent)}.sliders input{width:100%;margin:7px 0 0;height:4px}.presets{display:grid;grid-template-columns:1fr;gap:5px}.presets button{text-align:left;padding:9px 11px}.presets strong{font-size:12px;font-weight:500}.presets small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.presets button.selected{border-color:#839e6a;color:var(--accent);background:#283522}.helper{font-size:11px;line-height:1.55;color:var(--muted);margin:11px 0 0}.check{display:flex;align-items:center;gap:7px;font-size:11px;margin:12px 0}.section fieldset{margin-top:14px}.section fieldset:disabled{opacity:.5}.asset-picker{display:flex;gap:7px;align-items:center;margin-top:12px;flex-wrap:wrap}.asset-picker button{font-size:11px}.asset-name{font-size:10px;color:var(--muted);overflow-wrap:anywhere}.footer{border-top:1px solid var(--line);padding-top:15px;margin-top:8px;display:flex;flex-direction:column;gap:11px}.summary{font-size:11px;color:var(--muted)}.footer .generate{width:100%;padding:11px}
+.download-page{flex:1;min-height:0;overflow:auto;padding:30px}.page-content{max-width:640px;margin:0 auto}.eyebrow{color:var(--accent);font-size:10px;letter-spacing:1.4px}.download-page h1{font-size:25px;font-weight:500}.download-page p{color:var(--muted);line-height:1.6}.download-page .field{margin-top:18px}.download-page input[type=url],.download-page input[type=number]{width:100%;margin-top:7px}.download-actions{display:flex;gap:10px;margin-top:22px}.job-status{display:flex;align-items:center;gap:16px;flex-shrink:0;border-top:1px solid var(--line);padding:10px 24px;background:#171d19}.job-message{flex:1;min-width:0}#status{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-height:58px;overflow:auto}#status.error{color:#ffb8ae}progress{width:100%;height:4px;accent-color:var(--accent);display:block;margin-bottom:6px}.comparison-mode{grid-template-columns:1fr}.comparison-mode>.workspace{display:none}
+@media(max-width:1100px){main{grid-template-columns:minmax(0,1fr) 320px}.viewer{padding:15px;gap:11px}.workspace{padding:16px}.transport{gap:5px}.transport .timecode{font-size:10px}.view-options{gap:6px}.metadata{gap:8px}.range-actions{flex-wrap:wrap}}@media(max-width:760px){body{overflow:auto;height:auto;min-height:100vh}header{padding:0 14px;gap:12px}.local{display:none}main{display:flex;flex-direction:column}.viewer{min-height:660px}.workspace{border-left:0;border-top:1px solid var(--line)}.settings-wrap{overflow:visible}.transport{flex-wrap:wrap}.comparison-mode>.viewer{min-height:700px}.row,.sliders{gap:16px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<style>
-.youtube .check input{width:auto;margin:0;padding:0}
-.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.presets button{text-align:left;padding:11px 12px;line-height:1.4}.presets strong,.presets small{display:block}.presets small{margin-top:4px;color:var(--muted);font-size:11px;font-weight:400}
-.youtube .field{margin-top:13px}.youtube input{width:100%;min-width:0;margin-top:8px;padding:10px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.youtube .row{gap:10px}.youtube select{padding:9px 6px}.download-actions{display:flex;gap:8px;margin-top:15px}
-.section .row+.row,.section .row+.sliders,.section .sliders+.row,.section .sliders+.sliders{margin-top:17px}.check{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:15px}.check input{accent-color:var(--accent)}.field input[type=color],.field input[type=number]{display:block;width:100%;height:39px;margin-top:8px;padding:8px;border:1px solid #465149;border-radius:6px;background:#252d28;color:inherit}.field input[type=color]{padding:3px}.asset-picker{display:flex;align-items:center;gap:9px;margin-top:14px}.asset-picker button{font-size:12px;padding:8px 10px}.asset-name{color:var(--muted);font-size:12px;overflow-wrap:anywhere;min-width:0}input:disabled,select:disabled{opacity:.45}.section details>summary{font-size:13px;font-weight:600;cursor:pointer}.section details[open]>summary{margin-bottom:17px}.section fieldset{margin-top:15px}.section fieldset:disabled{opacity:.55}
-.sample-mode{grid-template-columns:minmax(0,1.15fr) minmax(390px,1fr)}.sample-mode>aside{display:none}.sample-panel{min-width:0;min-height:0;padding:26px 30px;overflow:auto;border-right:1px solid var(--line);background:#161c18;display:flex;flex-direction:column;gap:18px}.sample-panel h2{margin:0;font-size:23px}.sample-panel p{margin:0}.sample-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}.sample-selection{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px}.sample-selection input{display:block;width:100%;min-width:0;background:#252d28;color:inherit;border:1px solid #465149;border-radius:6px;margin-top:8px;padding:10px}.sample-player{background:#080b09;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:220px;display:grid;place-items:center;flex:1}.sample-player video{width:100%;max-height:55vh;display:block}.sample-player p{padding:30px;text-align:center}.sample-tabs{display:flex;gap:8px}.sample-tabs button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}#sample-status{white-space:pre-wrap;line-height:1.5;color:var(--muted);font-size:12px}.sample-mode .row{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.sample-mode .sliders{grid-template-columns:repeat(2,minmax(0,1fr))}.sample-mode .intro{gap:12px}.sample-mode .workspace{padding:26px 22px}.sample-mode .field{min-width:0}.sample-mode .field select{min-width:0}.sample-mode .footer{flex-wrap:wrap}@media(max-width:900px){.sample-mode{grid-template-columns:minmax(0,1fr) minmax(360px,1fr)}.sample-panel{padding:22px 18px}.sample-selection{grid-template-columns:1fr 1fr}.sample-selection button{grid-column:1/-1}.sample-toolbar{flex-wrap:wrap}}
-</style>
-<style>
-.comparison{flex:1;min-height:0;overflow:auto;padding:28px 34px}.comparison h1{margin:12px 0}.comparison-actions{display:flex;gap:8px;margin:22px 0}.comparison-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.comparison-players input{display:block;width:100%;margin:12px 0;color:var(--muted)}.comparison-players video{display:block;width:100%;aspect-ratio:16/9;max-height:55vh;background:#080b09;object-fit:contain;border:1px solid var(--line);border-radius:8px}.comparison-error{color:#ffb8ae;font-size:12px}
-header{gap:24px}header strong,.local{white-space:nowrap}nav{display:flex;gap:4px}nav button{border:0;background:transparent;color:var(--muted);padding:12px 15px;position:relative}nav button[aria-current=page]{background:#273421;color:var(--accent)}nav button[aria-current=page]:after{content:'';position:absolute;bottom:0;left:15px;right:15px;height:2px;background:var(--accent)}
-.download-page{flex:1;min-height:0;overflow:auto;padding:32px 34px}.page-content{max-width:680px;margin:0 auto}.download-page h1{margin-bottom:8px}.download-page .row{gap:20px}.download-page .field{margin-top:20px}.download-page .download-actions{margin-top:24px}.download-page .helper{max-width:600px}.download-page #download-timings{margin-top:6px}
-.sample-panel h2{margin-top:10px}.sample-panel #sample-source-name{margin-top:8px;overflow-wrap:anywhere}#sample-empty{text-align:center;padding:24px}#sample-empty p{padding:0 0 12px}
-.job-status{flex-shrink:0;display:flex;align-items:center;gap:24px;padding:12px 34px;border-top:1px solid var(--line);background:#161c18}.job-message{flex:1;min-width:0}.job-status #status{margin:0;max-height:64px}.job-status progress{margin:0 0 9px;display:block}.job-status button{flex-shrink:0}
-@media(max-width:900px){header{gap:12px}header strong{font-size:18px}nav button{padding:11px 12px}.local{font-size:10px;letter-spacing:.5px}.job-status{padding:12px 20px}.download-page{padding:26px 22px}}
-</style>
-<header>
-  <strong>Video Enhancer<span style="color:var(--accent)">.</span></strong>
-  <nav aria-label="Workspace"><button id="nav-enhance" data-page="enhance" aria-controls="main" aria-current="page">Enhance</button><button id="nav-sample" data-page="sample" aria-controls="main">Sample</button><button id="nav-download" data-page="download" aria-controls="download-page">Download</button><button id="nav-compare" data-page="compare" aria-controls="comparison">Compare</button></nav>
-  <span class="local">LOCAL · NVIDIA</span>
-</header>
+<header><strong>Video Enhancer<span>.</span></strong><nav aria-label="Workspace"><button id="nav-enhance" data-page="enhance" aria-current="page">Workspace</button><button id="nav-download" data-page="download">Download</button></nav><span class="local">LOCAL · NVIDIA</span><button id="compare-files-button">Compare files</button></header>
 <section id="download-page" class="download-page" aria-labelledby="download-title" hidden>
   <div class="page-content youtube">
     <div class="eyebrow">DOWNLOAD</div><h1 id="download-title">Download from YouTube</h1>
-    <p>Save a video locally, then load it to start enhancing.</p>
+    <p>Download a source, then open it in your workspace.</p>
     <form id="download-form">
       <fieldset id="download-settings" aria-label="YouTube download options">
         <label class="field">Video link<input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off" spellcheck="false"></label>
@@ -50,40 +40,28 @@ header{gap:24px}header strong,.local{white-space:nowrap}nav{display:flex;gap:4px
       </fieldset>
       <div class="download-actions"><button id="download" class="generate" type="submit">Download video</button><button id="download-load" type="button">Load video</button></div>
     </form>
-    <p class="helper">Saved in youtube-videos. Use Load video when ready.</p>
-  </div>
-</section>
-<section id="comparison" class="comparison" aria-label="Video comparison" hidden>
-  <div class="eyebrow">COMPARE</div><h1>Compare videos</h1><p>Play two local videos side by side. Each player keeps its own playback controls.</p>
-  <div class="comparison-actions"><button id="comparison-play" disabled>Play both</button><button id="comparison-pause">Pause both</button><button id="comparison-reset">Reset both</button><button id="comparison-clear">Clear both</button></div>
-  <div class="comparison-players">
-    <div><label for="comparison-file-1">Video 1</label><input id="comparison-file-1" type="file" accept="video/*"><video id="comparison-video-1" controls playsinline preload="auto" aria-label="Video 1"></video><p id="comparison-error-1" class="comparison-error" role="status"></p></div>
-    <div><label for="comparison-file-2">Video 2</label><input id="comparison-file-2" type="file" accept="video/*"><video id="comparison-video-2" controls playsinline preload="auto" aria-label="Video 2"></video><p id="comparison-error-2" class="comparison-error" role="status"></p></div>
+    <p class="helper">Saved in youtube-videos. Open your download directly when it finishes.</p>
   </div>
 </section>
 <main id="main">
-<aside>
-  <div class="eyebrow">YOUR SOURCE</div><h1>Choose a video.</h1><p>Load a video, choose your settings, and export locally.</p>
-  <button id="load" class="load">Load video</button>
-
-  <div id="name">No video selected</div>
-  <dl><div><dt>Resolution</dt><dd id="dimensions">—</dd></div><div><dt>Frame rate</dt><dd id="fps">—</dd></div><div><dt>Duration</dt><dd id="duration">—</dd></div><div><dt>Audio</dt><dd id="audio">—</dd></div></dl>
-  <p class="note">Your original stays untouched.<br>Export H.264 or 10-bit HEVC MP4 with the source audio.</p>
-</aside>
-<section id="sample-panel" class="sample-panel" aria-label="Sample preview" hidden>
-  <div><div class="eyebrow">SAMPLE</div><h2>Sample preview</h2><p class="helper" id="sample-source-name">No video selected</p></div>
-  <p class="helper">Choose a section, adjust the settings on the right, then render to compare.</p>
-  <fieldset id="sample-selection" class="sample-selection"><label class="field">Start · seconds<input id="sample-start" type="number" min="0" step="0.1" value="0" required></label><label class="field">Length · seconds<input id="sample-duration" type="number" min="1" max="15" step="1" value="5" required></label><button id="sample-load">Load section</button></fieldset>
-  <div class="sample-toolbar"><div class="sample-tabs" role="group" aria-label="Compare sample"><button id="show-original" aria-pressed="true" disabled>Original</button><button id="show-enhanced" aria-pressed="false" disabled>Enhanced</button></div><span class="helper" id="sample-range">No section loaded</span></div>
-  <div class="sample-player"><div id="sample-empty"><p id="sample-empty-message">Load a video to preview a sample.</p><button id="sample-source">Load video</button></div><video id="sample-original" aria-label="Original sample" controls playsinline preload="metadata" hidden></video><video id="sample-enhanced" aria-label="Enhanced sample" controls playsinline preload="metadata" hidden></video></div>
-  <div class="sample-toolbar"><button id="sample-render" class="generate" disabled>Render sample</button><button id="sample-external" disabled>Open rendered video</button></div>
-  <p class="helper">Rendered at your chosen resolution, frame rate and output format. Original playback uses an 8-bit copy. HDR needs compatible playback and a display.</p>
-  <div id="sample-status" role="status" aria-live="polite">Your full video stays unchanged.</div>
+<section class="viewer" aria-label="Video workspace">
+  <div class="source-bar"><div class="source-info"><div id="name">No video loaded</div><div class="metadata"><span id="dimensions">—</span><span id="fps">—</span><span id="duration">—</span><span id="audio">—</span></div></div><button id="load">Load video</button></div>
+  <div id="comparison-files" class="compare-files" hidden><label>Original file<input id="comparison-file-1" type="file" accept="video/*"></label><label>Comparison file<input id="comparison-file-2" type="file" accept="video/*"></label><button id="comparison-clear">Clear files</button></div>
+  <div class="viewer-toolbar"><div class="viewer-tabs" role="group" aria-label="Preview content"><button id="view-full" aria-pressed="true">Full video</button><button id="view-sample" aria-pressed="false" disabled>Preview</button><button id="return-workspace" hidden>Back to video</button></div><div class="view-options"><label>View<select id="view-mode" aria-label="Comparison view"><option value="original">Original</option><option value="enhanced">Enhanced</option><option value="wipe">Wipe</option><option value="side">Side by side</option></select></label><label>Zoom<select id="zoom" aria-label="Viewer zoom"><option value="fit">Fit</option><option value="1">100%</option><option value="2">200%</option></select></label><button id="reset-view" title="Reset zoom and pan">Reset</button></div></div>
+  <div id="viewport" data-mode="original" tabindex="0" aria-label="Video viewer. Space to play, left and right arrows to step. Drag to pan when zoomed.">
+    <div class="pane" id="pane-original"><video id="video-original" playsinline preload="auto" aria-label="Original video"></video></div>
+    <div class="pane" id="pane-enhanced"><video id="video-enhanced" playsinline preload="auto" muted aria-label="Enhanced video"></video></div>
+    <span class="pane-label" id="label-original" hidden>ORIGINAL</span><span class="pane-label" id="label-enhanced" hidden>ENHANCED</span>
+    <button id="wipe-handle" role="slider" aria-label="Comparison wipe" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" hidden></button>
+    <div id="viewer-empty"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="5" y="9" width="38" height="30" rx="3" stroke="currentColor" stroke-width="1.3"/><path d="m20 17 12 7-12 7V17Z" fill="currentColor"/></svg><h1>Your video, in detail.</h1><p>Load a video. Try a short preview and compare the result before exporting.</p><button id="empty-load" class="primary">Load video</button></div>
+    <div id="viewer-error" role="status" hidden></div>
+  </div>
+  <div class="transport" role="group" aria-label="Playback controls"><button id="play" aria-label="Play" disabled>Play</button><button id="step-back" aria-label="Step back" title="Previous timeline step" disabled>‹</button><button id="step-forward" aria-label="Step forward" title="Next timeline step" disabled>›</button><input id="seek" type="range" min="0" max="1" step="0.001" value="0" aria-label="Playback position" disabled><output id="timecode" class="timecode">0:00.000 / 0:00.000</output><label title="Loop the selected preview range in Full video, or the whole displayed preview"><input id="loop" type="checkbox">Loop</label><button id="mute" aria-label="Mute audio" aria-pressed="false" disabled>Sound</button></div>
+  <div class="viewer-note" id="viewer-note">Native video playback · source files stay untouched.</div>
+  <fieldset id="preview-range" class="preview-range" disabled><div class="range-heading"><strong>Preview range</strong><output id="range-label">Select up to 15 seconds</output><button id="range-here" title="Start a preview at the playhead">Start here</button></div><div class="range-track" id="range-track"><div class="range-fill"></div><input id="sample-start" type="range" min="0" max="15" step="0.001" value="0" aria-label="Preview start"><input id="sample-end" type="range" min="0" max="15" step="0.001" value="5" aria-label="Preview end"></div><div class="range-actions"><p class="helper" id="sample-status">Drag the range handles, then render your settings.</p><button id="sample-render" class="primary" disabled>Render preview</button></div></fieldset>
+  <div class="result-actions"><button id="open-source" disabled>Open source</button><button id="sample-external" hidden>Open preview</button><button id="open-output" hidden>Play export</button><button id="show-output" hidden>Show in folder</button></div>
 </section>
-<section class="workspace">
-  <div class="intro"><div><h2>Enhancement settings</h2><p>Choose a preset for your footage, then preview a sample.</p></div><button id="reset" disabled>Reset</button></div>
-  <div class="settings-wrap">
-  <fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
+<section class="workspace" aria-label="Enhancement settings"><div class="intro"><h2>Enhancement settings</h2><button id="reset" disabled>Reset</button></div><div class="settings-wrap"><fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
     <section class="section"><div class="section-title"><h3>Enhancement presets</h3><small id="preset-label">No preset</small></div><div class="presets" id="presets" role="group" aria-label="Enhancement presets"></div><p class="helper">Each preset replaces your settings: up to 2× resolution, original frame rate and high-quality export. Clean + colour adds colour lift and sharpening with H.264; the other presets keep neutral colour and 10-bit HEVC. Preview before exporting the full video.</p><p class="helper" id="preset-description" aria-live="polite"></p></section>
     <section class="section"><div class="section-title"><h3>Output</h3><small>Preserve aspect ratio</small></div>
       <div class="row"><label class="field">Resolution<select id="scale"><option value="1">Original resolution</option><option value="1.3333333333333333">1⅓× resolution</option><option value="1.5">1.5× resolution</option><option value="2">2× resolution</option><option value="3">3× resolution</option><option value="4">4× resolution</option></select></label><label class="field">Frame rate<select id="target_fps"><option value="">Original FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select></label></div>
@@ -99,50 +77,107 @@ header{gap:24px}header strong,.local{white-space:nowrap}nav{display:flex;gap:4px
     <section class="section"><details><summary>TrueHDR · SDR to HDR10</summary><label class="check"><input id="hdr_enabled" type="checkbox">Convert SDR to HDR10</label><fieldset id="hdr-settings" aria-label="TrueHDR settings" disabled><div class="sliders" id="hdr-controls"></div><label class="check"><input id="hdr_debanding" type="checkbox" checked>Use TrueHDR debanding</label></fieldset><p class="helper">Uses the SDK's 8-bit SDR input and exports 10-bit HEVC HDR10. Requires an HDR display for correct playback. Debanding is part of this conversion; it cannot recover detail lost to source compression.</p></details></section>
     <section class="section"><details><summary>Portrait background</summary><div class="row"><label class="field">Background effect<select id="portrait_mode"><option value="off">Off</option><option value="blur">Blur background</option><option value="replace">Replace with colour</option><option value="mask">Export person mask</option></select></label><label class="field">Segmentation quality<select id="segmentation_mode"><option value="0">Quality · keep chairs</option><option value="1">Performance · keep chairs</option><option value="2">Quality · remove chairs</option><option value="3">Performance · remove chairs</option></select></label></div><div class="sliders" id="portrait-controls"></div><label class="field" style="margin-top:17px">Replacement colour<input id="background_color" type="color" value="#00b140"></label><p class="helper">Designed for people in sources at least 512 × 288. Mask export saves a grayscale video with white foreground and black background.</p></details></section>
     <section class="section"><details><summary>Portrait relighting</summary><div class="row"><label class="field">Relighting effect<select id="relighting_mode"><option value="off">Off</option><option value="relighting">Relighting</option><option value="aigs">Relighting + HDR background</option></select></label><label class="field">Quality<select id="relighting_quality"><option value="0">Quality</option><option value="1" selected>Performance</option><option value="2">Quality + HDRI blur</option><option value="3">Performance + HDRI blur</option></select></label></div><div class="asset-picker"><button id="choose-hdri" type="button">Choose HDR environment</button><button id="clear-hdri" type="button" disabled>Clear</button><span class="asset-name" id="hdri-name">No environment selected</span></div><fieldset id="relighting-settings" aria-label="Relighting settings" disabled><div class="sliders" id="relighting-controls"></div><label class="check"><input id="environment_background" type="checkbox">Use HDR environment as the background</label></fieldset><p class="helper">Uses the selected HDR environment to light the person. The combined SDK effect uses the HDR environment background; its blur modes blur that background. Choose Relighting to preserve the source backdrop or apply a portrait background effect. Sources must be at least 512 × 288. An environment background replaces the portrait background effect.</p></details></section>
-  </fieldset>
-  <div class="lock-message" id="lock"><span>Load a video to unlock settings</span></div>
-  </div>
-  <div class="footer"><span class="summary" id="summary">Waiting for a video</span><div><button id="sample-use" class="generate" hidden disabled>Enhance full video →</button><button id="generate" class="generate" disabled>Generate →</button></div></div>
-</section>
+</fieldset></div><div class="footer"><span class="summary" id="summary">Waiting for a video</span><button id="generate" class="generate" disabled>Export full video →</button></div></section>
 </main>
 <footer id="job-status" class="job-status" hidden><div class="job-message"><progress id="progress" max="1" value="0" hidden></progress><div id="status" role="status" aria-live="polite"></div></div><button id="cancel" hidden>Cancel</button></footer>
 <script>
 const $ = id => document.getElementById(id);
-const comparisonVideos=[$('comparison-video-1'),$('comparison-video-2')];
-function pauseComparison(){for(const video of comparisonVideos)video.pause();}
-function updateComparison(){ $('comparison-play').disabled=!comparisonVideos.every(video=>video.readyState>=2&&!video.error); }
-for(const [index,video] of comparisonVideos.entries()){
- const error=$(`comparison-error-${index+1}`);
- $(`comparison-file-${index+1}`).onchange=event=>{
-  const file=event.target.files[0];
-  if(!file)return;
-  pauseComparison();
-  if(video.src)URL.revokeObjectURL(video.src);
-  error.textContent='';
-  video.src=URL.createObjectURL(file);
-  $('comparison-play').disabled=true;
- };
- video.onloadeddata=updateComparison;
- video.onerror=()=>{error.textContent='This video could not play. Try a supported format such as H.264 MP4.';updateComparison();};
-}
-$('comparison-play').onclick=()=>{
- for(const [index,video] of comparisonVideos.entries())video.play().catch(error=>{if(error.name!=='AbortError')$(`comparison-error-${index+1}`).textContent=error.message;});
-};
-$('comparison-pause').onclick=pauseComparison;
-$('comparison-reset').onclick=()=>{pauseComparison();for(const video of comparisonVideos)video.currentTime=0;};
-$('comparison-clear').onclick=()=>{
- pauseComparison();
- for(const [index,video] of comparisonVideos.entries()){
-  if(video.src)URL.revokeObjectURL(video.src);
-  video.removeAttribute('src');video.load();
-  $(`comparison-file-${index+1}`).value='';
-  $(`comparison-error-${index+1}`).textContent='';
- }
- $('comparison-play').disabled=true;
-};
 const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
-let source = null, busy = false, downloading = false, hdri = null;
-let sampleSelection=null, renderedJob=null, renderingJob=null, sampleBusy=false, enhancedUrl=null;
+let source=null, busy=false, downloading=false, hdri=null;
+let sampleSelection=null, sampleMedia=null, enhancedMedia=null, exportMedia=null, renderedJob=null, renderingJob=null, pendingJob=null;
+let viewerKind='full', pair=[null,null], comparisonFiles=[null,null], playing=false, playRevision=0, pan={x:0,y:0};
+const videos=[$('video-original'),$('video-enhanced')];
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
+const timeText=seconds=>{seconds=Math.max(0,seconds||0);return `${Math.floor(seconds/60)}:${(seconds%60).toFixed(3).padStart(6,'0')}`;};
+function activeVideos(){return $('view-mode').value==='original'?[videos[0]]:$('view-mode').value==='enhanced'?[videos[1]]:videos;}
+function masterVideo(){return activeVideos().at(-1);}
+function viewerDuration(){const times=activeVideos().map(video=>video.duration).filter(Number.isFinite);return times.length?Math.min(...times):0;}
+function pauseViewer(){playing=false;playRevision++;for(const video of videos){video.pause();video.playbackRate=1;}$('play').textContent='Play';$('play').setAttribute('aria-label','Play');}
+function seekViewer(time){const duration=viewerDuration();time=clamp(time,0,Math.max(0,duration-.001));for(const video of videos)if(video.readyState&&Number.isFinite(video.duration))video.currentTime=Math.min(time,Math.max(0,video.duration-.001));updateTimeline(time);}
+function loopBounds(){return viewerKind==='full'&&source&&$('loop').checked?[Number($('sample-start').value),Math.min(Number($('sample-end').value),viewerDuration())]:[0,viewerDuration()];}
+async function playViewer(){
+ if(!viewerDuration())return;
+ const [start,end]=loopBounds();if(masterVideo().currentTime>=end-.02||($('loop').checked&&masterVideo().currentTime<start))seekViewer(start);
+ const revision=++playRevision;playing=true;$('play').textContent='Pause';$('play').setAttribute('aria-label','Pause');updateAudio();
+ try{await Promise.all(activeVideos().map(video=>video.play()));if(revision!==playRevision&&!playing)for(const video of videos)video.pause();}
+ catch(error){if(revision===playRevision){pauseViewer();if(error.name!=='AbortError')showViewerError('Playback could not start. '+error.message);}}
+}
+function updateAudio(){for(const video of videos)video.muted=video!==masterVideo()||$('mute').getAttribute('aria-pressed')==='true';}
+function updateTimeline(time=masterVideo().currentTime){const duration=viewerDuration();$('seek').max=duration||1;$('seek').value=time||0;$('seek').setAttribute('aria-valuetext',timeText(time));$('timecode').textContent=`${timeText(time)} / ${timeText(duration)}`;}
+function animateViewer(){
+ // ponytail: native media clocks need drift correction; use decoded frames if exact frame synchronization is required.
+ if(playing){const master=masterVideo(),[start,end]=loopBounds();if(master.currentTime>=end-.01){if($('loop').checked){seekViewer(start);playViewer();}else{pauseViewer();}}else{
+  for(const video of activeVideos())if(video!==master&&!video.seeking){const drift=master.currentTime-video.currentTime;if(Math.abs(drift)>.06)video.currentTime=master.currentTime;else video.playbackRate=1+clamp(drift*.5,-.03,.03);}
+ }updateTimeline();}
+ requestAnimationFrame(animateViewer);
+}
+function showViewerError(text){$('viewer-error').textContent=text;$('viewer-error').hidden=!text;}
+function layoutViewer(){
+ const side=$('view-mode').value==='side',width=$('viewport').clientWidth/(side?2:1),height=$('viewport').clientHeight;
+ const reference=pair[1]||pair[0],refWidth=reference?.width||videos[1].videoWidth||videos[0].videoWidth,refHeight=reference?.height||videos[1].videoHeight||videos[0].videoHeight;
+ if(!refWidth||!refHeight)return;
+ const scale=$('zoom').value==='fit'?Math.min(width/refWidth,height/refHeight):Number($('zoom').value);
+ const displayWidth=refWidth*scale,displayHeight=refHeight*scale;
+ pan.x=clamp(pan.x,-Math.max(0,(displayWidth-width)/2),Math.max(0,(displayWidth-width)/2));pan.y=clamp(pan.y,-Math.max(0,(displayHeight-height)/2),Math.max(0,(displayHeight-height)/2));
+ for(const video of videos){video.style.width=`${displayWidth}px`;video.style.height=`${displayHeight}px`;video.style.transform=`translate(-50%,-50%) translate(${pan.x}px,${pan.y}px)`;}
+ $('viewport').style.cursor=$('zoom').value==='fit'?'default':'grab';
+}
+function updateViewer(){
+ const mode=$('view-mode').value;$('viewport').dataset.mode=mode;
+ for(const option of $('view-mode').options)option.disabled=option.value==='original'?!pair[0]:option.value==='enhanced'?!pair[1]:!pair.every(Boolean);
+ $('wipe-handle').hidden=mode!=='wipe'||!pair[1];$('label-original').hidden=!pair[0];$('label-enhanced').hidden=!pair[1];$('viewer-empty').hidden=pair.some(Boolean);
+ const ready=activeVideos().every(video=>video.readyState>0&&!video.error)&&viewerDuration()>0;
+ for(const id of ['play','step-back','step-forward','seek','mute'])$(id).disabled=!ready;
+ $('zoom').disabled=!pair.some(Boolean);$('reset-view').disabled=!pair.some(Boolean);
+ const rate=pair[videos.indexOf(masterVideo())]?.fps||30;
+ for(const id of ['step-back','step-forward'])$(id).title=`${rate.toFixed(3)} FPS timeline steps${pair[videos.indexOf(masterVideo())]?.fps?' (nominal for variable-rate video)':' (rate unknown; 30 FPS grid)'}`;
+ let note=viewerKind==='sample'?`Preview at source ${timeText(sampleSelection?.start)} · Native source and output; no display transcode.`:viewerKind==='files'?'Comparison uses a shared time axis. Unknown frame rates step on a 30 FPS grid.':'Native source and export playback · Drag to pan at 100% or 200%.';
+ if(pair.some(media=>media?.hdr))note+=' HDR needs compatible playback and a display; use Open preview or Play export for external playback.';
+ else if(pair.some(media=>media?.pixel_format?.includes('10')||media?.ten_bit))note+=' 10-bit HEVC playback depends on installed codec support.';
+ $('viewer-note').textContent=note;updateAudio();updateTimeline();layoutViewer();
+}
+function showPair(original,enhanced){
+ pauseViewer();pair=[original,enhanced];showViewerError('');pan={x:0,y:0};$('zoom').value='fit';
+ for(const [index,video] of videos.entries()){video.removeAttribute('src');video.load();if(pair[index])video.src=pair[index].url;}
+ $('view-mode').value=enhanced?(original?'wipe':'enhanced'):'original';updateViewer();
+}
+function showContent(kind){
+ viewerKind=kind;$('main').classList.toggle('comparison-mode',kind==='files');$('comparison-files').hidden=kind!=='files';$('preview-range').hidden=kind==='files';$('return-workspace').hidden=kind!=='files';
+ document.querySelector('.source-bar').hidden=kind==='files';
+ $('view-full').hidden=kind==='files';$('view-sample').hidden=kind==='files';$('view-full').setAttribute('aria-pressed',String(kind==='full'));$('view-sample').setAttribute('aria-pressed',String(kind==='sample'));
+ if(kind==='sample')showPair(sampleMedia,enhancedMedia);else if(kind==='files')showPair(...comparisonFiles);else showPair(source,exportMedia);
+ updateState();
+}
+for(const [index,video] of videos.entries()){
+ video.onloadedmetadata=()=>{if(pair[index]){pair[index].width ||= video.videoWidth;pair[index].height ||= video.videoHeight;}updateViewer();};
+ video.onseeked=()=>{if(!playing)updateTimeline();};
+ video.onended=()=>{if(playing){if($('loop').checked){seekViewer(loopBounds()[0]);playViewer();}else pauseViewer();}};
+ video.onerror=()=>{if(!pair[index])return;pauseViewer();showViewerError(`${index?'Enhanced':'Original'} video cannot play here. Use an external player or a browser-supported format such as H.264 MP4. No display transcode has been applied.`);updateViewer();};
+ video.onwaiting=()=>{if(playing&&activeVideos().includes(video)){playRevision++;for(const other of activeVideos())other.pause();}};
+ video.oncanplay=()=>{if(playing&&activeVideos().every(item=>item.readyState>=3)&&activeVideos().some(item=>item.paused))playViewer();};
+}
+new ResizeObserver(layoutViewer).observe($('viewport'));
+$('play').onclick=()=>playing?pauseViewer():playViewer();
+$('seek').oninput=()=>{pauseViewer();seekViewer(Number($('seek').value));};
+function stepViewer(direction){pauseViewer();const rate=pair[videos.indexOf(masterVideo())]?.fps||30;seekViewer((Math.round(masterVideo().currentTime*rate)+direction)/rate);}
+$('step-back').onclick=()=>stepViewer(-1);$('step-forward').onclick=()=>stepViewer(1);
+$('mute').onclick=()=>{const muted=$('mute').getAttribute('aria-pressed')!=='true';$('mute').setAttribute('aria-pressed',String(muted));$('mute').setAttribute('aria-label',muted?'Unmute audio':'Mute audio');$('mute').textContent=muted?'Muted':'Sound';updateAudio();};
+$('view-mode').onchange=()=>{const time=Number($('seek').value);pauseViewer();updateViewer();seekViewer(time);};
+$('zoom').onchange=()=>{pan={x:0,y:0};layoutViewer();};$('reset-view').onclick=()=>{$('zoom').value='fit';pan={x:0,y:0};layoutViewer();};
+function setWipe(value){value=clamp(value,0,100);$('viewport').style.setProperty('--wipe',value+'%');$('wipe-handle').setAttribute('aria-valuenow',String(Math.round(value)));}
+$('wipe-handle').onpointerdown=event=>{event.preventDefault();event.stopPropagation();$('wipe-handle').setPointerCapture(event.pointerId);};
+$('wipe-handle').onpointermove=event=>{if($('wipe-handle').hasPointerCapture(event.pointerId)){const rect=$('viewport').getBoundingClientRect();setWipe((event.clientX-rect.left)/rect.width*100);}};
+$('wipe-handle').onkeydown=event=>{let value=Number($('wipe-handle').getAttribute('aria-valuenow'));if(event.key==='ArrowLeft')value-=2;else if(event.key==='ArrowRight')value+=2;else if(event.key==='Home')value=0;else if(event.key==='End')value=100;else return;event.preventDefault();event.stopPropagation();setWipe(value);};
+let drag=null;
+$('viewport').onpointerdown=event=>{if(event.target.closest('button')||$('zoom').value==='fit')return;drag={x:event.clientX,y:event.clientY,pan:{...pan}};$('viewport').setPointerCapture(event.pointerId);};
+$('viewport').onpointermove=event=>{if(drag){pan={x:drag.pan.x+event.clientX-drag.x,y:drag.pan.y+event.clientY-drag.y};layoutViewer();}};
+$('viewport').onlostpointercapture=()=>{drag=null;};
+$('viewport').onkeydown=event=>{if(event.target!==$('viewport'))return;if(event.key===' '){event.preventDefault();if(!$('play').disabled)$('play').click();}else if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();if(!$('step-forward').disabled)stepViewer(event.key==='ArrowRight'?1:-1);}else if(event.key==='Escape')$('reset-view').click();};
+$('view-full').onclick=()=>showContent('full');$('view-sample').onclick=()=>showContent('sample');$('return-workspace').onclick=()=>showContent('full');
+$('compare-files-button').onclick=()=>{showPage('enhance');showContent('files');};
+for(const index of [0,1])$(`comparison-file-${index+1}`).onchange=event=>{const file=event.target.files[0];if(!file)return;pauseViewer();if(comparisonFiles[index])URL.revokeObjectURL(comparisonFiles[index].url);comparisonFiles[index]={url:URL.createObjectURL(file),name:file.name};showContent('files');};
+$('comparison-clear').onclick=()=>{pauseViewer();for(const [index,media] of comparisonFiles.entries()){if(media)URL.revokeObjectURL(media.url);$(`comparison-file-${index+1}`).value='';}comparisonFiles=[null,null];showContent('files');};
+requestAnimationFrame(animateViewer);
 const specs = [
   ['denoise','VSR denoise',0,1,0.05,'detail-controls'],['deblur','VSR deblur',0,1,0.05,'detail-controls'],['sharpening','Sharpening',0,2,0.05,'detail-controls'],
   ['contrast','Contrast',0.5,1.5,0.01,'colour-controls'],['vibrance','Vibrance',-1,1,0.01,'colour-controls'],['saturation','Saturation',0,2,0.01,'colour-controls'],['exposure','Exposure',-2,2,0.05,'colour-controls'],['warmth','Warmth',-1,1,0.01,'colour-controls']
@@ -193,15 +228,18 @@ function applyOutputFormat(){
  updateState();
 }
 function updateState(){
- $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);$('lock').hidden=!!source;
- for(const id of ['load','download-load','sample-source'])$(id).disabled=busy;
- $('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy||(!source&&!downloading);
- $('download-settings').disabled=busy;$('download').disabled=busy;
- $('sample-source-name').textContent=source?source.name:'No video selected';
- $('sample-empty-message').textContent=source?'Load a short section above to try your effects.':'Load a video to preview a sample.';
- $('sample-source').hidden=!!source;
- $('download-timings').disabled=!$('download-specific-timings').checked;
+ $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);
+ for(const id of ['load','download-load','empty-load'])$(id).disabled=busy;
+ $('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy;
+ $('download-settings').disabled=busy;$('download').disabled=busy;$('download-timings').disabled=!$('download-specific-timings').checked;
  $('download').textContent=$('download-specific-timings').checked?'Download clip':'Download video';
+ $('preview-range').disabled=!source||busy||!(source.duration>=1);$('view-sample').disabled=!sampleMedia;
+ $('sample-render').disabled=!source||busy||!(source.duration>=1);
+ $('open-source').disabled=!source||busy;$('open-source').hidden=viewerKind==='files';
+ $('sample-external').hidden=!enhancedMedia||viewerKind!=='sample';$('sample-external').disabled=busy;
+ for(const id of ['open-output','show-output']){$(id).hidden=!exportMedia||viewerKind==='files';$(id).disabled=busy;}
+ $('sample-render').textContent=sampleMatchesSelection()&&enhancedMedia?'Render again':'Render preview';
+ if(!busy){$('sample-status').textContent=enhancedMedia?(sampleMatchesSelection()&&renderedJob===JSON.stringify(buildJob())?'Preview matches your current settings.':'Settings or range changed. Render again to update the preview.'):'Drag the range handles to select 1–15 seconds.';}
  const portraitTooSmall=source&&(source.width<512||source.height<288);
  if(portraitTooSmall){$('portrait_mode').value='off';$('relighting_mode').value='off';}
  const tenBitSdr=isTenBitSdrOutput(),scaling=$('scale').value!=='1',relighting=$('relighting_mode').value!=='off',combined=$('relighting_mode').value==='aigs';
@@ -223,39 +261,40 @@ function updateState(){
  $('hdr-settings').disabled=!$('hdr_enabled').checked;$('output_encoding').disabled=$('hdr_enabled').checked;$('precision-note').hidden=!tenBitSdr;
  if(source){const scale=Number($('scale').value),format=$('hdr_enabled').checked?'HDR10':tenBitSdr?'10-bit SDR':'SDR';$('summary').textContent=`${Math.round(source.width*scale)} × ${Math.round(source.height*scale)} · ${$('target_fps').value || 'Original'} FPS · ${format}`;}
  else $('summary').textContent='Waiting for a video';
- updateSampleState();
+ updateRangeLabels();
 }
 function displayLoadedVideo(){
- $('name').textContent=source.name;
- $('dimensions').textContent=`${source.width} × ${source.height}`;
- $('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable / unknown';
- $('duration').textContent=source.duration?`${Math.floor(source.duration/60)}:${String(Math.floor(source.duration%60)).padStart(2,'0')}`:'Unknown';
- $('audio').textContent=source.audio?`${source.audio} track${source.audio>1?'s':''}`:'No audio';
- for(const option of $('scale').options){
-  const width=Math.round(source.width*Number(option.value)),height=Math.round(source.height*Number(option.value));
-  option.disabled=width>4096||height>4096||width%2!==0||height%2!==0||width*source.height!==height*source.width;
- }
+ $('name').textContent=source.name;$('dimensions').textContent=`${source.width} × ${source.height}`;$('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable FPS';$('duration').textContent=source.duration?timeText(source.duration):'Unknown duration';$('audio').textContent=source.audio?`${source.audio} audio track${source.audio>1?'s':''}`:'No audio';
+ for(const option of $('scale').options){const width=Math.round(source.width*Number(option.value)),height=Math.round(source.height*Number(option.value));option.disabled=width>4096||height>4096||width%2!==0||height%2!==0||width*source.height!==height*source.width;}
  for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;
- resetSettings();
- message('Ready. Choose your settings, then Generate.');
+ for(const id of ['sample-start','sample-end'])$(id).max=source.duration||1;
+ $('sample-start').value=0;$('sample-end').value=Math.min(5,source.duration||0);resetSettings();showContent('full');message('Ready. Select a short range to preview your settings.');
 }
 function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('job-status').hidden=!text;}
+function currentSelection(){return {start:Number($('sample-start').value),duration:Number((Number($('sample-end').value)-Number($('sample-start').value)).toFixed(3))};}
+function sampleMatchesSelection(){return sampleSelection&&JSON.stringify(sampleSelection)===JSON.stringify(currentSelection());}
+function updateRangeLabels(){const selection=currentSelection(),duration=source?.duration||1;const end=selection.start+selection.duration;$('range-label').textContent=`${timeText(selection.start)} — ${timeText(end)} · ${selection.duration.toFixed(1)}s`;$('range-track').style.setProperty('--start',clamp(selection.start/duration*100,0,100)+'%');$('range-track').style.setProperty('--end',clamp(end/duration*100,0,100)+'%');$('sample-start').setAttribute('aria-valuetext',timeText(selection.start));$('sample-end').setAttribute('aria-valuetext',timeText(end));}
+function changeRange(changed){
+ const duration=source?.duration||1;let start=Number($('sample-start').value),end=Number($('sample-end').value);
+ if(changed==='start'){start=clamp(start,0,Math.max(0,duration-1));end=clamp(end,start+1,Math.min(duration,start+15));}else{end=clamp(end,1,duration);start=clamp(start,Math.max(0,end-15),end-1);}
+ $('sample-start').value=start;$('sample-end').value=end;
+ if(viewerKind==='full'){pauseViewer();seekViewer(changed==='start'?start:end);}
+ updateState();
+}
+$('sample-start').oninput=()=>changeRange('start');$('sample-end').oninput=()=>changeRange('end');
+$('range-here').onclick=()=>{const duration=currentSelection().duration;const time=masterVideo().currentTime+(viewerKind==='sample'?(sampleSelection?.start||0):0);$('sample-start').value=clamp(time,0,Math.max(0,source.duration-1));$('sample-end').value=Math.min(source.duration,Number($('sample-start').value)+duration);changeRange('start');};
+function showPage(page){pauseViewer();$('main').hidden=page!=='enhance';$('download-page').hidden=page!=='download';for(const button of document.querySelectorAll('nav [data-page]')){if(button.dataset.page===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}}
+for(const button of document.querySelectorAll('nav [data-page]'))button.onclick=()=>{showPage(button.dataset.page);if(button.dataset.page==='enhance'&&viewerKind==='files')showContent('full');};
 $('download-specific-timings').onchange=updateState;
 for(const id of ['download-start','download-end'])$(id).oninput=()=>{$('download-end').setCustomValidity('');};
-$('download-form').onsubmit=event=>{
- event.preventDefault();if(busy)return;
- const timings=$('download-specific-timings').checked?{start:Number($('download-start').value),end:Number($('download-end').value)}:null;
- if(timings&&timings.end<=timings.start){$('download-end').setCustomValidity('End time must be after the start time.');$('download-end').reportValidity();return;}
- send('download',{options:{url:$('youtube-url').value.trim(),height:Number($('download-height').value),fps:Number($('download-fps').value),format:$('download-format').value,timings}});
-};
-for(const id of ['load','download-load','sample-source'])$(id).onclick=()=>send('load');
+$('download-form').onsubmit=event=>{event.preventDefault();if(busy)return;const timings=$('download-specific-timings').checked?{start:Number($('download-start').value),end:Number($('download-end').value)}:null;if(timings&&timings.end<=timings.start){$('download-end').setCustomValidity('End time must be after the start time.');$('download-end').reportValidity();return;}send('download',{options:{url:$('youtube-url').value.trim(),height:Number($('download-height').value),fps:Number($('download-fps').value),format:$('download-format').value,timings}});};
+for(const id of ['load','empty-load'])$(id).onclick=()=>send('load');
+$('download-load').onclick=()=>send($('download-load').dataset.ready?'load-downloaded':'load');
 $('reset').onclick=resetSettings;
 for(const id of ['scale','target_fps','upscale_method','portrait_mode','relighting_mode','relighting_quality'])$(id).onchange=updateState;
 for(const id of ['output_encoding','hdr_enabled'])$(id).onchange=applyOutputFormat;
-$('environment_background').onchange=updateState;
-$('choose-hdri').onclick=()=>send('choose-hdri');
-$('clear-hdri').onclick=()=>{hdri=null;$('hdri-name').textContent='No environment selected';markCustom();updateState();};
-$('cancel').onclick=()=>{send('cancel');$('cancel').disabled=true;message(downloading?'Stopping download…':'Stopping after the current frame…');};
+$('environment_background').onchange=updateState;$('choose-hdri').onclick=()=>send('choose-hdri');$('clear-hdri').onclick=()=>{hdri=null;$('hdri-name').textContent='No environment selected';markCustom();updateState();};
+$('cancel').onclick=()=>{pendingJob=null;send('cancel');$('cancel').disabled=true;message(downloading?'Stopping download…':'Stopping after the current operation…');};
 function buildJob(){
  const number=id=>Number($(id).value),enhancements=Object.fromEntries(specs.map(([id])=>[id,number(id)]));
  enhancements.denoise_quality=number('denoise_quality');enhancements.deblur_quality=number('deblur_quality');
@@ -268,63 +307,39 @@ function buildJob(){
  };
 }
 function settingsAreValid(){const quality=$('encoder_quality');if(!quality.checkValidity()){quality.closest('details').open=true;quality.reportValidity();return false;}if($('relighting_mode').value!=='off'&&!hdri){message('Choose an HDR environment for relighting.',true);return false;}return true;}
-$('generate').onclick=()=>{if(settingsAreValid())send('generate',{job:buildJob()});};
-function currentSelection(){return {start:Number($('sample-start').value),duration:Number($('sample-duration').value)};}
-function sampleMatchesSelection(){return sampleSelection&&JSON.stringify(sampleSelection)===JSON.stringify(currentSelection());}
-function updateSampleState(){
- const loaded=sampleMatchesSelection(),fresh=loaded&&renderedJob===JSON.stringify(buildJob());
- $('sample-selection').disabled=!source||busy;
- $('sample-render').disabled=!loaded||busy;$('sample-use').disabled=!source||busy;
- $('sample-render').textContent=enhancedUrl?'Render again':'Render sample';
- $('show-original').disabled=!sampleSelection;$('show-enhanced').disabled=!enhancedUrl;$('sample-external').disabled=!enhancedUrl||busy;
- if(!sampleBusy&&sampleSelection)$('sample-status').textContent=!loaded?'Section changed. Load it to update the sample.':fresh?'Preview matches your settings. Keep this look or keep experimenting.':enhancedUrl?'Settings changed. Render again to preview this look.':'Adjust your effects, then render the sample.';
-}
-function showPage(page){
- pauseComparison();$('sample-original').pause();$('sample-enhanced').pause();
- const sample=page==='sample';
- $('main').hidden=page!=='enhance'&&!sample;$('main').classList.toggle('sample-mode',sample);
- $('sample-panel').hidden=!sample;$('generate').hidden=sample;$('sample-use').hidden=!sample;
- $('download-page').hidden=page!=='download';$('comparison').hidden=page!=='compare';
- for(const button of document.querySelectorAll('nav [data-page]')){
-  if(button.dataset.page===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
- }
- $('nav-'+page).focus();
-}
-for(const button of document.querySelectorAll('nav [data-page]'))button.onclick=()=>showPage(button.dataset.page);
-function clearSample(){for(const id of ['sample-original','sample-enhanced']){$(id).pause();$(id).removeAttribute('src');$(id).load();$(id).hidden=true;}sampleSelection=null;renderedJob=null;enhancedUrl=null;$('sample-empty').hidden=false;$('sample-range').textContent='No section loaded';}
-function showSampleVersion(enhanced){const next=$(enhanced?'sample-enhanced':'sample-original'),previous=$(enhanced?'sample-original':'sample-enhanced');const time=previous.currentTime,playing=!previous.paused;previous.pause();previous.hidden=true;next.hidden=false;if(next.readyState)next.currentTime=Math.min(time,next.duration||0);$('show-original').setAttribute('aria-pressed',String(!enhanced));$('show-enhanced').setAttribute('aria-pressed',String(enhanced));if(playing)next.play().catch(()=>{});}
-$('sample-use').onclick=()=>showPage('enhance');
-$('sample-load').onclick=()=>{for(const id of ['sample-start','sample-duration'])if(!$(id).reportValidity())return;clearSample();send('load-sample',{selection:currentSelection()});};
-$('sample-render').onclick=()=>{if(settingsAreValid()){renderingJob=JSON.stringify(buildJob());$('sample-original').pause();$('sample-enhanced').pause();send('render-sample',{job:buildJob()});}};
-$('show-original').onclick=()=>showSampleVersion(false);$('show-enhanced').onclick=()=>showSampleVersion(true);
-$('sample-external').onclick=()=>send('open-sample');
-$('sample-selection').addEventListener('input',updateSampleState);
+
+$('generate').onclick=()=>{if(settingsAreValid()){pauseViewer();send('generate',{job:buildJob()});}};
+$('sample-render').onclick=()=>{
+ if(!settingsAreValid()||busy)return;pauseViewer();renderingJob=JSON.stringify(buildJob());pendingJob=buildJob();
+ if(sampleMatchesSelection()){send('render-sample',{job:pendingJob});pendingJob=null;}
+ else{showContent('full');sampleSelection=null;sampleMedia=null;enhancedMedia=null;renderedJob=null;send('load-sample',{selection:currentSelection()});}
+};
+$('sample-external').onclick=()=>send('open-sample');$('open-source').onclick=()=>send('open-source');$('open-output').onclick=()=>send('open-output');$('show-output').onclick=()=>send('show-output');
 $('settings').addEventListener('input',()=>{markCustom();updateState();});
-for(const id of ['sample-original','sample-enhanced'])$(id).onerror=()=>{if($(id).getAttribute('src'))$('sample-status').textContent='This video format could not play here. Use Open rendered video for external playback, or render H.264 SDR for an inline preview.';};
-window.receive = event => {
+window.receive=event=>{
  switch(event.type){
- case 'sample-loading':busy=true;sampleBusy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Preparing your section…';message('Preparing sample…');break;
- case 'sample-loaded':busy=false;sampleBusy=false;sampleSelection={start:event.start,duration:event.duration};$('sample-original').src=event.url;$('sample-empty').hidden=true;$('sample-range').textContent=`From ${event.start}s · up to ${event.duration}s`;showSampleVersion(false);message('Sample loaded. Adjust your settings, then render.');break;
- case 'sample-rendering':busy=true;sampleBusy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Rendering with your current settings…';message('Rendering sample…');break;
- case 'sample-progress':$('sample-status').textContent=`Rendering · ${event.frames.toLocaleString()} frames`;if(!$('cancel').disabled)message(`Rendering sample · ${event.frames.toLocaleString()} frames`);break;
- case 'sample-rendered':busy=false;sampleBusy=false;renderedJob=renderingJob;enhancedUrl=event.url;$('sample-enhanced').src=event.url;showSampleVersion(true);message('Sample rendered. Review it in Sample.');break;
- case 'sample-error':busy=false;sampleBusy=false;updateState();$('sample-status').textContent=event.message;message(event.message,true);return;
+ case 'loading':pauseViewer();source=null;sampleSelection=null;sampleMedia=null;enhancedMedia=null;exportMedia=null;renderedJob=null;pendingJob=null;busy=true;showPage('enhance');showContent('full');$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
+ case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
+ case 'sample-loading':busy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Preparing your selected range…';message('Preparing preview…');break;
+ case 'sample-loaded':busy=false;sampleSelection={start:event.start,duration:event.duration};sampleMedia={...event,name:'Original preview'};showContent('sample');if(pendingJob){const job=pendingJob;pendingJob=null;send('render-sample',{job});}else message('Preview range loaded.');break;
+ case 'sample-rendering':busy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Rendering your settings…';message('Rendering preview…');break;
+ case 'sample-progress':if(!$('cancel').disabled)message(`Rendering preview · ${event.frames.toLocaleString()} frames`);break;
+ case 'sample-rendered':busy=false;renderedJob=renderingJob;enhancedMedia={...event,name:'Enhanced preview',fps:event.fps||Number($('target_fps').value)||source.fps};showContent('sample');message('Preview ready. Compare the result, then export the full video.');break;
+ case 'sample-error':busy=false;pendingJob=null;message(event.message,true);break;
  case 'download-started':busy=true;downloading=true;$('cancel').disabled=false;$('progress').hidden=true;message('Connecting to YouTube…');break;
  case 'download-progress':if(!$('cancel').disabled)message(event.message);break;
- case 'downloaded':busy=false;downloading=false;message(`Saved. Use Load video to open it.\n${event.path}`);break;
+ case 'downloaded':busy=false;downloading=false;$('download-load').dataset.ready='true';$('download-load').textContent='Open download';message(`Download saved. Open it in your workspace.\n${event.path}`);break;
  case 'download-error':busy=false;downloading=false;message(event.message,true);break;
  case 'hdri-selected':hdri=event.path;$('hdri-name').textContent=event.name;markCustom();break;
- case 'loading':clearSample();showPage('enhance');source=null;busy=true;$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
- case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
  case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
- case 'progress':if(source.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);if(!$('cancel').disabled)message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
- case 'finished':busy=false;$('progress').value=1;message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
- case 'error':busy=false;$('progress').hidden=true;if(!source)$('name').textContent='No video selected';message(event.message,true);break;
+ case 'progress':if(source?.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);if(!$('cancel').disabled)message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
+ case 'finished':busy=false;exportMedia={...event,name:'Export'};$('progress').value=1;showPage('enhance');showContent('full');message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
+ case 'error':busy=false;pendingJob=null;$('progress').hidden=true;if(!source)$('name').textContent='No video loaded';message(event.message,true);break;
  case 'status':message(event.message);break;
  }
  updateState();
 };
 for(const preset of presets){const button=document.createElement('button');button.type='button';button.dataset.preset=preset[0];const name=document.createElement('strong'),description=document.createElement('small');name.textContent=preset[0];description.textContent=preset[1];button.append(name,description);button.onclick=()=>applyPreset(...preset);$('presets').append(button);}
-resetSettings();
+resetSettings();updateViewer();
 </script>
 </html>
