@@ -8,7 +8,7 @@
 :root{color-scheme:dark;font:13px 'Segoe UI',sans-serif;color:#e9eeeb;background:#121615;--muted:#9ca9a1;--accent:#b7eb89;--line:#303a33}
 *{box-sizing:border-box}body{margin:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}button,input,select{font:inherit}button,select,input[type=number],input[type=url]{border:1px solid #465149;border-radius:5px;background:#252d28;color:inherit;padding:8px 11px}button{cursor:pointer;transition:background .15s}button:hover:enabled{background:#354135}button:disabled,input:disabled,select:disabled{opacity:.45;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,#viewport:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button[aria-pressed=true]{color:var(--accent);border-color:#7c9c62;background:#283522}button.primary,.generate{background:var(--accent);color:#192315;border-color:transparent;font-weight:600}.primary:hover:enabled,.generate:hover:enabled{background:#c8f4a3}[hidden]{display:none!important}
 header{display:flex;align-items:center;gap:26px;flex-shrink:0;height:65px;padding:0 24px;border-bottom:1px solid var(--line)}header strong{font-size:20px;font-weight:600;letter-spacing:-.6px}header strong span{color:var(--accent)}nav{display:flex;gap:4px}nav button{border:0;background:transparent;color:var(--muted)}nav button[aria-current=page]{color:var(--accent);background:#283522}.local{margin-left:auto;color:var(--muted);font-size:11px;letter-spacing:1px}
-main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}.viewer{min-width:0;min-height:0;display:flex;flex-direction:column;padding:20px 24px;gap:14px}.source-bar{display:flex;align-items:center;gap:12px;min-height:38px}.source-info{min-width:0;flex:1}#name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metadata{display:flex;gap:13px;color:var(--muted);font-size:11px;margin-top:5px}.viewer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.viewer-tabs{display:flex;gap:5px}.viewer-toolbar label{color:var(--muted);font-size:11px}.viewer-toolbar select{padding:6px 8px;margin-left:4px}.view-options{display:flex;align-items:center;gap:10px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}.viewer{min-width:0;min-height:0;display:flex;flex-direction:column;padding:20px 24px;gap:14px}.source-bar{display:flex;align-items:center;gap:12px;min-height:38px}.source-info{min-width:0;flex:1}#name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metadata{display:flex;gap:13px;color:var(--muted);font-size:11px;margin-top:5px}.viewer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.viewer-toolbar label{color:var(--muted);font-size:11px}.viewer-toolbar select{padding:6px 8px;margin-left:4px}.view-options{display:flex;align-items:center;gap:10px}
 #viewport{position:relative;flex:1;min-height:200px;overflow:hidden;background:#080b09;border:1px solid #242c26;touch-action:none;--wipe:50%;user-select:none}.pane{position:absolute;inset:0;overflow:hidden}.pane video{position:absolute;left:50%;top:50%;max-width:none;object-fit:contain;pointer-events:none}.pane-label{position:absolute;top:14px;padding:5px 8px;background:#101611cb;color:#cbd6ce;font-size:10px;letter-spacing:1px;z-index:2;pointer-events:none}#label-original{left:14px}#label-enhanced{right:14px}#viewport[data-mode=wipe] #pane-enhanced{clip-path:inset(0 0 0 var(--wipe))}#viewport[data-mode=side] .pane{width:50%}#viewport[data-mode=side] #pane-enhanced{left:50%;border-left:1px solid var(--line)}#viewport[data-mode=original] #pane-enhanced,#viewport[data-mode=original] #label-enhanced{display:none}#viewport[data-mode=enhanced] #pane-original,#viewport[data-mode=enhanced] #label-original{display:none}
 #wipe-handle{position:absolute;top:0;bottom:0;left:var(--wipe);width:24px;transform:translateX(-50%);padding:0;border:0;border-radius:0;background:transparent;cursor:ew-resize;touch-action:none;z-index:3}#wipe-handle:before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:#e1eddbb0}#wipe-handle:after{content:'↔';position:absolute;left:0;top:50%;width:24px;height:38px;display:grid;place-items:center;border:1px solid #829b74;border-radius:4px;background:#253122;color:#def6ca}
 #viewer-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:12px;text-align:center;padding:24px}#viewer-empty svg{width:52px;height:52px;color:#819277}#viewer-empty h1{font-size:21px;font-weight:500;color:#dce7df;margin:6px 0 0}#viewer-empty p{max-width:350px;margin:0;line-height:1.6}#viewer-error{position:absolute;left:20px;right:20px;bottom:18px;z-index:4;background:#201c19e8;color:#ffc5b6;padding:12px;white-space:pre-line;font-size:12px;line-height:1.5}
@@ -17,7 +17,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}
 .download-page{flex:1;min-height:0;overflow:auto;padding:30px}.page-content{max-width:640px;margin:0 auto}.eyebrow{color:var(--accent);font-size:10px;letter-spacing:1.4px}.download-page h1{font-size:25px;font-weight:500}.download-page p{color:var(--muted);line-height:1.6}.download-page .field{margin-top:18px}.download-page input[type=url],.download-page input[type=number]{width:100%;margin-top:7px}.download-actions{display:flex;gap:10px;margin-top:22px}.job-status{display:flex;align-items:center;gap:16px;flex-shrink:0;border-top:1px solid var(--line);padding:10px 24px;background:#171d19}.job-message{flex:1;min-width:0}#status{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-height:58px;overflow:auto}#status.error{color:#ffb8ae}progress{width:100%;height:4px;accent-color:var(--accent);display:block;margin-bottom:6px}.comparison-mode{grid-template-columns:1fr}.comparison-mode>.workspace{display:none}
 @media(max-width:1100px){main{grid-template-columns:minmax(0,1fr) 320px}.viewer{padding:15px;gap:11px}.workspace{padding:16px}.transport{gap:5px}.transport .timecode{font-size:10px}.view-options{gap:6px}.metadata{gap:8px}.range-actions{flex-wrap:wrap}}@media(max-width:760px){body{overflow:auto;height:auto;min-height:100vh}header{padding:0 14px;gap:12px}.local{display:none}main{display:flex;flex-direction:column}.viewer{min-height:660px}.workspace{border-left:0;border-top:1px solid var(--line)}.settings-wrap{overflow:visible}.transport{flex-wrap:wrap}.comparison-mode>.viewer{min-height:700px}.row,.sliders{gap:16px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<header><strong>Video Enhancer<span>.</span></strong><nav aria-label="Workspace"><button id="nav-enhance" data-page="enhance" aria-current="page">Workspace</button><button id="nav-download" data-page="download">Download</button></nav><span class="local">LOCAL · NVIDIA</span><button id="compare-files-button">Compare files</button></header>
+<header><strong>Video Enhancer<span>.</span></strong><nav aria-label="Workspace"><button id="nav-full" data-page="full" aria-controls="main" aria-current="page">Full video</button><button id="nav-sample" data-page="sample" aria-controls="main">Preview</button><button id="nav-files" data-page="files" aria-controls="main">Compare</button><button id="nav-download" data-page="download" aria-controls="download-page">Download</button></nav><span class="local">LOCAL · NVIDIA</span></header>
 <section id="download-page" class="download-page" aria-labelledby="download-title" hidden>
   <div class="page-content youtube">
     <div class="eyebrow">DOWNLOAD</div><h1 id="download-title">Download from YouTube</h1>
@@ -45,20 +45,23 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}
 </section>
 <main id="main">
 <section class="viewer" aria-label="Video workspace">
-  <div class="source-bar"><div class="source-info"><div id="name">No video loaded</div><div class="metadata"><span id="dimensions">—</span><span id="fps">—</span><span id="duration">—</span><span id="audio">—</span></div></div><button id="load">Load video</button></div>
-  <div id="comparison-files" class="compare-files" hidden><label>Original file<input id="comparison-file-1" type="file" accept="video/*"></label><label>Comparison file<input id="comparison-file-2" type="file" accept="video/*"></label><button id="comparison-clear">Clear files</button></div>
-  <div class="viewer-toolbar"><div class="viewer-tabs" role="group" aria-label="Preview content"><button id="view-full" aria-pressed="true">Full video</button><button id="view-sample" aria-pressed="false" disabled>Preview</button><button id="return-workspace" hidden>Back to video</button></div><div class="view-options"><label>View<select id="view-mode" aria-label="Comparison view"><option value="original">Original</option><option value="enhanced">Enhanced</option><option value="wipe">Wipe</option><option value="side">Side by side</option></select></label><label>Zoom<select id="zoom" aria-label="Viewer zoom"><option value="fit">Fit</option><option value="1">100%</option><option value="2">200%</option></select></label><button id="reset-view" title="Reset zoom and pan">Reset</button></div></div>
+  <div id="source-bar" class="source-bar"><div class="source-info"><div id="name">No video loaded</div><div class="metadata"><span id="dimensions">—</span><span id="fps">—</span><span id="duration">—</span><span id="audio">—</span></div></div><button id="load">Load video</button></div>
+  <div id="preview-heading" class="source-bar" hidden><div class="source-info"><strong>Preview</strong><p id="preview-description" class="helper">Choose a range in Full video to prepare a preview.</p></div><button id="change-range">Change range</button></div>
+  <div id="comparison-heading" hidden><strong>Compare videos</strong><p class="helper">Choose two local videos to inspect on a shared timeline.</p></div>
+  <div id="comparison-files" class="compare-files" hidden><label>Video A<input id="comparison-file-1" type="file" accept="video/*"></label><label>Video B<input id="comparison-file-2" type="file" accept="video/*"></label><button id="comparison-clear">Clear files</button></div>
+  <div class="viewer-toolbar"><div class="view-options"><label>View<select id="view-mode" aria-label="Comparison view"><option value="original">Original</option><option value="enhanced">Enhanced</option><option value="wipe">Wipe</option><option value="side">Side by side</option></select></label><label>Zoom<select id="zoom" aria-label="Viewer zoom"><option value="fit">Fit</option><option value="1">100%</option><option value="2">200%</option></select></label><button id="reset-view" title="Reset zoom and pan">Reset</button></div></div>
   <div id="viewport" data-mode="original" tabindex="0" aria-label="Video viewer. Space to play, left and right arrows to step. Drag to pan when zoomed.">
     <div class="pane" id="pane-original"><video id="video-original" playsinline preload="auto" aria-label="Original video"></video></div>
     <div class="pane" id="pane-enhanced"><video id="video-enhanced" playsinline preload="auto" muted aria-label="Enhanced video"></video></div>
     <span class="pane-label" id="label-original" hidden>ORIGINAL</span><span class="pane-label" id="label-enhanced" hidden>ENHANCED</span>
     <button id="wipe-handle" role="slider" aria-label="Comparison wipe" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" hidden></button>
-    <div id="viewer-empty"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="5" y="9" width="38" height="30" rx="3" stroke="currentColor" stroke-width="1.3"/><path d="m20 17 12 7-12 7V17Z" fill="currentColor"/></svg><h1>Your video, in detail.</h1><p>Load a video. Try a short preview and compare the result before exporting.</p><button id="empty-load" class="primary">Load video</button></div>
+    <div id="viewer-empty"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="5" y="9" width="38" height="30" rx="3" stroke="currentColor" stroke-width="1.3"/><path d="m20 17 12 7-12 7V17Z" fill="currentColor"/></svg><h1 id="viewer-empty-title">Your video, in detail.</h1><p id="viewer-empty-text">Load a video. Try a short preview and compare the result before exporting.</p><button id="empty-load" class="primary">Load video</button></div>
     <div id="viewer-error" role="status" hidden></div>
   </div>
   <div class="transport" role="group" aria-label="Playback controls"><button id="play" aria-label="Play" disabled>Play</button><button id="step-back" aria-label="Step back" title="Previous timeline step" disabled>‹</button><button id="step-forward" aria-label="Step forward" title="Next timeline step" disabled>›</button><input id="seek" type="range" min="0" max="1" step="0.001" value="0" aria-label="Playback position" disabled><output id="timecode" class="timecode">0:00.000 / 0:00.000</output><label title="Loop the selected preview range in Full video, or the whole displayed preview"><input id="loop" type="checkbox">Loop</label><button id="mute" aria-label="Mute audio" aria-pressed="false" disabled>Sound</button></div>
   <div class="viewer-note" id="viewer-note">Native video playback · source files stay untouched.</div>
   <fieldset id="preview-range" class="preview-range" disabled><div class="range-heading"><strong>Preview range</strong><output id="range-label">Select up to 15 seconds</output><button id="range-here" title="Start a preview at the playhead">Start here</button></div><div class="range-track" id="range-track"><div class="range-fill"></div><input id="sample-start" type="range" min="0" max="15" step="0.001" value="0" aria-label="Preview start"><input id="sample-end" type="range" min="0" max="15" step="0.001" value="5" aria-label="Preview end"></div><div class="range-actions"><p class="helper" id="sample-status">Drag the range handles, then render your settings.</p><button id="sample-render" class="primary" disabled>Render preview</button></div></fieldset>
+  <div id="preview-actions" class="range-actions" hidden><p id="preview-status" class="helper" role="status">Prepare a preview from Full video.</p><button id="sample-rerender" class="primary" disabled>Render again</button></div>
   <div class="result-actions"><button id="open-source" disabled>Open source</button><button id="sample-external" hidden>Open preview</button><button id="open-output" hidden>Play export</button><button id="show-output" hidden>Show in folder</button></div>
 </section>
 <section class="workspace" aria-label="Enhancement settings"><div class="intro"><h2>Enhancement settings</h2><button id="reset" disabled>Reset</button></div><div class="settings-wrap"><fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
@@ -85,7 +88,10 @@ const $ = id => document.getElementById(id);
 const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
 let source=null, busy=false, downloading=false, hdri=null;
 let sampleSelection=null, sampleMedia=null, enhancedMedia=null, exportMedia=null, renderedJob=null, renderingJob=null, pendingJob=null;
+let sampleBusy=false, sampleMessage='';
 let viewerKind='full', pair=[null,null], comparisonFiles=[null,null], playing=false, playRevision=0, pan={x:0,y:0};
+const viewerStates={};
+let restoreTime=0;
 const videos=[$('video-original'),$('video-enhanced')];
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 const timeText=seconds=>{seconds=Math.max(0,seconds||0);return `${Math.floor(seconds/60)}:${(seconds%60).toFixed(3).padStart(6,'0')}`;};
@@ -93,7 +99,7 @@ function activeVideos(){return $('view-mode').value==='original'?[videos[0]]:$('
 function masterVideo(){return activeVideos().at(-1);}
 function viewerDuration(){const times=activeVideos().map(video=>video.duration).filter(Number.isFinite);return times.length?Math.min(...times):0;}
 function pauseViewer(){playing=false;playRevision++;for(const video of videos){video.pause();video.playbackRate=1;}$('play').textContent='Play';$('play').setAttribute('aria-label','Play');}
-function seekViewer(time){const duration=viewerDuration();time=clamp(time,0,Math.max(0,duration-.001));for(const video of videos)if(video.readyState&&Number.isFinite(video.duration))video.currentTime=Math.min(time,Math.max(0,video.duration-.001));updateTimeline(time);}
+function seekViewer(time){const duration=viewerDuration();time=clamp(time,0,Math.max(0,duration-.001));restoreTime=time;for(const video of videos)if(video.readyState&&Number.isFinite(video.duration))video.currentTime=Math.min(time,Math.max(0,video.duration-.001));updateTimeline(time);}
 function loopBounds(){return viewerKind==='full'&&source&&$('loop').checked?[Number($('sample-start').value),Math.min(Number($('sample-end').value),viewerDuration())]:[0,viewerDuration()];}
 async function playViewer(){
  if(!viewerDuration())return;
@@ -114,6 +120,7 @@ function animateViewer(){
 function showViewerError(text){$('viewer-error').textContent=text;$('viewer-error').hidden=!text;}
 function layoutViewer(){
  const side=$('view-mode').value==='side',width=$('viewport').clientWidth/(side?2:1),height=$('viewport').clientHeight;
+ if(!width||!height)return;
  const reference=pair[1]||pair[0],refWidth=reference?.width||videos[1].videoWidth||videos[0].videoWidth,refHeight=reference?.height||videos[1].videoHeight||videos[0].videoHeight;
  if(!refWidth||!refHeight)return;
  const scale=$('zoom').value==='fit'?Math.min(width/refWidth,height/refHeight):Number($('zoom').value);
@@ -125,34 +132,32 @@ function layoutViewer(){
 function updateViewer(){
  const mode=$('view-mode').value;$('viewport').dataset.mode=mode;
  for(const option of $('view-mode').options)option.disabled=option.value==='original'?!pair[0]:option.value==='enhanced'?!pair[1]:!pair.every(Boolean);
+ const labels=viewerKind==='files'?['Video A','Video B']:['Original','Enhanced'];
+ for(const [index,video] of videos.entries()){video.setAttribute('aria-label',labels[index]+' video');$(index?'label-enhanced':'label-original').textContent=labels[index].toUpperCase();$('view-mode').options[index].textContent=labels[index];}
  $('wipe-handle').hidden=mode!=='wipe'||!pair[1];$('label-original').hidden=!pair[0];$('label-enhanced').hidden=!pair[1];$('viewer-empty').hidden=pair.some(Boolean);
+ $('viewer-empty-title').textContent=viewerKind==='sample'?(sampleBusy?'Preparing preview…':'No preview yet'):viewerKind==='files'?'Compare local videos':'Your video, in detail.';
+ $('viewer-empty-text').textContent=viewerKind==='sample'?(sampleBusy?sampleMessage:'Choose a short range in Full video, then render it with your settings.'):viewerKind==='files'?'Choose Video A and Video B above to compare them with one set of playback controls.':'Load a video. Try a short preview and compare the result before exporting.';
+ $('empty-load').textContent=viewerKind==='sample'?'Go to Full video':viewerKind==='files'?'Choose Video A':'Load video';$('empty-load').hidden=viewerKind==='sample'&&sampleBusy;
  const ready=activeVideos().every(video=>video.readyState>0&&!video.error)&&viewerDuration()>0;
  for(const id of ['play','step-back','step-forward','seek','mute'])$(id).disabled=!ready;
  $('zoom').disabled=!pair.some(Boolean);$('reset-view').disabled=!pair.some(Boolean);
  const rate=pair[videos.indexOf(masterVideo())]?.fps||30;
  for(const id of ['step-back','step-forward'])$(id).title=`${rate.toFixed(3)} FPS timeline steps${pair[videos.indexOf(masterVideo())]?.fps?' (nominal for variable-rate video)':' (rate unknown; 30 FPS grid)'}`;
- let note=viewerKind==='sample'?`Preview at source ${timeText(sampleSelection?.start)} · Native source and output; no display transcode.`:viewerKind==='files'?'Comparison uses a shared time axis. Unknown frame rates step on a 30 FPS grid.':'Native source and export playback · Drag to pan at 100% or 200%.';
+ let note=viewerKind==='sample'?(sampleMedia?`Preview at source ${timeText(sampleSelection.start)} · Native source and output; no display transcode.`:'Render a selected range to inspect the result here.'):viewerKind==='files'?'Comparison uses a shared time axis. Unknown frame rates step on a 30 FPS grid.':'Native source and export playback · Drag to pan at 100% or 200%.';
  if(pair.some(media=>media?.hdr))note+=' HDR needs compatible playback and a display; use Open preview or Play export for external playback.';
  else if(pair.some(media=>media?.pixel_format?.includes('10')||media?.ten_bit))note+=' 10-bit HEVC playback depends on installed codec support.';
  $('viewer-note').textContent=note;updateAudio();updateTimeline();layoutViewer();
 }
-function showPair(original,enhanced){
- pauseViewer();pair=[original,enhanced];showViewerError('');pan={x:0,y:0};$('zoom').value='fit';
+function showPair(original,enhanced,state=null){
+ pauseViewer();pair=[original,enhanced];showViewerError('');pan=state?{...state.pan}:{x:0,y:0};$('zoom').value=state?.zoom||'fit';restoreTime=state?.time||0;$('loop').checked=state?.loop||false;setWipe(state?.wipe??50);
  for(const [index,video] of videos.entries()){video.removeAttribute('src');video.load();if(pair[index])video.src=pair[index].url;}
- $('view-mode').value=enhanced?(original?'wipe':'enhanced'):'original';updateViewer();
-}
-function showContent(kind){
- viewerKind=kind;$('main').classList.toggle('comparison-mode',kind==='files');$('comparison-files').hidden=kind!=='files';$('preview-range').hidden=kind==='files';$('return-workspace').hidden=kind!=='files';
- document.querySelector('.source-bar').hidden=kind==='files';
- $('view-full').hidden=kind==='files';$('view-sample').hidden=kind==='files';$('view-full').setAttribute('aria-pressed',String(kind==='full'));$('view-sample').setAttribute('aria-pressed',String(kind==='sample'));
- if(kind==='sample')showPair(sampleMedia,enhancedMedia);else if(kind==='files')showPair(...comparisonFiles);else showPair(source,exportMedia);
- updateState();
+ $('view-mode').value=state?.mode||(enhanced?(original?'wipe':'enhanced'):'original');updateViewer();
 }
 for(const [index,video] of videos.entries()){
- video.onloadedmetadata=()=>{if(pair[index]){pair[index].width ||= video.videoWidth;pair[index].height ||= video.videoHeight;}updateViewer();};
+ video.onloadedmetadata=()=>{if(pair[index]){pair[index].width ||= video.videoWidth;pair[index].height ||= video.videoHeight;}if(restoreTime&&Number.isFinite(video.duration))video.currentTime=Math.min(restoreTime,Math.max(0,video.duration-.001));updateViewer();};
  video.onseeked=()=>{if(!playing)updateTimeline();};
  video.onended=()=>{if(playing){if($('loop').checked){seekViewer(loopBounds()[0]);playViewer();}else pauseViewer();}};
- video.onerror=()=>{if(!pair[index])return;pauseViewer();showViewerError(`${index?'Enhanced':'Original'} video cannot play here. Use an external player or a browser-supported format such as H.264 MP4. No display transcode has been applied.`);updateViewer();};
+ video.onerror=()=>{if(!pair[index])return;pauseViewer();const label=viewerKind==='files'?(index?'Video B':'Video A'):(index?'Enhanced video':'Original video');showViewerError(`${label} cannot play here. Use an external player or a browser-supported format such as H.264 MP4. No display transcode has been applied.`);updateViewer();};
  video.onwaiting=()=>{if(playing&&activeVideos().includes(video)){playRevision++;for(const other of activeVideos())other.pause();}};
  video.oncanplay=()=>{if(playing&&activeVideos().every(item=>item.readyState>=3)&&activeVideos().some(item=>item.paused))playViewer();};
 }
@@ -173,10 +178,9 @@ $('viewport').onpointerdown=event=>{if(event.target.closest('button')||$('zoom')
 $('viewport').onpointermove=event=>{if(drag){pan={x:drag.pan.x+event.clientX-drag.x,y:drag.pan.y+event.clientY-drag.y};layoutViewer();}};
 $('viewport').onlostpointercapture=()=>{drag=null;};
 $('viewport').onkeydown=event=>{if(event.target!==$('viewport'))return;if(event.key===' '){event.preventDefault();if(!$('play').disabled)$('play').click();}else if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();if(!$('step-forward').disabled)stepViewer(event.key==='ArrowRight'?1:-1);}else if(event.key==='Escape')$('reset-view').click();};
-$('view-full').onclick=()=>showContent('full');$('view-sample').onclick=()=>showContent('sample');$('return-workspace').onclick=()=>showContent('full');
-$('compare-files-button').onclick=()=>{showPage('enhance');showContent('files');};
-for(const index of [0,1])$(`comparison-file-${index+1}`).onchange=event=>{const file=event.target.files[0];if(!file)return;pauseViewer();if(comparisonFiles[index])URL.revokeObjectURL(comparisonFiles[index].url);comparisonFiles[index]={url:URL.createObjectURL(file),name:file.name};showContent('files');};
-$('comparison-clear').onclick=()=>{pauseViewer();for(const [index,media] of comparisonFiles.entries()){if(media)URL.revokeObjectURL(media.url);$(`comparison-file-${index+1}`).value='';}comparisonFiles=[null,null];showContent('files');};
+$('change-range').onclick=()=>showPage('full');
+for(const index of [0,1])$(`comparison-file-${index+1}`).onchange=event=>{const file=event.target.files[0];if(!file)return;pauseViewer();if(comparisonFiles[index])URL.revokeObjectURL(comparisonFiles[index].url);comparisonFiles[index]={url:URL.createObjectURL(file),name:file.name};showPage('files');};
+$('comparison-clear').onclick=()=>{pauseViewer();for(const [index,media] of comparisonFiles.entries()){if(media)URL.revokeObjectURL(media.url);$(`comparison-file-${index+1}`).value='';}comparisonFiles=[null,null];showPage('files');};
 requestAnimationFrame(animateViewer);
 const specs = [
   ['denoise','VSR denoise',0,1,0.05,'detail-controls'],['deblur','VSR deblur',0,1,0.05,'detail-controls'],['sharpening','Sharpening',0,2,0.05,'detail-controls'],
@@ -237,16 +241,19 @@ function applyOutputFormat(){
 function updateState(){
  $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);
  for(const id of ['load','download-load','empty-load'])$(id).disabled=busy;
- $('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('cancel').hidden=!busy;
+ $('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('generate').hidden=viewerKind!=='full';$('cancel').hidden=!busy;
  $('download-settings').disabled=busy;$('download').disabled=busy;$('download-timings').disabled=!$('download-specific-timings').checked;
  $('download').textContent=$('download-specific-timings').checked?'Download clip':'Download video';
- $('preview-range').disabled=!source||busy||!(source.duration>=1);$('view-sample').disabled=!sampleMedia;
+ $('preview-range').disabled=!source||busy||!(source.duration>=1);
  $('sample-render').disabled=!source||busy||!(source.duration>=1);
- $('open-source').disabled=!source||busy;$('open-source').hidden=viewerKind==='files';
+ $('sample-rerender').disabled=!sampleMedia||busy;
+ $('open-source').disabled=!source||busy;$('open-source').hidden=viewerKind!=='full';
  $('sample-external').hidden=!enhancedMedia||viewerKind!=='sample';$('sample-external').disabled=busy;
- for(const id of ['open-output','show-output']){$(id).hidden=!exportMedia||viewerKind==='files';$(id).disabled=busy;}
+ for(const id of ['open-output','show-output']){$(id).hidden=!exportMedia||viewerKind!=='full';$(id).disabled=busy;}
  $('sample-render').textContent=sampleMatchesSelection()&&enhancedMedia?'Render again':'Render preview';
- if(!busy){$('sample-status').textContent=enhancedMedia?(sampleMatchesSelection()&&renderedJob===JSON.stringify(buildJob())?'Preview matches your current settings.':'Settings or range changed. Render again to update the preview.'):'Drag the range handles to select 1–15 seconds.';}
+ $('sample-status').textContent=sampleBusy?sampleMessage:enhancedMedia?(sampleMatchesSelection()&&renderedJob===JSON.stringify(buildJob())?'Preview matches your current settings.':'Settings or range changed. Render again to update the preview.'):'Drag the range handles to select 1–15 seconds.';
+ $('preview-status').textContent=sampleMessage||(enhancedMedia?(renderedJob===JSON.stringify(buildJob())?'Preview matches your current settings.':'Settings changed. Render again to update this preview.'):sampleMedia?'Adjust your settings, then render this preview.':'Choose a range in Full video, then render a preview.');
+ $('preview-description').textContent=sampleMedia?`${timeText(sampleSelection.start)} — ${timeText(sampleSelection.start+(sampleMedia.actual_duration||sampleSelection.duration))} of ${source.name}`:'Choose a range in Full video to prepare a preview.';
  const portraitTooSmall=source&&(source.width<512||source.height<288);
  if(portraitTooSmall){$('portrait_mode').value='off';$('relighting_mode').value='off';}
  const tenBitSdr=isTenBitSdrOutput(),scaling=$('scale').value!=='1',relighting=$('relighting_mode').value!=='off',combined=$('relighting_mode').value==='aigs';
@@ -275,7 +282,7 @@ function displayLoadedVideo(){
  for(const option of $('scale').options){const width=Math.round(source.width*Number(option.value)),height=Math.round(source.height*Number(option.value));option.disabled=width>4096||height>4096||width%2!==0||height%2!==0||width*source.height!==height*source.width;}
  for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;
  for(const id of ['sample-start','sample-end'])$(id).max=source.duration||1;
- $('sample-start').value=0;$('sample-end').value=Math.min(5,source.duration||0);resetSettings();showContent('full');message('Ready. Select a short range to preview your settings.');
+ $('sample-start').value=0;$('sample-end').value=Math.min(5,source.duration||0);resetSettings();showPage('full');message('Ready. Select a short range to preview your settings.');
 }
 function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('job-status').hidden=!text;}
 function currentSelection(){return {start:Number($('sample-start').value),duration:Number((Number($('sample-end').value)-Number($('sample-start').value)).toFixed(3))};}
@@ -290,12 +297,22 @@ function changeRange(changed){
 }
 $('sample-start').oninput=()=>changeRange('start');$('sample-end').oninput=()=>changeRange('end');
 $('range-here').onclick=()=>{const duration=currentSelection().duration;const time=masterVideo().currentTime+(viewerKind==='sample'?(sampleSelection?.start||0):0);$('sample-start').value=clamp(time,0,Math.max(0,source.duration-1));$('sample-end').value=Math.min(source.duration,Number($('sample-start').value)+duration);changeRange('start');};
-function showPage(page){pauseViewer();$('main').hidden=page!=='enhance';$('download-page').hidden=page!=='download';for(const button of document.querySelectorAll('nav [data-page]')){if(button.dataset.page===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}}
-for(const button of document.querySelectorAll('nav [data-page]'))button.onclick=()=>{showPage(button.dataset.page);if(button.dataset.page==='enhance'&&viewerKind==='files')showContent('full');};
+function showPage(page){
+ viewerStates[viewerKind]={pair,time:masterVideo().readyState?Number($('seek').value):restoreTime,mode:$('view-mode').value,zoom:$('zoom').value,pan:{...pan},wipe:Number($('wipe-handle').getAttribute('aria-valuenow')),loop:$('loop').checked};
+ pauseViewer();$('main').hidden=page==='download';$('download-page').hidden=page!=='download';
+ for(const button of document.querySelectorAll('nav [data-page]')){if(button.dataset.page===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
+ if(page==='download')return;
+ viewerKind=page;$('main').classList.toggle('comparison-mode',page==='files');$('source-bar').hidden=page!=='full';$('preview-range').hidden=page!=='full';
+ $('preview-heading').hidden=page!=='sample';$('preview-actions').hidden=page!=='sample';$('comparison-heading').hidden=page!=='files';$('comparison-files').hidden=page!=='files';
+ const media=page==='sample'?[sampleMedia,enhancedMedia]:page==='files'?comparisonFiles:[source,exportMedia],state=viewerStates[page];
+ showPair(...media,state?.pair.every((item,index)=>item===media[index])?state:null);updateState();
+}
+for(const button of document.querySelectorAll('nav [data-page]'))button.onclick=()=>showPage(button.dataset.page);
 $('download-specific-timings').onchange=updateState;
 for(const id of ['download-start','download-end'])$(id).oninput=()=>{$('download-end').setCustomValidity('');};
 $('download-form').onsubmit=event=>{event.preventDefault();if(busy)return;const timings=$('download-specific-timings').checked?{start:Number($('download-start').value),end:Number($('download-end').value)}:null;if(timings&&timings.end<=timings.start){$('download-end').setCustomValidity('End time must be after the start time.');$('download-end').reportValidity();return;}send('download',{options:{url:$('youtube-url').value.trim(),height:Number($('download-height').value),fps:Number($('download-fps').value),format:$('download-format').value,timings}});};
-for(const id of ['load','empty-load'])$(id).onclick=()=>send('load');
+$('load').onclick=()=>send('load');
+$('empty-load').onclick=()=>{if(viewerKind==='sample')showPage('full');else if(viewerKind==='files')$('comparison-file-1').click();else send('load');};
 $('download-load').onclick=()=>send($('download-load').dataset.ready?'load-downloaded':'load');
 $('reset').onclick=resetSettings;
 for(const id of ['scale','target_fps','upscale_method','portrait_mode','relighting_mode','relighting_quality'])$(id).onchange=updateState;
@@ -316,23 +333,26 @@ function buildJob(){
 function settingsAreValid(){const quality=$('encoder_quality');if(!quality.checkValidity()){quality.closest('details').open=true;quality.reportValidity();return false;}if($('relighting_mode').value!=='off'&&!hdri){message('Choose an HDR environment for relighting.',true);return false;}return true;}
 
 $('generate').onclick=()=>{if(settingsAreValid()){pauseViewer();send('generate',{job:buildJob()});}};
-$('sample-render').onclick=()=>{
- if(!settingsAreValid()||busy)return;pauseViewer();renderingJob=JSON.stringify(buildJob());pendingJob=buildJob();
- if(sampleMatchesSelection()){send('render-sample',{job:pendingJob});pendingJob=null;}
- else{showContent('full');sampleSelection=null;sampleMedia=null;enhancedMedia=null;renderedJob=null;send('load-sample',{selection:currentSelection()});}
-};
+function renderPreview(currentClip=false){
+ if(busy||(currentClip&&!sampleMedia)||!settingsAreValid())return;
+ const job=buildJob(),reuse=currentClip||sampleMatchesSelection();renderingJob=JSON.stringify(job);busy=true;sampleBusy=true;sampleMessage=reuse?'Rendering your settings…':'Preparing your selected range…';
+ if(!reuse){sampleSelection=null;sampleMedia=null;enhancedMedia=null;renderedJob=null;}
+ pendingJob=reuse?null:job;showPage('sample');
+ if(reuse)send('render-sample',{job});else send('load-sample',{selection:currentSelection()});
+}
+$('sample-render').onclick=()=>renderPreview();$('sample-rerender').onclick=()=>renderPreview(true);
 $('sample-external').onclick=()=>send('open-sample');$('open-source').onclick=()=>send('open-source');$('open-output').onclick=()=>send('open-output');$('show-output').onclick=()=>send('show-output');
 $('settings').addEventListener('input',()=>{markCustom();updateState();});
 window.receive=event=>{
  switch(event.type){
- case 'loading':pauseViewer();source=null;sampleSelection=null;sampleMedia=null;enhancedMedia=null;exportMedia=null;renderedJob=null;pendingJob=null;busy=true;showPage('enhance');showContent('full');$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
+ case 'loading':pauseViewer();source=null;sampleSelection=null;sampleMedia=null;enhancedMedia=null;exportMedia=null;renderedJob=null;pendingJob=null;sampleBusy=false;sampleMessage='';busy=true;delete viewerStates.full;delete viewerStates.sample;showPage('full');$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
  case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
- case 'sample-loading':busy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Preparing your selected range…';message('Preparing preview…');break;
- case 'sample-loaded':busy=false;sampleSelection={start:event.start,duration:event.duration};sampleMedia={...event,name:'Original preview'};showContent('sample');if(pendingJob){const job=pendingJob;pendingJob=null;send('render-sample',{job});}else message('Preview range loaded.');break;
- case 'sample-rendering':busy=true;$('cancel').disabled=false;$('progress').hidden=true;$('sample-status').textContent='Rendering your settings…';message('Rendering preview…');break;
- case 'sample-progress':if(!$('cancel').disabled)message(`Rendering preview · ${event.frames.toLocaleString()} frames`);break;
- case 'sample-rendered':busy=false;renderedJob=renderingJob;enhancedMedia={...event,name:'Enhanced preview',fps:event.fps||Number($('target_fps').value)||source.fps};showContent('sample');message('Preview ready. Compare the result, then export the full video.');break;
- case 'sample-error':busy=false;pendingJob=null;message(event.message,true);break;
+ case 'sample-loading':busy=true;sampleBusy=true;sampleMessage='Preparing your selected range…';$('cancel').disabled=false;$('progress').hidden=true;showPage('sample');message('Preparing preview…');break;
+ case 'sample-loaded':busy=!!pendingJob;sampleBusy=!!pendingJob;sampleMessage=pendingJob?'Rendering your settings…':'';sampleSelection={start:event.start,duration:event.duration};sampleMedia={...event,name:'Original preview'};showPage('sample');if(pendingJob){const job=pendingJob;pendingJob=null;send('render-sample',{job});}else message('Preview range loaded.');break;
+ case 'sample-rendering':busy=true;sampleBusy=true;sampleMessage='Rendering your settings…';$('cancel').disabled=false;$('progress').hidden=true;showPage('sample');message('Rendering preview…');break;
+ case 'sample-progress':if(!$('cancel').disabled){sampleMessage=`Rendering preview · ${event.frames.toLocaleString()} frames`;message(sampleMessage);}break;
+ case 'sample-rendered':busy=false;sampleBusy=false;sampleMessage='';renderedJob=renderingJob;enhancedMedia={...event,name:'Enhanced preview',fps:event.fps||Number($('target_fps').value)||source.fps};showPage('sample');message('Preview ready. Compare the result, then return to Full video to export.');break;
+ case 'sample-error':busy=false;sampleBusy=false;pendingJob=null;sampleMessage=event.message;updateViewer();message(event.message,true);break;
  case 'download-started':busy=true;downloading=true;$('cancel').disabled=false;$('progress').hidden=true;message('Connecting to YouTube…');break;
  case 'download-progress':if(!$('cancel').disabled)message(event.message);break;
  case 'downloaded':busy=false;downloading=false;$('download-load').dataset.ready='true';$('download-load').textContent='Open download';message(`Download saved. Open it in your workspace.\n${event.path}`);break;
@@ -340,7 +360,7 @@ window.receive=event=>{
  case 'hdri-selected':hdri=event.path;$('hdri-name').textContent=event.name;markCustom();break;
  case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
  case 'progress':if(source?.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);if(!$('cancel').disabled)message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
- case 'finished':busy=false;exportMedia={...event,name:'Export'};$('progress').value=1;showPage('enhance');showContent('full');message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
+ case 'finished':busy=false;exportMedia={...event,name:'Export'};$('progress').value=1;showPage('full');message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
  case 'error':busy=false;pendingJob=null;$('progress').hidden=true;if(!source)$('name').textContent='No video loaded';message(event.message,true);break;
  case 'status':message(event.message);break;
  }
