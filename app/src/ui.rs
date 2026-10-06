@@ -1,10 +1,10 @@
-use std::{io, path::{Path, PathBuf}, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
+use std::{collections::HashMap, io::{self, Read, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 use serde_json::{json, Value};
 use tao::{event::{Event, WindowEvent}, event_loop::{ControlFlow, EventLoopBuilder}, window::WindowBuilder, dpi::LogicalSize};
 use video_enhancer::{job::VideoEnhancementJob, parser::{FileData, Parser}};
 use crate::youtube::{self, DownloadOptions};
 use crate::sample::{self, SampleClip, SampleSelection};
-use wry::WebViewExtWindows;
+use wry::{WebViewExtWindows, WebViewBuilderExtWindows, http::{Request, Response}};
 use windows_core::{HSTRING, Interface};
 use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2_3, COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY};
 
@@ -14,10 +14,10 @@ enum AppEvent {
     Command(String),
     Loaded(Result<FileData, String>),
     Progress(Value),
-    Finished(Result<Value, String>),
+    Finished(Result<(FileData, u64, f64), String>),
     Downloaded(Result<PathBuf, String>),
     SampleLoaded(Result<SampleClip, String>),
-    SampleRendered(Result<PathBuf, String>),
+    SampleRendered(Result<FileData, String>),
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,10 +27,17 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let page = preview_workspace.path().join("index.html");
     std::fs::write(&page, include_str!("ui.html"))?;
     let event_loop = EventLoopBuilder::<AppEvent>::with_user_event().build();
-    let window = WindowBuilder::new().with_title("Video Enhancer").with_inner_size(LogicalSize::new(1120.0, 850.0)).with_min_inner_size(LogicalSize::new(780.0, 650.0)).build(&event_loop)?;
+    let window = WindowBuilder::new().with_title("Video Enhancer").with_inner_size(LogicalSize::new(1440.0, 900.0)).with_min_inner_size(LogicalSize::new(900.0, 650.0)).build(&event_loop)?;
     let proxy = event_loop.create_proxy();
     let ipc_proxy = proxy.clone();
+    let media_files = Arc::new(Mutex::new(MediaFiles::default()));
+    let protocol_files = Arc::clone(&media_files);
     let webview = wry::WebViewBuilder::new()
+        .with_https_scheme(true)
+        .with_custom_protocol("media".into(), move |_, request| {
+            let path = protocol_files.lock().unwrap().paths.get(request.uri().path()).cloned();
+            serve_media(&request, path.as_deref()).unwrap_or_else(|_| media_error(500)).map(Into::into)
+        })
         .with_ipc_handler(move |request| { let _ = ipc_proxy.send_event(AppEvent::Command(request.body().clone())); })
         .with_navigation_handler({
             let initial_page = AtomicBool::new(true);
@@ -48,6 +55,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut webview = Some(webview);
     let mut preview_workspace = Some(preview_workspace);
     let mut loaded_path: Option<PathBuf> = None;
+    let mut last_output: Option<PathBuf> = None;
+    let mut downloaded_path: Option<PathBuf> = None;
     let mut sample_clip: Option<Arc<SampleClip>> = None;
     let mut sample_revision = 0_u64;
     let mut rendered_sample: Option<PathBuf> = None;
@@ -73,8 +82,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             Event::UserEvent(AppEvent::Command(body)) => {
                 let Ok(message) = serde_json::from_str::<Value>(&body) else { return; };
                 match message["command"].as_str().unwrap_or("") {
+                    "open-source" | "open-output" | "show-output" if !busy => {
+                        let command = message["command"].as_str().unwrap();
+                        let path = if command == "open-source" { &loaded_path } else { &last_output };
+                        if let Some(path) = path && let Err(error) = open_video(path, command == "show-output") {
+                            emit(json!({"type":"error", "message":error.to_string()}));
+                        }
+                    }
                     "open-sample" if !busy => {
-                        if let Some(path) = &rendered_sample && let Err(error) = std::path::absolute(path).and_then(|path| std::process::Command::new("explorer.exe").arg(path).spawn()) {
+                        let path = rendered_sample.as_deref().or_else(|| sample_clip.as_ref().map(|clip| clip.video.path.as_path()));
+                        if let Some(path) = path && let Err(error) = open_video(path, false) {
                             emit(json!({"type":"sample-error", "message":error.to_string()}));
                         }
                     }
@@ -101,10 +118,15 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                             let _ = sender.send_event(AppEvent::Downloaded(result));
                         });
                     }
-                    "load" if !busy => {
-                        if let Some(path) = rfd::FileDialog::new().set_title("Load video").set_directory(youtube::directory()).add_filter("Video", &["mp4", "mkv", "mov", "avi", "webm", "m4v"]).pick_file() {
+                    "load" | "load-downloaded" if !busy => {
+                        let path = if message["command"] == "load-downloaded" { downloaded_path.clone() } else {
+                            rfd::FileDialog::new().set_title("Load video").set_directory(youtube::directory()).add_filter("Video", &["mp4", "mkv", "mov", "avi", "webm", "m4v"]).pick_file()
+                        };
+                        if let Some(path) = path {
                             busy = true;
                             loaded_path = None;
+                            last_output = None;
+                            media_files.lock().unwrap().paths.clear();
                             sample_clip = None;
                             rendered_sample = None;
                             emit(json!({"type":"loading"}));
@@ -184,7 +206,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                                     let _ = sender.send_event(AppEvent::Progress(json!({"type":"progress", "frames":frames, "seconds":seconds, "elapsed":started.elapsed().as_secs_f64()})));
                                     last_update = Instant::now();
                                 }
-                            }).map(|frames| json!({"type":"finished", "frames":frames, "elapsed":started.elapsed().as_secs_f64(), "output":job.output})).map_err(|error| error.to_string());
+                            }).and_then(|frames| Parser::new(&job.output).get_video_information().map(|video| (video, frames, started.elapsed().as_secs_f64()))).map_err(|error| error.to_string());
                             let _ = sender.send_event(AppEvent::Finished(result));
                         });
                     }
@@ -196,7 +218,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 match result {
                     Ok(source) => {
                         loaded_path = Some(source.path.clone());
-                        emit(json!({"type":"loaded", "source":{"name":source.path.file_name().unwrap_or_default().to_string_lossy(), "width":source.width, "height":source.height, "fps":source.fps, "duration":source.duration_seconds, "audio":source.audio_streams.len(), "pixel_format":source.pixel_format}}));
+                        let url = media_files.lock().unwrap().register("source", &source.path);
+                        let mut details = video_details(&source);
+                        details["url"] = json!(url);
+                        emit(json!({"type":"loaded", "source":details}));
                     }
                     Err(error) => emit(json!({"type":"error", "message":error})),
                 }
@@ -207,8 +232,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 busy = false;
                 match result {
                     Ok(clip) => {
-                        match sample_url(&clip.directory.path().join("original.mp4"), preview_workspace.as_ref().unwrap().path()) {
-                            Ok(url) => emit(json!({"type":"sample-loaded", "url":url, "start":clip.selection.start, "duration":clip.selection.duration})),
+                        match sample_url(&clip.video.path, preview_workspace.as_ref().unwrap().path()) {
+                            Ok(url) => {
+                                let mut details = video_details(&clip.video);
+                                details["type"] = json!("sample-loaded");
+                                details["url"] = json!(url);
+                                details["start"] = json!(clip.selection.start);
+                                details["actual_duration"] = details["duration"].clone();
+                                details["duration"] = json!(clip.selection.duration);
+                                emit(details);
+                            }
                             Err(error) => emit(json!({"type":"sample-error", "message":error.to_string()})),
                         }
                         sample_clip = Some(Arc::new(clip));
@@ -219,8 +252,15 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             Event::UserEvent(AppEvent::SampleRendered(result)) => {
                 busy = false;
-                match result.and_then(|path| { let url = sample_url(&path, preview_workspace.as_ref().unwrap().path()).map_err(|error| error.to_string())?; rendered_sample = Some(path); Ok(url) }) {
-                    Ok(url) => emit(json!({"type":"sample-rendered", "url":url})),
+                match result.and_then(|video| {
+                    let url = sample_url(&video.path, preview_workspace.as_ref().unwrap().path()).map_err(|error| error.to_string())?;
+                    let mut details = video_details(&video);
+                    details["type"] = json!("sample-rendered");
+                    details["url"] = json!(url);
+                    rendered_sample = Some(video.path);
+                    Ok(details)
+                }) {
+                    Ok(details) => emit(details),
                     Err(error) => emit(json!({"type":"sample-error", "message":error})),
                 }
                 if close_when_finished { *control_flow = ControlFlow::Exit; }
@@ -228,14 +268,29 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             Event::UserEvent(AppEvent::Downloaded(result)) => {
                 busy = false;
                 match result {
-                    Ok(path) => emit(json!({"type":"downloaded", "path":path})),
+                    Ok(path) => {
+                        emit(json!({"type":"downloaded", "path":path}));
+                        downloaded_path = Some(path);
+                    }
                     Err(error) => emit(json!({"type":"download-error", "message":error})),
                 }
                 if close_when_finished { *control_flow = ControlFlow::Exit; }
             }
             Event::UserEvent(AppEvent::Finished(result)) => {
                 busy = false;
-                emit(result.unwrap_or_else(|error| json!({"type":"error", "message":error})));
+                match result {
+                    Ok((video, frames, elapsed)) => {
+                        let mut details = video_details(&video);
+                        details["type"] = json!("finished");
+                        details["frames"] = json!(frames);
+                        details["elapsed"] = json!(elapsed);
+                        details["output"] = json!(video.path);
+                        details["url"] = json!(media_files.lock().unwrap().register("output", &video.path));
+                        last_output = Some(video.path);
+                        emit(details);
+                    }
+                    Err(error) => emit(json!({"type":"error", "message":error})),
+                }
                 if close_when_finished { *control_flow = ControlFlow::Exit; }
             }
             _ => {}
@@ -244,9 +299,92 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn sample_url(path: &Path, workspace: &Path) -> io::Result<String> {
+    let path = path.canonicalize()?;
+    let workspace = workspace.canonicalize()?;
     let relative = path.strip_prefix(workspace).map_err(io::Error::other)?;
     // Sample folders and filenames are generated by the app using URL-safe names.
     Ok(format!("https://enhancer.example/{}", relative.to_string_lossy().replace('\\', "/")))
+}
+
+fn video_details(video: &FileData) -> Value {
+    let stream = video.metadata["streams"].as_array().and_then(|streams| streams.iter().find(|stream| stream["index"].as_u64() == Some(u64::from(video.video_stream_index))));
+    let hdr = stream.and_then(|stream| stream["color_transfer"].as_str()).is_some_and(|transfer| ["smpte2084", "arib-std-b67"].contains(&transfer));
+    json!({"name":video.path.file_name().unwrap_or_default().to_string_lossy(), "width":video.width, "height":video.height, "fps":video.fps, "duration":video.duration_seconds, "audio":video.audio_streams.len(), "pixel_format":video.pixel_format, "hdr":hdr})
+}
+
+fn open_video(path: &Path, show_location: bool) -> io::Result<()> {
+    // The parser canonicalizes paths; Explorer expects ordinary drive/UNC paths.
+    let path = path.to_string_lossy();
+    let path = if let Some(unc) = path.strip_prefix(r"\\?\UNC\") { format!(r"\\{unc}") } else { path.strip_prefix(r"\\?\").unwrap_or(&path).to_owned() };
+    let mut command = std::process::Command::new("explorer.exe");
+    if show_location { command.arg("/select,"); }
+    command.arg(path).spawn().map(|_| ())
+}
+
+#[derive(Default)]
+struct MediaFiles {
+    paths: HashMap<String, PathBuf>,
+    revision: u64,
+}
+
+impl MediaFiles {
+    fn register(&mut self, slot: &str, path: &Path) -> String {
+        let prefix = format!("/{slot}-");
+        self.paths.retain(|key, _| !key.starts_with(&prefix));
+        self.revision += 1;
+        let key = format!("{prefix}{}", self.revision);
+        self.paths.insert(key.clone(), path.to_path_buf());
+        format!("https://media.localhost{key}")
+    }
+}
+
+fn media_error(status: u16) -> Response<Vec<u8>> {
+    Response::builder().status(status).header("Access-Control-Allow-Origin", "https://enhancer.example").body(Vec::new()).unwrap()
+}
+
+fn serve_media(request: &Request<Vec<u8>>, path: Option<&Path>) -> io::Result<Response<Vec<u8>>> {
+    let Some(path) = path else { return Ok(media_error(404)); };
+    if !matches!(request.method().as_str(), "GET" | "HEAD") { return Ok(media_error(405)); }
+    let mut file = std::fs::File::open(path)?;
+    let length = file.metadata()?.len();
+    let mime = match path.extension().and_then(|extension| extension.to_str()).unwrap_or("").to_ascii_lowercase().as_str() {
+        "webm" => "video/webm", "mkv" => "video/x-matroska", "mov" => "video/quicktime", "avi" => "video/x-msvideo", _ => "video/mp4",
+    };
+    let response = Response::builder().header("Content-Type", mime).header("Accept-Ranges", "bytes")
+        .header("Access-Control-Allow-Origin", "https://enhancer.example").header("Cache-Control", "no-store");
+    if request.method() == "HEAD" { return Ok(response.header("Content-Length", length).body(Vec::new()).unwrap()); }
+    // ponytail: one bounded range per request; add multipart only if a player needs it.
+    const MAX_BYTES: u64 = 1024 * 1024;
+    let range = request.headers().get("Range");
+    let (start, end) = if let Some(range) = range {
+        match range.to_str().ok().and_then(|range| media_range(range, length)) {
+            Some(range) => range,
+            None => return Ok(response.status(416).header("Content-Range", format!("bytes */{length}")).body(Vec::new()).unwrap()),
+        }
+    } else {
+        if length > MAX_BYTES { return Ok(media_error(400)); }
+        (0, length.saturating_sub(1))
+    };
+    let count = if length == 0 { 0 } else { (end - start + 1).min(MAX_BYTES) };
+    let mut body = vec![0; count as usize];
+    file.seek(SeekFrom::Start(start))?;
+    file.read_exact(&mut body)?;
+    let response = if range.is_some() {
+        response.status(206).header("Content-Range", format!("bytes {start}-{}/{length}", start + count - 1))
+    } else { response };
+    Ok(response.header("Content-Length", count).body(body).unwrap())
+}
+
+fn media_range(header: &str, length: u64) -> Option<(u64, u64)> {
+    if length == 0 { return None; }
+    let (start, end) = header.strip_prefix("bytes=")?.split_once('-')?;
+    if start.is_empty() {
+        let count = end.parse::<u64>().ok()?;
+        return (count > 0).then_some((length.saturating_sub(count), length - 1));
+    }
+    let start = start.parse::<u64>().ok()?;
+    let end = if end.is_empty() { length - 1 } else { end.parse::<u64>().ok()?.min(length - 1) };
+    (start <= end && start < length).then_some((start, end))
 }
 
 fn load_video_information(path: &Path) -> io::Result<FileData> {

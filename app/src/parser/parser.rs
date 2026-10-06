@@ -13,6 +13,7 @@ pub struct FileData {
     pub height: u32,
     /// Decimal average FPS, not a guarantee of constant frame rate.
     pub fps: Option<f64>,
+    /// Video duration, or container duration when the video track does not report one.
     pub duration_seconds: Option<f64>,
     /// End timestamp and time base of the video track, when present in the container.
     pub video_end_time: Option<(i64, (i32, i32))>,
@@ -71,7 +72,7 @@ impl Parser {
             height: serde_json::from_value(video_stream["height"].clone())?,
             fps,
             video_end_time: parse_video_end_time(video_stream),
-            duration_seconds: video_stream["duration"].as_str().and_then(|duration| duration.parse().ok()),
+            duration_seconds: video_stream["duration"].as_str().and_then(|duration| duration.parse().ok()).or_else(|| metadata["format"]["duration"].as_str().and_then(|duration| duration.parse().ok())),
             video_stream_index: serde_json::from_value(video_stream["index"].clone())?,
             codec: serde_json::from_value(video_stream["codec_name"].clone())?,
             pixel_format: serde_json::from_value(video_stream["pix_fmt"].clone())?,

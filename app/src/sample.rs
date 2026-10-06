@@ -1,6 +1,6 @@
-use std::{io, os::windows::process::CommandExt, path::{Path, PathBuf}, process::{Command, Stdio}, sync::atomic::{AtomicBool, Ordering}, time::Duration};
+use std::{io, os::windows::process::CommandExt, path::Path, process::{Command, Stdio}, sync::atomic::{AtomicBool, Ordering}, time::Duration};
 use serde::Deserialize;
-use video_enhancer::{job::VideoEnhancementJob, parser::Parser};
+use video_enhancer::{job::VideoEnhancementJob, parser::{FileData, Parser}};
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -12,6 +12,7 @@ pub struct SampleSelection {
 pub struct SampleClip {
     pub directory: tempfile::TempDir,
     pub selection: SampleSelection,
+    pub video: FileData,
 }
 
 pub fn load(input: &Path, selection: SampleSelection, workspace: &Path, cancelled: &AtomicBool) -> io::Result<SampleClip> {
@@ -30,17 +31,13 @@ pub fn load(input: &Path, selection: SampleSelection, workspace: &Path, cancelle
     if clip.duration_seconds.is_none_or(|duration| duration <= 0.0) {
         return Err(io::Error::other("No video at this start time. Choose an earlier section."));
     }
-    // The lossless clip feeds the real pipeline; this H.264 copy is only for browser playback.
-    let mut command = ffmpeg();
-    command.arg("-i").arg(&clip.path).args(["-map", "0:v:0", "-map", "0:a?", "-c:v", "h264_nvenc", "-preset", "p4", "-cq", "18", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", "-c:a", "copy", "-movflags", "+faststart"]).arg(directory.path().join("original.mp4"));
-    run_ffmpeg(command, cancelled)?;
-    Ok(SampleClip { directory, selection })
+    Ok(SampleClip { directory, selection, video: clip })
 }
 
-pub fn render(mut job: VideoEnhancementJob, clip: &SampleClip, cancelled: &AtomicBool, progress: impl FnMut(u64, f64)) -> io::Result<PathBuf> {
+pub fn render(mut job: VideoEnhancementJob, clip: &SampleClip, cancelled: &AtomicBool, progress: impl FnMut(u64, f64)) -> io::Result<FileData> {
     job.input = clip.directory.path().join("source.mp4");
     job.run(cancelled, progress)?;
-    Ok(job.output)
+    Parser::new(job.output).get_video_information()
 }
 
 fn ffmpeg() -> Command {
