@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; media-src 'self' blob: https://media.localhost;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src data:; media-src 'self' blob: https://media.localhost;">
 <title>Video Enhancer</title>
 <style>
 :root{color-scheme:dark;font:13px 'Segoe UI',sans-serif;color:#e9eeeb;background:#121615;--muted:#9ca9a1;--accent:#b7eb89;--line:#303a33}
@@ -13,9 +13,10 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}
 #wipe-handle{position:absolute;top:0;bottom:0;left:var(--wipe);width:24px;transform:translateX(-50%);padding:0;border:0;border-radius:0;background:transparent;cursor:ew-resize;touch-action:none;z-index:3}#wipe-handle:before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:#e1eddbb0}#wipe-handle:after{content:'↔';position:absolute;left:0;top:50%;width:24px;height:38px;display:grid;place-items:center;border:1px solid #829b74;border-radius:4px;background:#253122;color:#def6ca}
 #viewer-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:12px;text-align:center;padding:24px}#viewer-empty svg{width:52px;height:52px;color:#819277}#viewer-empty h1{font-size:21px;font-weight:500;color:#dce7df;margin:6px 0 0}#viewer-empty p{max-width:350px;margin:0;line-height:1.6}#viewer-error{position:absolute;left:20px;right:20px;bottom:18px;z-index:4;background:#201c19e8;color:#ffc5b6;padding:12px;white-space:pre-line;font-size:12px;line-height:1.5}
 .transport{display:flex;align-items:center;gap:8px}.transport button{min-width:36px;padding:7px 10px}.transport input{flex:1;min-width:70px}.timecode{font:11px Consolas,monospace;color:#c0cbc3;white-space:nowrap}.transport label{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}input[type=range]{accent-color:var(--accent);cursor:pointer}input[type=checkbox]{accent-color:var(--accent)}.viewer-note{color:var(--muted);font-size:11px;line-height:1.5;min-height:16px}.preview-range{border-top:1px solid var(--line);padding-top:13px}.range-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.range-heading strong{font-size:12px;font-weight:500}.range-heading output{font:11px Consolas,monospace;color:var(--muted)}.range-track{height:30px;position:relative;margin:6px 3px}.range-track:before{content:'';position:absolute;left:0;right:0;top:13px;height:4px;background:#303a33}.range-fill{position:absolute;top:12px;height:6px;left:var(--start,0%);right:calc(100% - var(--end,100%));background:#8eae6d}.range-track input{position:absolute;inset:0;width:100%;margin:0;background:transparent;appearance:none;pointer-events:none}.range-track input::-webkit-slider-runnable-track{background:transparent;height:6px}.range-track input::-webkit-slider-thumb{appearance:none;pointer-events:auto;cursor:ew-resize;height:22px;width:11px;border:2px solid #d5ebbc;background:#60784e;border-radius:2px;margin-top:-8px}.range-actions{display:flex;align-items:center;gap:10px}.range-actions .helper{flex:1;margin:0}.range-actions button{white-space:nowrap}.compare-files{display:flex;gap:16px;flex-wrap:wrap;padding-bottom:3px}.compare-files label{font-size:11px;color:var(--muted);flex:1;min-width:160px}.compare-files input{display:block;width:100%;font-size:11px;margin-top:6px}.result-actions{display:flex;gap:8px;flex-wrap:wrap}
-.workspace{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid var(--line);background:#171d19;padding:20px}.intro{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.intro h2{font-size:15px;font-weight:600;margin:0}.settings-wrap{overflow:auto;flex:1;min-height:0;padding-right:7px}fieldset{border:0;padding:0;margin:0;min-width:0}fieldset.locked{opacity:.5}.section{padding:17px 0;border-bottom:1px solid var(--line)}.section:first-child{padding-top:0}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px}.section-title h3,summary{font-size:12px;font-weight:600;margin:0}.section-title small{font-size:10px;color:var(--muted)}summary{cursor:pointer}details[open]>summary{margin-bottom:14px}.row,.sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.row+.row,.row+.sliders,.sliders+.row,.sliders+.sliders{margin-top:15px}.field{display:block;font-size:11px;color:var(--muted);min-width:0}.field select,.field input[type=number],.field input[type=color]{display:block;width:100%;margin-top:7px;font-size:12px}.field select{padding:8px 5px}.field input[type=color]{height:34px;background:#252d28;border:1px solid #465149}.slider-head{display:flex;justify-content:space-between;gap:5px;font-size:11px;margin-bottom:5px}.slider-head output{font-variant-numeric:tabular-nums;color:var(--accent)}.sliders input{width:100%;margin:7px 0 0;height:4px}.presets{display:grid;grid-template-columns:1fr;gap:5px}.presets button{text-align:left;padding:9px 11px}.presets strong{font-size:12px;font-weight:500}.presets small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.presets button.selected{border-color:#839e6a;color:var(--accent);background:#283522}.helper{font-size:11px;line-height:1.55;color:var(--muted);margin:11px 0 0}.check{display:flex;align-items:center;gap:7px;font-size:11px;margin:12px 0}.section fieldset{margin-top:14px}.section fieldset:disabled{opacity:.5}.asset-picker{display:flex;gap:7px;align-items:center;margin-top:12px;flex-wrap:wrap}.asset-picker button{font-size:11px}.asset-name{font-size:10px;color:var(--muted);overflow-wrap:anywhere}.footer{border-top:1px solid var(--line);padding-top:15px;margin-top:8px;display:flex;flex-direction:column;gap:11px}.summary{font-size:11px;color:var(--muted)}.footer .generate{width:100%;padding:11px}
+.workspace{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid var(--line);background:#171d19;padding:20px}.intro{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.intro h2{font-size:15px;font-weight:600;margin:0}.settings-wrap{overflow:auto;flex:1;min-height:0;padding-right:7px}fieldset{border:0;padding:0;margin:0;min-width:0}fieldset.locked{opacity:.5}.section{padding:17px 0;border-bottom:1px solid var(--line)}.section:first-child{padding-top:0}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px}.section-title h3,summary{font-size:12px;font-weight:600;margin:0}.section-title small{font-size:10px;color:var(--muted)}summary{cursor:pointer}details[open]>summary{margin-bottom:14px}.row,.sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.row+.row,.row+.sliders,.sliders+.row,.sliders+.sliders{margin-top:15px}.field{display:block;font-size:11px;color:var(--muted);min-width:0}.field select,.field input[type=number],.field input[type=color]{display:block;width:100%;margin-top:7px;font-size:12px}.field select{padding:8px 5px}.field input[type=color]{height:34px;background:#252d28;border:1px solid #465149}.slider-head{display:flex;justify-content:space-between;gap:5px;font-size:11px;margin-bottom:5px}.slider-head output{font-variant-numeric:tabular-nums;color:var(--accent)}.sliders input{width:100%;margin:7px 0 0;height:4px}.helper{font-size:11px;line-height:1.55;color:var(--muted);margin:11px 0 0}.check{display:flex;align-items:center;gap:7px;font-size:11px;margin:12px 0}.section fieldset{margin-top:14px}.section fieldset:disabled{opacity:.5}.asset-picker{display:flex;gap:7px;align-items:center;margin-top:12px;flex-wrap:wrap}.asset-picker button{font-size:11px}.asset-name{font-size:10px;color:var(--muted);overflow-wrap:anywhere}.footer{border-top:1px solid var(--line);padding-top:15px;margin-top:8px;display:flex;flex-direction:column;gap:11px}.summary{font-size:11px;color:var(--muted)}.footer .generate{width:100%;padding:11px}
 .download-page{flex:1;min-height:0;overflow:auto;padding:30px}.page-content{max-width:640px;margin:0 auto}.eyebrow{color:var(--accent);font-size:10px;letter-spacing:1.4px}.download-page h1{font-size:25px;font-weight:500}.download-page p{color:var(--muted);line-height:1.6}.download-page .field{margin-top:18px}.download-page input[type=url],.download-page input[type=number]{width:100%;margin-top:7px}.download-actions{display:flex;gap:10px;margin-top:22px}.job-status{display:flex;align-items:center;gap:16px;flex-shrink:0;border-top:1px solid var(--line);padding:10px 24px;background:#171d19}.job-message{flex:1;min-width:0}#status{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-height:58px;overflow:auto}#status.error{color:#ffb8ae}progress{width:100%;height:4px;accent-color:var(--accent);display:block;margin-bottom:6px}.comparison-mode{grid-template-columns:1fr}.comparison-mode>.workspace{display:none}
 @media(max-width:1100px){main{grid-template-columns:minmax(0,1fr) 320px}.viewer{padding:15px;gap:11px}.workspace{padding:16px}.transport{gap:5px}.transport .timecode{font-size:10px}.view-options{gap:6px}.metadata{gap:8px}.range-actions{flex-wrap:wrap}}@media(max-width:760px){body{overflow:auto;height:auto;min-height:100vh}header{padding:0 14px;gap:12px}.local{display:none}main{display:flex;flex-direction:column}.viewer{min-height:660px}.workspace{border-left:0;border-top:1px solid var(--line)}.settings-wrap{overflow:visible}.transport{flex-wrap:wrap}.comparison-mode>.viewer{min-height:700px}.row,.sliders{gap:16px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.component-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.component-actions button{font-size:11px}.applied-enhancement{padding:12px 0;border-bottom:1px solid var(--line)}.component-row{display:flex;gap:8px;align-items:flex-start}.component-row input{margin:4px 0 0}.component-info{flex:1;min-width:0}.component-info strong{font-size:12px;font-weight:500;overflow-wrap:anywhere}.component-info small{display:block;font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px}.component-row button{font-size:10px;padding:5px 7px}.component-overlap{font-size:10px;line-height:1.5;color:#d8bd85;margin:6px 0 0}.component-editor{margin-top:14px;padding-left:20px}.component-editor h3{font-size:12px;font-weight:500;margin:0 0 12px}.component-panel{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}.component-panel h4{font-size:11px;color:var(--muted);font-weight:500;margin:14px 0 8px}.enhancement-library{display:grid;gap:6px}.enhancement-library button{text-align:left}.enhancement-library strong{display:block;font-size:12px;font-weight:500}.enhancement-library small{display:block;font-size:10px;color:var(--muted);line-height:1.5;margin-top:3px}.adjustment-groups{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0}.adjustment-groups label{display:flex;gap:6px;align-items:center;font-size:11px}.field input[type=text]{display:block;width:100%;min-width:0;margin-top:7px;padding:8px;border:1px solid #465149;border-radius:5px;background:#252d28;color:inherit}.error{color:#ffb8ae!important;white-space:pre-line}
 </style>
 <header><strong>Video Enhancer<span>.</span></strong><nav aria-label="Workspace"><button id="nav-full" data-page="full" aria-controls="main" aria-current="page">Full video</button><button id="nav-sample" data-page="sample" aria-controls="main">Preview</button><button id="nav-files" data-page="files" aria-controls="main">Compare</button><button id="nav-download" data-page="download" aria-controls="download-page">Download</button></nav><span class="local">LOCAL · NVIDIA</span></header>
 <section id="download-page" class="download-page" aria-labelledby="download-title" hidden>
@@ -64,29 +65,52 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}
   <div id="preview-actions" class="range-actions" hidden><p id="preview-status" class="helper" role="status">Prepare a preview from Full video.</p><button id="sample-rerender" class="primary" disabled>Render again</button></div>
   <div class="result-actions"><button id="open-source" disabled>Open source</button><button id="sample-external" hidden>Open preview</button><button id="open-output" hidden>Play export</button><button id="show-output" hidden>Show in folder</button></div>
 </section>
-<section class="workspace" aria-label="Enhancement settings"><div class="intro"><h2>Enhancement settings</h2><button id="reset" disabled>Reset</button></div><div class="settings-wrap"><fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
-    <section class="section"><div class="section-title"><h3>Enhancement presets</h3><small id="preset-label">No preset</small></div><button id="stack-presets" type="button" aria-pressed="false" style="margin-bottom:8px">Stack presets: off</button><div class="presets" id="presets" role="group" aria-label="Enhancement presets"></div><p class="helper">Presets replace your settings by default. Turn on Stack presets to add a preset's adjustments while keeping your other effects, resolution and FPS. Shared settings use the last preset's values; format compatibility rules still apply.</p><p class="helper" id="preset-description" aria-live="polite"></p></section>
+<section class="workspace" aria-label="Enhancement settings"><div class="intro"><h2>Enhancements</h2><button id="reset" disabled>Reset</button></div><div class="settings-wrap"><fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
+  <section class="section"><div class="section-title"><h3>Applied to this video</h3><small id="component-count">None</small></div>
+    <div id="applied-enhancements"></div><p id="components-empty" class="helper">Add an enhancement to start. Output settings stay separate.</p>
+    <p class="helper">Later enabled enhancements override shared adjustments.</p><div class="component-actions"><button id="add-enhancement">Add enhancement</button><button id="create-enhancement">Create new enhancement</button></div>
+    <p id="upscale-note" class="helper" hidden>Choose a larger resolution in Output to use upscaling detail.</p>
+    <p id="library-status" class="helper" role="status">Loading saved enhancements...</p><button id="retry-library" hidden>Retry saved library</button>
+    <section id="enhancement-library" class="component-panel" hidden><div class="section-title"><h3>Add enhancement</h3><button id="close-library">Close</button></div><h4>Built in</h4><div id="builtin-library" class="enhancement-library"></div><h4>Saved enhancements</h4><div id="saved-library" class="enhancement-library"></div></section>
+    <section id="custom-builder" class="component-panel" hidden><div class="section-title"><h3>Create new enhancement</h3><button id="cancel-custom">Cancel</button></div><label class="field">Name<input id="custom-name" type="text" maxlength="120" placeholder="My enhancement"></label><p class="helper">Choose only the adjustments this enhancement should control.</p><div id="custom-groups" class="adjustment-groups"></div><button id="create-custom" class="primary">Create enhancement</button></section>
+    <div id="editor-home" hidden><div id="component-editor" class="component-editor" hidden><label class="field">Name for this video<input id="component-name" type="text" maxlength="120"></label><p class="helper">Changes affect this video's copy. Save a new enhancement to reuse them.</p>
+<section class="section" id="edit-group-upscale" hidden><h3>Upscaling detail</h3>      <div class="row"><label class="field">Upscale method<select id="upscale_method"><option value="vsr">Video Super Resolution</option><option value="lightweight">Lightweight Upscale</option></select></label><label class="field">VSR quality<select id="quality"><optgroup label="Standard"><option value="0">Bicubic · no AI</option><option value="1">Low · fastest</option><option value="2">Medium</option><option value="3">High</option><option value="4" selected>Ultra · most detail</option></optgroup><optgroup label="High bitrate"><option value="16">High bitrate · low</option><option value="17">High bitrate · medium</option><option value="18">High bitrate · high</option><option value="19">High bitrate · ultra</option></optgroup><optgroup label="Streaming"><option value="21">Streaming · medium</option><option value="23">Streaming · ultra</option></optgroup></select></label></div>
+      <div class="sliders" id="upscale-controls"></div><p class="helper">Choose a larger resolution in Output to use upscaling detail.</p></section>
+<section class="section" id="edit-group-denoise" hidden><h3>Noise reduction</h3><div class="sliders" id="denoise-controls"></div><label class="field">VSR denoise quality<select id="denoise_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label></section>
+<section class="section" id="edit-group-deblur" hidden><h3>Deblur</h3><div class="sliders" id="deblur-controls"></div><label class="field">VSR deblur quality<select id="deblur_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label></section>
+<section class="section" id="edit-group-sharpen" hidden><h3>Sharpening</h3><div class="sliders" id="sharpen-controls"></div><p class="helper">Too much sharpening can create halos.</p></section>
+<section class="section" id="edit-group-contrast" hidden><h3>Contrast</h3><div class="sliders" id="contrast-controls"></div></section>
+<section class="section" id="edit-group-vibrance" hidden><h3>Vibrance</h3><div class="sliders" id="vibrance-controls"></div></section>
+<section class="section" id="edit-group-saturation" hidden><h3>Saturation</h3><div class="sliders" id="saturation-controls"></div></section>
+<section class="section" id="edit-group-exposure" hidden><h3>Exposure</h3><div class="sliders" id="exposure-controls"></div></section>
+<section class="section" id="edit-group-warmth" hidden><h3>Warmth</h3><div class="sliders" id="warmth-controls"></div></section>
+<section class="section" id="edit-group-temporal" hidden><h3>Temporal denoising</h3><label class="field" style="margin-top:17px">Temporal denoising · sources up to 1920 × 1080<select id="temporal_denoise"><option value="">Off</option><option value="0">Weak</option><option value="1">Strong</option></select></label></section>
+<section class="section" id="edit-group-hdr" hidden><h3>SDR to HDR</h3><label class="check"><input id="hdr_enabled" type="checkbox">Convert SDR to HDR10</label><fieldset id="hdr-settings" aria-label="TrueHDR settings" disabled><div class="sliders" id="hdr-controls"></div><label class="check"><input id="hdr_debanding" type="checkbox" checked>Use TrueHDR debanding</label></fieldset><p class="helper">Uses the SDK's 8-bit SDR input and exports 10-bit HEVC HDR10. Requires an HDR display for correct playback. Debanding is part of this conversion; it cannot recover detail lost to source compression.</p></section>
+<section class="section" id="edit-group-portrait" hidden><h3>Portrait background</h3><div class="row"><label class="field">Background effect<select id="portrait_mode"><option value="off">Off</option><option value="blur">Blur background</option><option value="replace">Replace with colour</option><option value="mask">Export person mask</option></select></label><label class="field">Segmentation quality<select id="segmentation_mode"><option value="0">Quality · keep chairs</option><option value="1">Performance · keep chairs</option><option value="2">Quality · remove chairs</option><option value="3">Performance · remove chairs</option></select></label></div><div class="sliders" id="portrait-controls"></div><label class="field" style="margin-top:17px">Replacement colour<input id="background_color" type="color" value="#00b140"></label><p class="helper">Designed for people in sources at least 512 × 288. Mask export saves a grayscale video with white foreground and black background.</p></section>
+<section class="section" id="edit-group-relighting" hidden><h3>Portrait relighting</h3><div class="row"><label class="field">Relighting effect<select id="relighting_mode"><option value="off">Off</option><option value="relighting">Relighting</option><option value="aigs">Relighting + HDR background</option></select></label><label class="field">Quality<select id="relighting_quality"><option value="0">Quality</option><option value="1" selected>Performance</option><option value="2">Quality + HDRI blur</option><option value="3">Performance + HDRI blur</option></select></label></div><div class="asset-picker"><button id="choose-hdri" type="button">Choose HDR environment</button><button id="clear-hdri" type="button" disabled>Clear</button><span class="asset-name" id="hdri-name">No environment selected</span></div><fieldset id="relighting-settings" aria-label="Relighting settings" disabled><div class="sliders" id="relighting-controls"></div><label class="check"><input id="environment_background" type="checkbox">Use HDR environment as the background</label></fieldset><p class="helper">Uses the selected HDR environment to light the person. The combined SDK effect uses the HDR environment background; its blur modes blur that background. Choose Relighting to preserve the source backdrop or apply a portrait background effect. Sources must be at least 512 × 288. Use either the environment background or a portrait background effect; disable one before rendering.</p></section>
+    <div class="component-actions"><button id="save-as-enhancement">Save as enhancement</button><button id="close-component">Done</button></div>
+    <div id="save-enhancement-panel" class="component-panel" hidden><label class="field">New library name<input id="save-enhancement-name" type="text" maxlength="120"></label><div class="component-actions"><button id="save-enhancement" class="primary">Save new enhancement</button><button id="cancel-save-enhancement">Cancel</button></div></div>
+    </div></div>
+  </section>
     <section class="section"><div class="section-title"><h3>Output</h3><small>Preserve aspect ratio</small></div>
       <div class="row"><label class="field">Resolution<select id="scale"><option value="1">Original resolution</option><option value="1.3333333333333333">1⅓× resolution</option><option value="1.5">1.5× resolution</option><option value="2">2× resolution</option><option value="3">3× resolution</option><option value="4">4× resolution</option></select></label><label class="field">Frame rate<select id="target_fps"><option value="">Original FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select></label></div>
-      <div class="row"><label class="field">Upscale method<select id="upscale_method"><option value="vsr">Video Super Resolution</option><option value="lightweight">Lightweight Upscale</option></select></label><label class="field">VSR quality<select id="quality"><optgroup label="Standard"><option value="0">Bicubic · no AI</option><option value="1">Low · fastest</option><option value="2">Medium</option><option value="3">High</option><option value="4" selected>Ultra · most detail</option></optgroup><optgroup label="High bitrate"><option value="16">High bitrate · low</option><option value="17">High bitrate · medium</option><option value="18">High bitrate · high</option><option value="19">High bitrate · ultra</option></optgroup><optgroup label="Streaming"><option value="21">Streaming · medium</option><option value="23">Streaming · ultra</option></optgroup></select></label></div>
-      <div class="sliders" id="upscale-controls"></div>
       <p class="helper">Higher FPS uses NVIDIA AI frame generation. Maximum output: 4096 pixels per side.</p>
       <details style="margin-top:17px"><summary>Frame generation & encoding</summary><div class="row"><label class="field">Frame generation quality<select id="frame_quality"><option value="0">Low</option><option value="1" selected>Medium</option><option value="2">High</option></select></label><label class="field">Output encoding<select id="output_encoding"><option value="h264">H.264 · 8-bit SDR</option><option value="hevc10">HEVC · 10-bit</option></select></label></div>
       <label class="check"><input id="detect_scene_changes" type="checkbox" checked>Detect scene changes before generating frames</label>
-      <div class="row"><label class="field">Encoder preset<select id="encoder_preset"><option value="1">P1 · fastest</option><option value="2">P2</option><option value="3">P3</option><option value="4" selected>P4 · balanced</option><option value="5">P5</option><option value="6">P6</option><option value="7">P7 · best compression</option></select></label><label class="field">Encoder quality · 0–51<input id="encoder_quality" type="number" min="0" max="51" step="1" value="19" required></label></div><p class="helper">Encoder quality 1–51: lower retains more detail and uses more space. 0 selects automatic quality. 10-bit output preserves finer colour steps; it does not recover missing source detail.</p><p class="helper" id="precision-note" hidden>10-bit SDR supports VSR, frame generation and colour controls. Lightweight Upscale, temporal denoising, sharpening and portrait effects use 8-bit SDR and are disabled.</p></details>
+      <div class="row"><label class="field">Encoder preset<select id="encoder_preset"><option value="1">P1 · fastest</option><option value="2">P2</option><option value="3">P3</option><option value="4" selected>P4 · balanced</option><option value="5">P5</option><option value="6">P6</option><option value="7">P7 · best compression</option></select></label><label class="field">Encoder quality · 0–51<input id="encoder_quality" type="number" min="0" max="51" step="1" value="19" required></label></div><p class="helper">Encoder quality 1–51: lower retains more detail and uses more space. 0 selects automatic quality. 10-bit output preserves finer colour steps; it does not recover missing source detail.</p></details>
     </section>
-    <section class="section"><div class="section-title"><h3>Detail & cleanup</h3><small>NVIDIA</small></div><div class="sliders" id="detail-controls"></div><div class="row"><label class="field">VSR denoise quality<select id="denoise_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label><label class="field">VSR deblur quality<select id="deblur_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label></div><label class="field" style="margin-top:17px">Temporal denoising · sources up to 1920 × 1080<select id="temporal_denoise"><option value="">Off</option><option value="0">Weak</option><option value="1">Strong</option></select></label><p class="helper">Temporal denoising uses nearby frames. VSR cleanup and temporal denoising can be combined. Too much sharpening can create halos.</p></section>
-    <section class="section"><div class="section-title"><h3>Colour & tone</h3><small>SDR</small></div><div class="sliders" id="colour-controls"></div></section>
-    <section class="section"><details><summary>TrueHDR · SDR to HDR10</summary><label class="check"><input id="hdr_enabled" type="checkbox">Convert SDR to HDR10</label><fieldset id="hdr-settings" aria-label="TrueHDR settings" disabled><div class="sliders" id="hdr-controls"></div><label class="check"><input id="hdr_debanding" type="checkbox" checked>Use TrueHDR debanding</label></fieldset><p class="helper">Uses the SDK's 8-bit SDR input and exports 10-bit HEVC HDR10. Requires an HDR display for correct playback. Debanding is part of this conversion; it cannot recover detail lost to source compression.</p></details></section>
-    <section class="section"><details><summary>Portrait background</summary><div class="row"><label class="field">Background effect<select id="portrait_mode"><option value="off">Off</option><option value="blur">Blur background</option><option value="replace">Replace with colour</option><option value="mask">Export person mask</option></select></label><label class="field">Segmentation quality<select id="segmentation_mode"><option value="0">Quality · keep chairs</option><option value="1">Performance · keep chairs</option><option value="2">Quality · remove chairs</option><option value="3">Performance · remove chairs</option></select></label></div><div class="sliders" id="portrait-controls"></div><label class="field" style="margin-top:17px">Replacement colour<input id="background_color" type="color" value="#00b140"></label><p class="helper">Designed for people in sources at least 512 × 288. Mask export saves a grayscale video with white foreground and black background.</p></details></section>
-    <section class="section"><details><summary>Portrait relighting</summary><div class="row"><label class="field">Relighting effect<select id="relighting_mode"><option value="off">Off</option><option value="relighting">Relighting</option><option value="aigs">Relighting + HDR background</option></select></label><label class="field">Quality<select id="relighting_quality"><option value="0">Quality</option><option value="1" selected>Performance</option><option value="2">Quality + HDRI blur</option><option value="3">Performance + HDRI blur</option></select></label></div><div class="asset-picker"><button id="choose-hdri" type="button">Choose HDR environment</button><button id="clear-hdri" type="button" disabled>Clear</button><span class="asset-name" id="hdri-name">No environment selected</span></div><fieldset id="relighting-settings" aria-label="Relighting settings" disabled><div class="sliders" id="relighting-controls"></div><label class="check"><input id="environment_background" type="checkbox">Use HDR environment as the background</label></fieldset><p class="helper">Uses the selected HDR environment to light the person. The combined SDK effect uses the HDR environment background; its blur modes blur that background. Choose Relighting to preserve the source backdrop or apply a portrait background effect. Sources must be at least 512 × 288. An environment background replaces the portrait background effect.</p></details></section>
+
+  <p id="compatibility-errors" class="helper error" role="status" hidden></p>
 </fieldset></div><div class="footer"><span class="summary" id="summary">Waiting for a video</span><button id="generate" class="generate" disabled>Export full video →</button></div></section>
 </main>
 <footer id="job-status" class="job-status" hidden><div class="job-message"><progress id="progress" max="1" value="0" hidden></progress><div id="status" role="status" aria-live="polite"></div></div><button id="cancel" hidden>Cancel</button></footer>
+<script src="enhancements.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
-let source=null, busy=false, downloading=false, hdri=null;
+let source=null, busy=false, downloading=false;
+let components=[], editingId=null, nextComponentId=1, savedTemplates=[], pendingTemplates=null, libraryLoaded=false;
+const componentRows=new Map(), customGroupInputs=new Map();
 let sampleSelection=null, sampleMedia=null, enhancedMedia=null, exportMedia=null, renderedJob=null, renderingJob=null, pendingJob=null;
 let sampleBusy=false, sampleMessage='';
 let viewerKind='full', pair=[null,null], comparisonFiles=[null,null], playing=false, playRevision=0, pan={x:0,y:0};
@@ -183,8 +207,8 @@ for(const index of [0,1])$(`comparison-file-${index+1}`).onchange=event=>{const 
 $('comparison-clear').onclick=()=>{pauseViewer();for(const [index,media] of comparisonFiles.entries()){if(media)URL.revokeObjectURL(media.url);$(`comparison-file-${index+1}`).value='';}comparisonFiles=[null,null];showPage('files');};
 requestAnimationFrame(animateViewer);
 const specs = [
-  ['denoise','VSR denoise',0,1,0.05,'detail-controls'],['deblur','VSR deblur',0,1,0.05,'detail-controls'],['sharpening','Sharpening',0,2,0.05,'detail-controls'],
-  ['contrast','Contrast',0.5,1.5,0.01,'colour-controls'],['vibrance','Vibrance',-1,1,0.01,'colour-controls'],['saturation','Saturation',0,2,0.01,'colour-controls'],['exposure','Exposure',-2,2,0.05,'colour-controls'],['warmth','Warmth',-1,1,0.01,'colour-controls']
+  ['denoise','VSR denoise',0,1,0.05,'denoise-controls'],['deblur','VSR deblur',0,1,0.05,'deblur-controls'],['sharpening','Sharpening',0,2,0.05,'sharpen-controls'],
+  ['contrast','Contrast',0.5,1.5,0.01,'contrast-controls'],['vibrance','Vibrance',-1,1,0.01,'vibrance-controls'],['saturation','Saturation',0,2,0.01,'saturation-controls'],['exposure','Exposure',-2,2,0.05,'exposure-controls'],['warmth','Warmth',-1,1,0.01,'warmth-controls']
 ];
 const advancedSpecs = [
   ['upscale_strength','Upscale strength',0,1,0.05,'upscale-controls'],
@@ -192,14 +216,8 @@ const advancedSpecs = [
   ['blur_strength','Background blur',0,1,0.05,'portrait-controls'],
   ['relighting_pan','Environment pan · °',-180,180,1,'relighting-controls'],['relighting_field_of_view','Field of view · °',1,179,1,'relighting-controls'],['relighting_foreground_gain','Foreground gain',0,4,0.05,'relighting-controls'],['relighting_background_gain','Background gain',0,4,0.05,'relighting-controls'],['relighting_specularity','Specularity',0,1,0.05,'relighting-controls'],['relighting_blur_strength','Relighting background blur',0,2,0.05,'relighting-controls']
 ];
-const defaults = {scale:1,quality:4,upscale_method:'vsr',upscale_strength:1,target_fps:'',frame_quality:1,output_encoding:'h264',encoder_preset:4,encoder_quality:19,denoise:0,denoise_quality:0,deblur:0,deblur_quality:0,contrast:1,saturation:1,vibrance:0,exposure:0,warmth:0,sharpening:0,temporal_denoise:'',portrait_mode:'off',segmentation_mode:0,blur_strength:0.5,background_color:'#00b140',relighting_mode:'off',relighting_quality:1,relighting_pan:0,relighting_field_of_view:60,relighting_foreground_gain:1,relighting_background_gain:1,relighting_specularity:0,relighting_blur_strength:0.5,hdr_contrast:100,hdr_saturation:100,hdr_middle_gray:50,hdr_max_luminance:650,hdr_enabled:false,hdr_debanding:true,detect_scene_changes:true,environment_background:false};
-const presets=[
- ['Clean footage','Sharp camera footage and clean, detailed recordings.','High-Bitrate Ultra preserves existing detail while enlarging. No extra denoise, deblur or sharpening.',{quality:19}],
- ['Clean + colour','Clean footage with richer colour and crisper detail.','Clean footage upscaling with a stronger Colour lift look and gentle sharpening. Adds contrast, vibrance and saturation without lifting exposure. Uses high-quality 8-bit H.264 because sharpening needs 8-bit processing.',{quality:19,contrast:1.08,vibrance:0.3,saturation:1.06,sharpening:0.15,output_encoding:'h264'}],
- ['Compressed footage','Downloads with visible compression artifacts.','Standard Ultra reduces compression artifacts while enlarging. Extra denoise and deblur stay off to avoid smoothing texture or emphasizing damaged edges.',{quality:4}],
- ['Soft footage','Clean footage with mild focus or lens softness.','High-Bitrate Ultra with gentle, medium-mode deblur. Use for slight softness; severe motion blur and heavily compressed footage need a different treatment.',{quality:19,deblur:0.15,deblur_quality:1}],
- ['Noisy footage','Low-light digital footage with visible noise.','Standard Ultra with restrained, medium-mode VSR denoise. Check fine textures in the preview; avoid this preset when you want to preserve intentional film grain.',{quality:4,denoise:0.2,denoise_quality:1}]
-];
+const defaults=Enhancements.defaults;
+const outputFields=['scale','target_fps','frame_quality','detect_scene_changes','output_encoding','encoder_preset','encoder_quality'];
 for(const [id,label,min,max,step,group] of [...specs,...advancedSpecs]){
  const wrapper=document.createElement('div');
  wrapper.innerHTML=`<div class="slider-head"><label for="${id}">${label}</label><output id="${id}-value" for="${id}"></output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
@@ -207,46 +225,106 @@ for(const [id,label,min,max,step,group] of [...specs,...advancedSpecs]){
  $(id).addEventListener('input',()=>displayValue(id));
 }
 function displayValue(id){const value=Number($(id).value);$(id+'-value').textContent=id==='exposure'?`${value.toFixed(2)} EV`:Number($(id).step)>=1?String(value):value.toFixed(2);}
-function showPreset(name,description){
- $('preset-label').textContent=name;$('preset-description').textContent=description;
- for(const button of $('presets').children){const selected=button.dataset.preset===name;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
+function readSetting(id){const control=$(id);return control.type==='checkbox'?control.checked:typeof defaults[id]==='number'||(['target_fps','temporal_denoise'].includes(id)&&control.value!=='')?Number(control.value):control.value;}
+function currentSettings(){const settings=Enhancements.compose(components);for(const id of outputFields)settings[id]=readSetting(id);return settings;}
+function selectedComponent(){return components.find(component=>component.id===editingId);}
+function fieldLabel(id){return [...specs,...advancedSpecs].find(spec=>spec[0]===id)?.[1]||({quality:'VSR quality',upscale_method:'Upscale method',denoise_quality:'Denoise quality',deblur_quality:'Deblur quality',temporal_denoise:'Temporal denoising',hdr_enabled:'HDR conversion',hdr_debanding:'HDR debanding',portrait_mode:'Portrait background',segmentation_mode:'Segmentation quality',background_color:'Background colour',relighting_mode:'Relighting',relighting_quality:'Relighting quality',hdri:'HDR environment',environment_background:'Environment background'})[id]||id;}
+function settingText(id,value){if(id==='hdri')return value?value.split(/[\\/]/).pop():'None';if(typeof value==='boolean')return value?'On':'Off';const control=$(id);if(control.tagName==='SELECT')return [...control.options].find(option=>option.value===String(value))?.textContent||String(value);return String(value);}
+function componentSummary(settings){return Enhancements.groups.filter(group=>group.fields.some(field=>Object.hasOwn(settings,field))).map(group=>{const field=group.fields.find(field=>Object.hasOwn(settings,field)&&settings[field]!==defaults[field])||group.fields.find(field=>Object.hasOwn(settings,field));return `${fieldLabel(field)}: ${settingText(field,settings[field])}`;}).join(' · ');}
+function setLibraryStatus(text,error=false){$('library-status').textContent=text;$('library-status').classList.toggle('error',error);}
+function updateAppliedSummaries(){
+ const overlaps=Enhancements.overlaps(components);
+ for(const component of components){const row=componentRows.get(component.id);if(!row)continue;row.name.textContent=component.name;row.enabled.setAttribute('aria-label',`Enable ${component.name}`);row.edit.setAttribute('aria-label',`Edit ${component.name}`);row.remove.setAttribute('aria-label',`Remove ${component.name}`);row.summary.textContent=componentSummary(component.settings);row.overlap.textContent=overlaps[component.id].length?'Overridden later: '+overlaps[component.id].map(fieldLabel).join(', '):'';row.overlap.hidden=!row.overlap.textContent;}
+ $('component-count').textContent=components.length?`${components.filter(component=>component.enabled).length} enabled`:'None';$('components-empty').hidden=components.length>0;
 }
-function markCustom(){showPreset('Custom','Settings changed. Render a preview to inspect your adjustments.');}
-function applySettings(settings,replace=true){
- for(const [id,value] of Object.entries(replace?{...defaults,...settings}:settings)){if($(id).type==='checkbox')$(id).checked=value;else $(id).value=value;}
- for(const [id] of [...specs,...advancedSpecs])displayValue(id);
- if(replace){hdri=null;$('hdri-name').textContent='No environment selected';}
- applyOutputFormat();
-}
-function setPresetStacking(enabled){$('stack-presets').setAttribute('aria-pressed',String(enabled));$('stack-presets').textContent=`Stack presets: ${enabled?'on':'off'}`;}
-$('stack-presets').onclick=()=>setPresetStacking($('stack-presets').getAttribute('aria-pressed')!=='true');
-function applyPreset(name,useCase,description,settings){
- if($('stack-presets').getAttribute('aria-pressed')==='true'){
-  applySettings(settings,false);
-  showPreset('Stacked',`${name} added to your current settings. Shared adjustments use this preset's values. Render a preview to inspect the combination.`);
-  return;
+function refreshComponents(){updateAppliedSummaries();updateState();}
+function renderApplied(){
+ const editor=$('component-editor');$('editor-home').append(editor);$('applied-enhancements').replaceChildren();componentRows.clear();
+ for(const component of components){
+  const item=document.createElement('div');item.className='applied-enhancement';
+  const row=document.createElement('div');row.className='component-row';
+  const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=component.enabled;enabled.setAttribute('aria-label',`Enable ${component.name}`);enabled.onchange=()=>{component.enabled=enabled.checked;refreshComponents();};
+  const info=document.createElement('div');info.className='component-info';const name=document.createElement('strong'),summary=document.createElement('small'),overlap=document.createElement('p');overlap.className='component-overlap';info.append(name,summary,overlap);
+  const edit=document.createElement('button');edit.textContent=component.id===editingId?'Close':'Edit';edit.setAttribute('aria-expanded',String(component.id===editingId));edit.onclick=()=>editComponent(component.id===editingId?null:component.id);
+  const remove=document.createElement('button');remove.textContent='Remove';remove.setAttribute('aria-label',`Remove ${component.name}`);remove.onclick=()=>removeComponent(component.id);
+  row.append(enabled,info,edit,remove);item.append(row);$('applied-enhancements').append(item);componentRows.set(component.id,{name,summary,overlap,enabled,edit,remove});
+  if(component.id===editingId)item.append(editor);
  }
- const scale=[...$('scale').options].findLast(option=>!option.disabled&&Number(option.value)<=2)?.value||'1';
- applySettings({scale,frame_quality:2,output_encoding:'hevc10',encoder_preset:7,encoder_quality:16,...settings});
- const size=scale==='1'?' This source has no supported larger size, so VSR upscaling is skipped.':` Resolution set to ${Number(scale).toLocaleString(undefined,{maximumFractionDigits:2})}×; you can change it below.`;
- showPreset(name,description+size);
+ editor.hidden=!selectedComponent();updateAppliedSummaries();
 }
-function resetSettings(){setPresetStacking(false);applySettings({output_encoding:['yuv420p10le','p010le'].includes(source?.pixel_format)?'hevc10':'h264'});showPreset('No preset','Original resolution and frame rate, with cleanup and colour changes off. Choose a preset to start enhancing.');}
-function isTenBitSdrOutput(){return $('output_encoding').value==='hevc10'&&!$('hdr_enabled').checked;}
-function applyOutputFormat(){
- if($('hdr_enabled').checked)$('output_encoding').value='hevc10';
- if(isTenBitSdrOutput()){for(const id of ['portrait_mode','relighting_mode'])$(id).value='off';$('temporal_denoise').value='';$('upscale_method').value='vsr';$('sharpening').value=0;displayValue('sharpening');}
- updateState();
+function populateEditor(){
+ const component=selectedComponent();if(!component)return;
+ $('component-name').value=component.name;const settings={...defaults,...component.settings};
+ for(const group of Enhancements.groups){$('edit-group-'+group.id).hidden=!group.fields.some(field=>Object.hasOwn(component.settings,field));for(const id of group.fields){if(id==='hdri')continue;if($(id).type==='checkbox')$(id).checked=settings[id];else $(id).value=settings[id];}}
+ for(const [id] of [...specs,...advancedSpecs])displayValue(id);
+ $('hdri-name').textContent=settingText('hdri',settings.hdri);$('save-enhancement-panel').hidden=true;updateEditorState();
 }
+function editComponent(id){const previousId=editingId;editingId=id;renderApplied();populateEditor();updateState();if(selectedComponent())$('component-name').focus();else componentRows.get(previousId)?.edit.focus();}
+function addComponent(template){const copy=Enhancements.sanitizeTemplate(template);components.push({id:'enhancement-'+nextComponentId++,name:copy.name,enabled:true,settings:{...copy.settings}});$('enhancement-library').hidden=true;renderApplied();refreshComponents();return components.at(-1);}
+function removeComponent(id){components=components.filter(component=>component.id!==id);if(editingId===id)editingId=null;renderApplied();refreshComponents();}
+function renderLibrary(){
+ for(const [id,templates] of [['builtin-library',Enhancements.builtins],['saved-library',savedTemplates]]){
+  $(id).replaceChildren();
+  for(const template of templates){const button=document.createElement('button'),name=document.createElement('strong'),summary=document.createElement('small');name.textContent=template.name;summary.textContent=componentSummary(template.settings);button.append(name,summary);button.onclick=()=>addComponent(template);$(id).append(button);}
+  if(!templates.length){const empty=document.createElement('p');empty.className='helper';empty.textContent=libraryLoaded?'No saved enhancements yet.':'Saved library is not loaded.';$(id).append(empty);}
+ }
+}
+function resetSettings(){
+ components=[];editingId=null;$('enhancement-library').hidden=true;$('custom-builder').hidden=true;
+ for(const id of outputFields){const value=id==='output_encoding'&&['yuv420p10le','p010le'].includes(source?.pixel_format)?'hevc10':defaults[id];if($(id).type==='checkbox')$(id).checked=value;else $(id).value=value;}
+ renderApplied();updateState();
+}
+function updateEditorState(){
+ const settings={...defaults,...selectedComponent()?.settings},relighting=settings.relighting_mode!=='off',combined=settings.relighting_mode==='aigs';
+ $('quality').disabled=settings.upscale_method!=='vsr';$('denoise_quality').disabled=settings.denoise===0;$('deblur_quality').disabled=settings.deblur===0;
+ $('blur_strength').disabled=settings.portrait_mode!=='blur';$('background_color').disabled=settings.portrait_mode!=='replace';
+ $('relighting_quality').disabled=!combined;$('relighting_specularity').disabled=!combined;$('relighting_blur_strength').disabled=!combined||settings.relighting_quality<2;
+ $('relighting-settings').disabled=!relighting;$('choose-hdri').disabled=!relighting;$('clear-hdri').disabled=!settings.hdri;
+ $('relighting_field_of_view').disabled=!settings.environment_background;$('relighting_background_gain').disabled=!settings.environment_background;
+ $('hdr-settings').disabled=!settings.hdr_enabled;
+}
+function compatibilityErrors(settings=currentSettings()){
+ const errors=[],tenBitSdr=settings.output_encoding==='hevc10'&&!settings.hdr_enabled;
+ if(settings.hdr_enabled&&settings.output_encoding!=='hevc10')errors.push('SDR to HDR requires HEVC · 10-bit in Output.');
+ if(tenBitSdr&&(settings.temporal_denoise!==''||settings.portrait_mode!=='off'||settings.relighting_mode!=='off'||settings.sharpening!==0||(settings.upscale_method==='lightweight'&&settings.scale>1)))errors.push('10-bit SDR cannot use sharpening, temporal denoising, portrait effects or lightweight upscaling. Choose H.264 in Output or disable those enhancements.');
+ if(source&&(source.width<512||source.height<288)&&(settings.portrait_mode!=='off'||settings.relighting_mode!=='off'))errors.push('Portrait effects require a source of at least 512 × 288. Disable those enhancements for this video.');
+ if(source&&settings.temporal_denoise!==''&&(source.height<80||source.height>1080||source.width>1920))errors.push('Temporal denoising requires a source height of 80–1080 pixels and width up to 1920. Disable it for this video.');
+ if(settings.relighting_mode!=='off'){
+  if(!settings.hdri)errors.push('Choose an HDR environment in the relighting enhancement.');
+  if(settings.environment_background&&settings.portrait_mode!=='off')errors.push('Use either the relighting environment background or a portrait background effect. Disable one of them.');
+  if(settings.relighting_mode==='aigs'&&!settings.environment_background)errors.push('Relighting + HDR background requires Use HDR environment as the background in that enhancement.');
+ }
+ return errors;
+}
+$('add-enhancement').onclick=()=>{$('enhancement-library').hidden=!$('enhancement-library').hidden;$('custom-builder').hidden=true;};
+$('close-library').onclick=()=>{$('enhancement-library').hidden=true;};
+$('create-enhancement').onclick=()=>{$('custom-builder').hidden=false;$('enhancement-library').hidden=true;};
+$('cancel-custom').onclick=()=>{$('custom-builder').hidden=true;};
+for(const group of Enhancements.groups){const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span');input.type='checkbox';input.value=group.id;text.textContent=group.label;label.append(input,text);$('custom-groups').append(label);customGroupInputs.set(group.id,input);}
+$('create-custom').onclick=()=>{
+ const settings={};for(const group of Enhancements.groups)if(customGroupInputs.get(group.id).checked)for(const field of group.fields)settings[field]=defaults[field];
+ try{const component=addComponent({name:$('custom-name').value,settings});$('custom-builder').hidden=true;$('custom-name').value='';for(const input of customGroupInputs.values())input.checked=false;setLibraryStatus('Enhancement added to this video.');editComponent(component.id);}catch(error){setLibraryStatus(error.message,true);}
+};
+$('component-name').oninput=()=>{const component=selectedComponent();if(component){component.name=$('component-name').value;updateAppliedSummaries();}};
+for(const group of Enhancements.groups)for(const id of group.fields){if(id==='hdri')continue;$(id).addEventListener('input',()=>{const component=selectedComponent();if(!component||!group.fields.some(field=>Object.hasOwn(component.settings,field)))return;component.settings[id]=readSetting(id);updateEditorState();refreshComponents();});}
+$('close-component').onclick=()=>editComponent(null);
+$('save-as-enhancement').onclick=()=>{const component=selectedComponent();if(!component||!libraryLoaded||pendingTemplates)return;$('save-enhancement-name').value=component.name+' copy';$('save-enhancement-panel').hidden=false;};
+$('cancel-save-enhancement').onclick=()=>{$('save-enhancement-panel').hidden=true;};
+$('save-enhancement').onclick=()=>{
+ if(!libraryLoaded||pendingTemplates||!selectedComponent())return;
+ try{const template=Enhancements.sanitizeTemplate({name:$('save-enhancement-name').value,settings:selectedComponent().settings});if([...Enhancements.builtins,...savedTemplates].some(item=>item.name.toLowerCase()===template.name.toLowerCase()))throw new Error('Choose a new library name. Existing enhancements are never overwritten.');pendingTemplates=[...savedTemplates,template];send('save-enhancement-library',{templates:pendingTemplates});setLibraryStatus('Saving new enhancement…');updateState();}catch(error){setLibraryStatus(error.message,true);}
+};
+$('retry-library').onclick=()=>{setLibraryStatus('Loading saved enhancements…');send('load-enhancement-library');};
 function updateState(){
+ const effective=currentSettings(),errors=compatibilityErrors(effective);
  $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);
  for(const id of ['load','download-load','empty-load'])$(id).disabled=busy;
- $('reset').disabled=!source||busy;$('generate').disabled=!source||busy;$('generate').hidden=viewerKind!=='full';$('cancel').hidden=!busy;
+ $('reset').disabled=!source||busy;$('generate').disabled=!source||busy||errors.length>0;$('generate').hidden=viewerKind!=='full';$('cancel').hidden=!busy;
  $('download-settings').disabled=busy;$('download').disabled=busy;$('download-timings').disabled=!$('download-specific-timings').checked;
  $('download').textContent=$('download-specific-timings').checked?'Download clip':'Download video';
  $('preview-range').disabled=!source||busy||!(source.duration>=1);
- $('sample-render').disabled=!source||busy||!(source.duration>=1);
- $('sample-rerender').disabled=!sampleMedia||busy;
+ $('sample-render').disabled=!source||busy||errors.length>0||!(source.duration>=1);
+ $('sample-rerender').disabled=!sampleMedia||busy||errors.length>0;
  $('open-source').disabled=!source||busy;$('open-source').hidden=viewerKind!=='full';
  $('sample-external').hidden=!enhancedMedia||viewerKind!=='sample';$('sample-external').disabled=busy;
  for(const id of ['open-output','show-output']){$(id).hidden=!exportMedia||viewerKind!=='full';$(id).disabled=busy;}
@@ -254,26 +332,11 @@ function updateState(){
  $('sample-status').textContent=sampleBusy?sampleMessage:enhancedMedia?(sampleMatchesSelection()&&renderedJob===JSON.stringify(buildJob())?'Preview matches your current settings.':'Settings or range changed. Render again to update the preview.'):'Drag the range handles to select 1–15 seconds.';
  $('preview-status').textContent=sampleMessage||(enhancedMedia?(renderedJob===JSON.stringify(buildJob())?'Preview matches your current settings.':'Settings changed. Render again to update this preview.'):sampleMedia?'Adjust your settings, then render this preview.':'Choose a range in Full video, then render a preview.');
  $('preview-description').textContent=sampleMedia?`${timeText(sampleSelection.start)} — ${timeText(sampleSelection.start+(sampleMedia.actual_duration||sampleSelection.duration))} of ${source.name}`:'Choose a range in Full video to prepare a preview.';
- const portraitTooSmall=source&&(source.width<512||source.height<288);
- if(portraitTooSmall){$('portrait_mode').value='off';$('relighting_mode').value='off';}
- const tenBitSdr=isTenBitSdrOutput(),scaling=$('scale').value!=='1',relighting=$('relighting_mode').value!=='off',combined=$('relighting_mode').value==='aigs';
- const combinedBlur=combined&&Number($('relighting_quality').value)>=2;
- if(combined)$('environment_background').checked=true;
- $('environment_background').disabled=combined;
- if(relighting&&$('environment_background').checked)$('portrait_mode').value='off';
- const portrait=$('portrait_mode').value,unsupportedDenoiseSize=source&&(source.height<80||source.height>1080||source.width>1920);
- if(unsupportedDenoiseSize)$('temporal_denoise').value='';
- $('quality').disabled=!scaling||$('upscale_method').value!=='vsr';$('upscale_method').disabled=!scaling||tenBitSdr;$('upscale_strength').disabled=!scaling;
  $('frame_quality').disabled=!$('target_fps').value;$('detect_scene_changes').disabled=!$('target_fps').value;
- $('denoise_quality').disabled=Number($('denoise').value)===0;$('deblur_quality').disabled=Number($('deblur').value)===0;
- $('sharpening').disabled=tenBitSdr;
- $('temporal_denoise').disabled=tenBitSdr||unsupportedDenoiseSize;
- $('portrait_mode').disabled=tenBitSdr||portraitTooSmall||(relighting&&$('environment_background').checked);$('relighting_mode').disabled=tenBitSdr||portraitTooSmall;
- $('segmentation_mode').disabled=combined||(portrait==='off'&&!relighting);$('blur_strength').disabled=portrait!=='blur';$('background_color').disabled=portrait!=='replace';$('relighting_blur_strength').disabled=!combinedBlur;
- $('relighting_quality').disabled=!combined;$('relighting_specularity').disabled=!combined;$('relighting-settings').disabled=!relighting;$('choose-hdri').disabled=!relighting;$('clear-hdri').disabled=!relighting||!hdri;
- $('relighting_field_of_view').disabled=!$('environment_background').checked;$('relighting_background_gain').disabled=!$('environment_background').checked;
- $('hdr-settings').disabled=!$('hdr_enabled').checked;$('output_encoding').disabled=$('hdr_enabled').checked;$('precision-note').hidden=!tenBitSdr;
- if(source){const scale=Number($('scale').value),format=$('hdr_enabled').checked?'HDR10':tenBitSdr?'10-bit SDR':'SDR';$('summary').textContent=`${Math.round(source.width*scale)} × ${Math.round(source.height*scale)} · ${$('target_fps').value || 'Original'} FPS · ${format}`;}
+ $('compatibility-errors').textContent=errors.join('\n');$('compatibility-errors').hidden=!errors.length;
+ $('save-as-enhancement').disabled=!libraryLoaded||!!pendingTemplates;$('save-enhancement').disabled=!libraryLoaded||!!pendingTemplates;$('retry-library').hidden=libraryLoaded;
+ $('upscale-note').hidden=effective.scale>1||!components.some(component=>component.enabled&&Enhancements.groups[0].fields.some(field=>Object.hasOwn(component.settings,field)));
+ if(source){const format=effective.hdr_enabled?'HDR10':effective.output_encoding==='hevc10'?'10-bit SDR':'SDR';$('summary').textContent=`${Math.round(source.width*effective.scale)} × ${Math.round(source.height*effective.scale)} · ${effective.target_fps||'Original'} FPS · ${format}`;}
  else $('summary').textContent='Waiting for a video';
  updateRangeLabels();
 }
@@ -315,22 +378,22 @@ $('load').onclick=()=>send('load');
 $('empty-load').onclick=()=>{if(viewerKind==='sample')showPage('full');else if(viewerKind==='files')$('comparison-file-1').click();else send('load');};
 $('download-load').onclick=()=>send($('download-load').dataset.ready?'load-downloaded':'load');
 $('reset').onclick=resetSettings;
-for(const id of ['scale','target_fps','upscale_method','portrait_mode','relighting_mode','relighting_quality'])$(id).onchange=updateState;
-for(const id of ['output_encoding','hdr_enabled'])$(id).onchange=applyOutputFormat;
-$('environment_background').onchange=updateState;$('choose-hdri').onclick=()=>send('choose-hdri');$('clear-hdri').onclick=()=>{hdri=null;$('hdri-name').textContent='No environment selected';markCustom();updateState();};
+for(const id of outputFields)$(id).addEventListener('input',updateState);
+$('choose-hdri').onclick=()=>{if(editingId)send('choose-hdri',{component_id:editingId});};
+$('clear-hdri').onclick=()=>{const component=selectedComponent();if(component){component.settings.hdri=null;$('hdri-name').textContent='No environment selected';updateEditorState();refreshComponents();}};
 $('cancel').onclick=()=>{pendingJob=null;send('cancel');$('cancel').disabled=true;message(downloading?'Stopping download…':'Stopping after the current operation…');};
 function buildJob(){
- const number=id=>Number($(id).value),enhancements=Object.fromEntries(specs.map(([id])=>[id,number(id)]));
- enhancements.denoise_quality=number('denoise_quality');enhancements.deblur_quality=number('deblur_quality');
- return {resolution_scale:number('scale'),upscale_method:$('upscale_method').value,upscale_quality:number('quality'),upscale_strength:number('upscale_strength'),target_fps:$('target_fps').value?number('target_fps'):null,enhancements,
-  frame_generation:{quality:number('frame_quality'),detect_scene_changes:$('detect_scene_changes').checked},output_encoding:$('output_encoding').value,encoder:{preset:number('encoder_preset'),quality:number('encoder_quality')},
-  temporal_denoise:$('temporal_denoise').value===''?null:number('temporal_denoise'),
-  hdr:{enabled:$('hdr_enabled').checked,contrast:number('hdr_contrast'),saturation:number('hdr_saturation'),middle_gray:number('hdr_middle_gray'),max_luminance:number('hdr_max_luminance'),debanding:$('hdr_debanding').checked},
-  portrait:{mode:$('portrait_mode').value,segmentation_mode:number('segmentation_mode'),blur_strength:number('blur_strength'),background_color:$('background_color').value.slice(1).match(/../g).map(value=>parseInt(value,16))},
-  relighting:{mode:$('relighting_mode').value,hdri,quality:number('relighting_quality'),pan:number('relighting_pan'),field_of_view:number('relighting_field_of_view'),foreground_gain:number('relighting_foreground_gain'),background_gain:number('relighting_background_gain'),specularity:number('relighting_specularity'),blur_strength:number('relighting_blur_strength'),environment_background:$('environment_background').checked}
+ const settings=currentSettings(),enhancements=Object.fromEntries(specs.map(([id])=>[id,settings[id]]));
+ enhancements.denoise_quality=settings.denoise_quality;enhancements.deblur_quality=settings.deblur_quality;
+ return {resolution_scale:settings.scale,upscale_method:settings.upscale_method,upscale_quality:settings.quality,upscale_strength:settings.upscale_strength,target_fps:settings.target_fps||null,enhancements,
+  frame_generation:{quality:settings.frame_quality,detect_scene_changes:settings.detect_scene_changes},output_encoding:settings.output_encoding,encoder:{preset:settings.encoder_preset,quality:settings.encoder_quality},
+  temporal_denoise:settings.temporal_denoise===''?null:settings.temporal_denoise,
+  hdr:{enabled:settings.hdr_enabled,contrast:settings.hdr_contrast,saturation:settings.hdr_saturation,middle_gray:settings.hdr_middle_gray,max_luminance:settings.hdr_max_luminance,debanding:settings.hdr_debanding},
+  portrait:{mode:settings.portrait_mode,segmentation_mode:settings.segmentation_mode,blur_strength:settings.blur_strength,background_color:settings.background_color.slice(1).match(/../g).map(value=>parseInt(value,16))},
+  relighting:{mode:settings.relighting_mode,hdri:settings.hdri,quality:settings.relighting_quality,pan:settings.relighting_pan,field_of_view:settings.relighting_field_of_view,foreground_gain:settings.relighting_foreground_gain,background_gain:settings.relighting_background_gain,specularity:settings.relighting_specularity,blur_strength:settings.relighting_blur_strength,environment_background:settings.environment_background}
  };
 }
-function settingsAreValid(){const quality=$('encoder_quality');if(!quality.checkValidity()){quality.closest('details').open=true;quality.reportValidity();return false;}if($('relighting_mode').value!=='off'&&!hdri){message('Choose an HDR environment for relighting.',true);return false;}return true;}
+function settingsAreValid(){const quality=$('encoder_quality');if(!quality.checkValidity()){quality.closest('details').open=true;quality.reportValidity();return false;}const errors=compatibilityErrors();if(errors.length){message(errors.join('\n'),true);return false;}return true;}
 
 $('generate').onclick=()=>{if(settingsAreValid()){pauseViewer();send('generate',{job:buildJob()});}};
 function renderPreview(currentClip=false){
@@ -342,10 +405,9 @@ function renderPreview(currentClip=false){
 }
 $('sample-render').onclick=()=>renderPreview();$('sample-rerender').onclick=()=>renderPreview(true);
 $('sample-external').onclick=()=>send('open-sample');$('open-source').onclick=()=>send('open-source');$('open-output').onclick=()=>send('open-output');$('show-output').onclick=()=>send('show-output');
-$('settings').addEventListener('input',()=>{markCustom();updateState();});
 window.receive=event=>{
  switch(event.type){
- case 'loading':pauseViewer();source=null;sampleSelection=null;sampleMedia=null;enhancedMedia=null;exportMedia=null;renderedJob=null;pendingJob=null;sampleBusy=false;sampleMessage='';busy=true;delete viewerStates.full;delete viewerStates.sample;showPage('full');$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
+ case 'loading':pauseViewer();source=null;components=[];editingId=null;renderApplied();$('enhancement-library').hidden=true;$('custom-builder').hidden=true;sampleSelection=null;sampleMedia=null;enhancedMedia=null;exportMedia=null;renderedJob=null;pendingJob=null;sampleBusy=false;sampleMessage='';busy=true;delete viewerStates.full;delete viewerStates.sample;showPage('full');$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
  case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
  case 'sample-loading':busy=true;sampleBusy=true;sampleMessage='Preparing your selected range…';$('cancel').disabled=false;$('progress').hidden=true;showPage('sample');message('Preparing preview…');break;
  case 'sample-loaded':busy=!!pendingJob;sampleBusy=!!pendingJob;sampleMessage=pendingJob?'Rendering your settings…':'';sampleSelection={start:event.start,duration:event.duration};sampleMedia={...event,name:'Original preview'};showPage('sample');if(pendingJob){const job=pendingJob;pendingJob=null;send('render-sample',{job});}else message('Preview range loaded.');break;
@@ -357,7 +419,10 @@ window.receive=event=>{
  case 'download-progress':if(!$('cancel').disabled)message(event.message);break;
  case 'downloaded':busy=false;downloading=false;$('download-load').dataset.ready='true';$('download-load').textContent='Open download';message(`Download saved. Open it in your workspace.\n${event.path}`);break;
  case 'download-error':busy=false;downloading=false;message(event.message,true);break;
- case 'hdri-selected':hdri=event.path;$('hdri-name').textContent=event.name;markCustom();break;
+ case 'hdri-selected':{const component=components.find(component=>component.id===event.component_id);if(component){component.settings.hdri=event.path;if(component.id===editingId){$('hdri-name').textContent=event.name;updateEditorState();}updateAppliedSummaries();}break;}
+ case 'enhancement-library':try{savedTemplates=event.templates.map(Enhancements.sanitizeTemplate);libraryLoaded=true;setLibraryStatus('');renderLibrary();}catch(error){libraryLoaded=false;setLibraryStatus('Saved library could not be loaded: '+error.message,true);}break;
+ case 'enhancement-library-saved':if(pendingTemplates){savedTemplates=pendingTemplates;pendingTemplates=null;setLibraryStatus('New enhancement saved. Existing templates are unchanged.');$('save-enhancement-panel').hidden=true;renderLibrary();}break;
+ case 'enhancement-library-error':pendingTemplates=null;setLibraryStatus(event.message,true);break;
  case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
  case 'progress':if(source?.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);if(!$('cancel').disabled)message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
  case 'finished':busy=false;exportMedia={...event,name:'Export'};$('progress').value=1;showPage('full');message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
@@ -366,7 +431,6 @@ window.receive=event=>{
  }
  updateState();
 };
-for(const preset of presets){const button=document.createElement('button');button.type='button';button.dataset.preset=preset[0];const name=document.createElement('strong'),description=document.createElement('small');name.textContent=preset[0];description.textContent=preset[1];button.append(name,description);button.onclick=()=>applyPreset(...preset);$('presets').append(button);}
-resetSettings();updateViewer();
+resetSettings();renderLibrary();updateViewer();send('load-enhancement-library');
 </script>
 </html>
