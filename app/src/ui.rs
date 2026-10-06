@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::{self, Read, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
+use std::{collections::HashMap, io::{self, Read, Seek, SeekFrom, Write}, path::{Path, PathBuf}, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 use serde_json::{json, Value};
 use tao::{event::{Event, WindowEvent}, event_loop::{ControlFlow, EventLoopBuilder}, window::WindowBuilder, dpi::LogicalSize};
 use video_enhancer::{job::VideoEnhancementJob, parser::{FileData, Parser}};
@@ -26,6 +26,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let preview_workspace = tempfile::Builder::new().prefix("session-").tempdir_in(preview_root)?;
     let page = preview_workspace.path().join("index.html");
     std::fs::write(&page, include_str!("ui.html"))?;
+    std::fs::write(preview_workspace.path().join("enhancements.js"), include_str!("enhancements.js"))?;
     let event_loop = EventLoopBuilder::<AppEvent>::with_user_event().build();
     let window = WindowBuilder::new().with_title("Video Enhancer").with_inner_size(LogicalSize::new(1440.0, 900.0)).with_min_inner_size(LogicalSize::new(900.0, 650.0)).build(&event_loop)?;
     let proxy = event_loop.create_proxy();
@@ -82,6 +83,21 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             Event::UserEvent(AppEvent::Command(body)) => {
                 let Ok(message) = serde_json::from_str::<Value>(&body) else { return; };
                 match message["command"].as_str().unwrap_or("") {
+                    "load-enhancement-library" => {
+                        match load_enhancement_library() {
+                            Ok(templates) => emit(json!({"type":"enhancement-library", "templates":templates})),
+                            Err(error) => emit(json!({"type":"enhancement-library-error", "message":error.to_string()})),
+                        }
+                    }
+                    "save-enhancement-library" => {
+                        let result = if body.len() > MAX_ENHANCEMENT_LIBRARY_BYTES {
+                            Err(io::Error::other("Saved enhancements must fit within 1 MiB"))
+                        } else { save_enhancement_library(&message["templates"]) };
+                        match result {
+                            Ok(()) => emit(json!({"type":"enhancement-library-saved"})),
+                            Err(error) => emit(json!({"type":"enhancement-library-error", "message":error.to_string()})),
+                        }
+                    }
                     "open-source" | "open-output" | "show-output" if !busy => {
                         let command = message["command"].as_str().unwrap();
                         let path = if command == "open-source" { &loaded_path } else { &last_output };
@@ -98,7 +114,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "cancel" => { cancelled.store(true, Ordering::Relaxed); }
                     "choose-hdri" if !busy => {
                         if let Some(path) = rfd::FileDialog::new().set_title("Choose a relighting environment").add_filter("HDR environment", &["hdr", "exr", "pfm"]).pick_file() {
-                            emit(json!({"type":"hdri-selected", "path":path, "name":path.file_name().unwrap_or_default().to_string_lossy()}));
+                            emit(json!({"type":"hdri-selected", "path":path, "name":path.file_name().unwrap_or_default().to_string_lossy(), "component_id":message["component_id"]}));
                         }
                     }
                     "download" if !busy => {
@@ -296,6 +312,61 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         }
     });
+}
+
+const MAX_ENHANCEMENT_LIBRARY_BYTES: usize = 1024 * 1024;
+
+fn enhancement_library_path() -> io::Result<PathBuf> {
+    let directory = std::env::var_os("LOCALAPPDATA").ok_or_else(|| io::Error::other("Windows local application data folder is unavailable"))?;
+    Ok(PathBuf::from(directory).join("VideoEnhancer").join("enhancements.json"))
+}
+
+fn validate_enhancement_templates(templates: &Value) -> io::Result<()> {
+    let templates = templates.as_array().ok_or_else(|| io::Error::other("Saved enhancements must be a list"))?;
+    if templates.len() > 100 { return Err(io::Error::other("Keep at most 100 saved enhancements")); }
+    for template in templates {
+        if !template.as_object().is_some_and(|fields| fields.len() == 2) {
+            return Err(io::Error::other("Each saved enhancement needs a name and settings"));
+        }
+        let name = template["name"].as_str().ok_or_else(|| io::Error::other("Each saved enhancement needs a name"))?;
+        if name.trim().is_empty() || name.chars().count() > 120 {
+            return Err(io::Error::other("Enhancement names must contain 1–120 characters"));
+        }
+        let settings = template["settings"].as_object().ok_or_else(|| io::Error::other("Enhancement settings must be an object"))?;
+        if settings.values().any(|value| value.is_array() || value.is_object()) {
+            return Err(io::Error::other("Enhancement settings must contain numbers, text, booleans or null"));
+        }
+    }
+    Ok(())
+}
+
+fn load_enhancement_library() -> io::Result<Value> {
+    let file = match std::fs::File::open(enhancement_library_path()?) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(json!([])),
+        Err(error) => return Err(error),
+    };
+    let mut bytes = Vec::new();
+    file.take(MAX_ENHANCEMENT_LIBRARY_BYTES as u64 + 1).read_to_end(&mut bytes)?;
+    if bytes.len() > MAX_ENHANCEMENT_LIBRARY_BYTES { return Err(io::Error::other("Saved enhancement library exceeds 1 MiB")); }
+    let templates: Value = serde_json::from_slice(&bytes)?;
+    validate_enhancement_templates(&templates)?;
+    Ok(templates)
+}
+
+fn save_enhancement_library(templates: &Value) -> io::Result<()> {
+    validate_enhancement_templates(templates)?;
+    let bytes = serde_json::to_vec_pretty(templates)?;
+    if bytes.len() > MAX_ENHANCEMENT_LIBRARY_BYTES { return Err(io::Error::other("Saved enhancements must fit within 1 MiB")); }
+    let path = enhancement_library_path()?;
+    let directory = path.parent().unwrap();
+    std::fs::create_dir_all(directory)?;
+    let mut temporary = tempfile::NamedTempFile::new_in(directory)?;
+    temporary.write_all(&bytes)?;
+    temporary.as_file().sync_all()?;
+    // Persist replaces the old file only after the complete new library has been written.
+    temporary.persist(path).map_err(|error| error.error)?;
+    Ok(())
 }
 
 fn sample_url(path: &Path, workspace: &Path) -> io::Result<String> {
