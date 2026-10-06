@@ -47,12 +47,16 @@ The setup script installs the additional shared FFmpeg libraries and libclang ne
 ## Use
 
 1. Open **Full video** and load a video.
-2. Choose a preset or adjust the resolution, frame rate, and effects.
+2. **Add enhancement** from the built-in or saved library, or **Create new enhancement** and choose its adjustments. Set resolution, frame rate and format in **Output**.
 3. Drag the **Preview range** handles to select 1–15 seconds, then choose **Render preview**. The **Preview** tab opens with the clip and enhancement settings. Render again there after changing settings; use **Change range** to return to the full video.
 4. Choose **Original**, **Enhanced**, **Wipe**, or **Side by side**. Use the shared timeline and **Loop** to inspect motion. At **100%** or **200%**, drag the image to pan both views together; zoom uses the enhanced image's pixel dimensions.
 5. Return to **Full video** and choose **Export full video** to save a new MP4. The completed export opens for comparison automatically; **Play export** and **Show in folder** open the saved file. Your original stays untouched.
 
-To combine presets, apply **Noisy footage**, turn **Stack presets** on, then choose **Clean + colour**. This keeps the denoising and adds colour and sharpening in one processing pass. Stacking preserves other effects, resolution and FPS; overlapping settings use the latest preset's values, subject to format compatibility. Turn stacking off to replace settings with a complete preset again. **Reset** or loading another video also turns stacking off.
+The **Applied to this video** list shows everything in the current recipe. Add **Noisy footage** and **Clean + colour** to combine noise reduction, colour and sharpening in one processing pass. **Edit** opens a component's controls; they stay collapsed otherwise. Disable or remove a component to restore earlier components' values or the neutral defaults. Overlapping adjustments use the last enabled component's value and are identified in the list.
+
+Custom enhancements contain only the adjustments you select. Editing an applied enhancement changes this video's copy; **Save as enhancement** creates a separate reusable template. Saved templates remain available after restarting the app, in `%LOCALAPPDATA%\VideoEnhancer\enhancements.json`. Resetting or loading another source clears the applied list while keeping that library.
+
+Output settings are shared by the whole recipe. Upscaling detail needs a larger resolution selected in **Output**. Unsupported combinations show a compatibility message instead of silently clearing your adjustments—for example, sharpening needs H.264 SDR or the TrueHDR processing path. Changed components mark the preview as needing another render.
 
 **Compare** is a standalone tab for any two local videos, with no enhancement settings. **Download** can open a completed YouTube download directly in **Full video**.
 
