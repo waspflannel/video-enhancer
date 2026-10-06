@@ -52,6 +52,8 @@ The setup script installs the additional shared FFmpeg libraries and libclang ne
 4. Choose **Original**, **Enhanced**, **Wipe**, or **Side by side**. Use the shared timeline and **Loop** to inspect motion. At **100%** or **200%**, drag the image to pan both views together; zoom uses the enhanced image's pixel dimensions.
 5. **Export full video** to a new MP4. The completed export opens for comparison automatically; **Play export** and **Show in folder** open the saved file. Your original stays untouched.
 
+To combine presets, apply **Noisy footage**, turn **Stack presets** on, then choose **Clean + colour**. This keeps the denoising and adds colour and sharpening in one processing pass. Stacking preserves other effects, resolution and FPS; overlapping settings use the latest preset's values, subject to format compatibility. Turn stacking off to replace settings with a complete preset again. **Reset** or loading another video also turns stacking off.
+
 **Compare files** uses the same viewer for any two local videos. **Download** can open a completed YouTube download directly in the workspace.
 
 With the viewer focused, **Space** toggles playback, **Left/Right** step through the timeline, and **Escape** resets zoom. Steps use the video's nominal frame rate (a 30 FPS grid for comparison files with unknown rates); variable-rate video is not frame-exact. Only one video plays audio at a time. In **Full video**, Loop repeats the selected preview range; in **Preview** or **Compare files**, it repeats the displayed clip.

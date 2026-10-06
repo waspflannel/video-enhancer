@@ -62,7 +62,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}
   <div class="result-actions"><button id="open-source" disabled>Open source</button><button id="sample-external" hidden>Open preview</button><button id="open-output" hidden>Play export</button><button id="show-output" hidden>Show in folder</button></div>
 </section>
 <section class="workspace" aria-label="Enhancement settings"><div class="intro"><h2>Enhancement settings</h2><button id="reset" disabled>Reset</button></div><div class="settings-wrap"><fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
-    <section class="section"><div class="section-title"><h3>Enhancement presets</h3><small id="preset-label">No preset</small></div><div class="presets" id="presets" role="group" aria-label="Enhancement presets"></div><p class="helper">Each preset replaces your settings: up to 2× resolution, original frame rate and high-quality export. Clean + colour adds colour lift and sharpening with H.264; the other presets keep neutral colour and 10-bit HEVC. Preview before exporting the full video.</p><p class="helper" id="preset-description" aria-live="polite"></p></section>
+    <section class="section"><div class="section-title"><h3>Enhancement presets</h3><small id="preset-label">No preset</small></div><button id="stack-presets" type="button" aria-pressed="false" style="margin-bottom:8px">Stack presets: off</button><div class="presets" id="presets" role="group" aria-label="Enhancement presets"></div><p class="helper">Presets replace your settings by default. Turn on Stack presets to add a preset's adjustments while keeping your other effects, resolution and FPS. Shared settings use the last preset's values; format compatibility rules still apply.</p><p class="helper" id="preset-description" aria-live="polite"></p></section>
     <section class="section"><div class="section-title"><h3>Output</h3><small>Preserve aspect ratio</small></div>
       <div class="row"><label class="field">Resolution<select id="scale"><option value="1">Original resolution</option><option value="1.3333333333333333">1⅓× resolution</option><option value="1.5">1.5× resolution</option><option value="2">2× resolution</option><option value="3">3× resolution</option><option value="4">4× resolution</option></select></label><label class="field">Frame rate<select id="target_fps"><option value="">Original FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select></label></div>
       <div class="row"><label class="field">Upscale method<select id="upscale_method"><option value="vsr">Video Super Resolution</option><option value="lightweight">Lightweight Upscale</option></select></label><label class="field">VSR quality<select id="quality"><optgroup label="Standard"><option value="0">Bicubic · no AI</option><option value="1">Low · fastest</option><option value="2">Medium</option><option value="3">High</option><option value="4" selected>Ultra · most detail</option></optgroup><optgroup label="High bitrate"><option value="16">High bitrate · low</option><option value="17">High bitrate · medium</option><option value="18">High bitrate · high</option><option value="19">High bitrate · ultra</option></optgroup><optgroup label="Streaming"><option value="21">Streaming · medium</option><option value="23">Streaming · ultra</option></optgroup></select></label></div>
@@ -207,20 +207,27 @@ function showPreset(name,description){
  $('preset-label').textContent=name;$('preset-description').textContent=description;
  for(const button of $('presets').children){const selected=button.dataset.preset===name;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
 }
-function markCustom(){showPreset('Custom','Settings changed. Preview your adjustments, or choose a preset to restore its complete settings.');}
-function applySettings(settings){
- for(const [id,value] of Object.entries({...defaults,...settings})){if($(id).type==='checkbox')$(id).checked=value;else $(id).value=value;}
+function markCustom(){showPreset('Custom','Settings changed. Render a preview to inspect your adjustments.');}
+function applySettings(settings,replace=true){
+ for(const [id,value] of Object.entries(replace?{...defaults,...settings}:settings)){if($(id).type==='checkbox')$(id).checked=value;else $(id).value=value;}
  for(const [id] of [...specs,...advancedSpecs])displayValue(id);
- hdri=null;$('hdri-name').textContent='No environment selected';
+ if(replace){hdri=null;$('hdri-name').textContent='No environment selected';}
  applyOutputFormat();
 }
+function setPresetStacking(enabled){$('stack-presets').setAttribute('aria-pressed',String(enabled));$('stack-presets').textContent=`Stack presets: ${enabled?'on':'off'}`;}
+$('stack-presets').onclick=()=>setPresetStacking($('stack-presets').getAttribute('aria-pressed')!=='true');
 function applyPreset(name,useCase,description,settings){
+ if($('stack-presets').getAttribute('aria-pressed')==='true'){
+  applySettings(settings,false);
+  showPreset('Stacked',`${name} added to your current settings. Shared adjustments use this preset's values. Render a preview to inspect the combination.`);
+  return;
+ }
  const scale=[...$('scale').options].findLast(option=>!option.disabled&&Number(option.value)<=2)?.value||'1';
  applySettings({scale,frame_quality:2,output_encoding:'hevc10',encoder_preset:7,encoder_quality:16,...settings});
  const size=scale==='1'?' This source has no supported larger size, so VSR upscaling is skipped.':` Resolution set to ${Number(scale).toLocaleString(undefined,{maximumFractionDigits:2})}×; you can change it below.`;
  showPreset(name,description+size);
 }
-function resetSettings(){applySettings({output_encoding:['yuv420p10le','p010le'].includes(source?.pixel_format)?'hevc10':'h264'});showPreset('No preset','Original resolution and frame rate, with cleanup and colour changes off. Choose a preset to start enhancing.');}
+function resetSettings(){setPresetStacking(false);applySettings({output_encoding:['yuv420p10le','p010le'].includes(source?.pixel_format)?'hevc10':'h264'});showPreset('No preset','Original resolution and frame rate, with cleanup and colour changes off. Choose a preset to start enhancing.');}
 function isTenBitSdrOutput(){return $('output_encoding').value==='hevc10'&&!$('hdr_enabled').checked;}
 function applyOutputFormat(){
  if($('hdr_enabled').checked)$('output_encoding').value='hevc10';
