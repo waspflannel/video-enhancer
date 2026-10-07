@@ -56,7 +56,7 @@ The **Applied to this video** list shows everything in the current recipe. Add *
 
 Custom enhancements contain only the adjustments you select. Editing an applied enhancement changes this video's copy; **Save as enhancement** creates a separate reusable template. Saved templates remain available after restarting the app, in `%LOCALAPPDATA%\VideoEnhancer\enhancements.json`. Resetting or loading another source clears the applied list while keeping that library.
 
-Output settings are shared by the whole recipe. Upscaling detail needs a larger resolution selected in **Output**. Unsupported combinations show a compatibility message instead of silently clearing your adjustments—for example, sharpening needs H.264 SDR or the TrueHDR processing path. Changed components mark the preview as needing another render.
+Output settings are shared by the whole recipe. Upscaling detail needs a larger resolution selected in **Output**. Unsupported combinations show a compatibility message instead of silently clearing your adjustments—for example, sharpening needs H.264 SDR or the TrueHDR processing path. A green **Up to date** status means the preview matches your settings; amber **Changes not rendered** keeps the previous preview visible and offers **Render changes**. Restoring the rendered settings returns to green. **Render again** remains available for a manual rerender; buttons show **Rendering…** and are disabled while the preview renders.
 
 **Compare** is a standalone tab for any two local videos, with no enhancement settings. **Download** can open a completed YouTube download directly in **Full video**.
 
