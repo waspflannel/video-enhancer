@@ -100,7 +100,7 @@ Reuse loaded models and a bounded pool of frame buffers. Overlap decoding, infer
 
 Start with NVIDIA modes suitable for clean or lightly degraded footage, including the documented High Bitrate and Streaming VSR modes. Select internal quality settings from measured results instead of adding a large model/technical-options interface.
 
-The application uses Rust and Cargo, targeting Windows x64. Choose the desktop UI framework and NVIDIA/media bindings when implementing those components. VSR and VFG remain the selected effects; access to their native API must be integrated from Rust. See `documents/development.md` for the scaffold and toolchain setup.
+The application uses Rust and Cargo, targeting Windows x64. Choose the desktop UI framework and NVIDIA/media bindings when implementing those components. VSR and VFG remain the selected effects; access to their native API must be integrated from Rust. See the setup section in `README.md` for the toolchain setup.
 
 Measure total export time, startup/model-loading time, processing throughput, peak GPU memory, and motion/detail quality on the RTX 5070. Vendor filter timings are not complete export benchmarks and do not establish performance on this machine. No speed multiplier or quality superiority has been demonstrated yet.
 

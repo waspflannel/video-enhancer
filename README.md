@@ -29,7 +29,6 @@ This project currently requires a local development setup:
 - Windows x64 and a compatible NVIDIA RTX GPU/driver.
 - Stable Rust with the MSVC toolchain, Visual Studio C++ build tools, and the Windows SDK.
 - Python with pip for the media setup script.
-- `ffmpeg.exe` and `ffprobe.exe` in `tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin/`, as currently expected by the app.
 - `yt-dlp` on PATH if you want to download videos.
 
 Media tools and videos are also **not included in this repository**.
@@ -42,7 +41,7 @@ cd app
 cargo run --release
 ```
 
-The setup script installs the additional shared FFmpeg libraries and libclang needed to build. It does not install the NVIDIA packages or the separate FFmpeg tools listed above.
+The setup script installs the shared FFmpeg build (libraries plus `ffmpeg.exe` and `ffprobe.exe`) and libclang needed to build. It does not install the NVIDIA packages.
 
 ## Use
 
