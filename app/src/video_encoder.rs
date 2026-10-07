@@ -121,6 +121,7 @@ struct EncoderWorker {
     target_frame_rate: ffmpeg::Rational,
     settings: EncoderSettings,
     ten_bit: bool,
+    display_matrix: Option<Vec<u8>>,
 }
 
 impl EncoderWorker {
@@ -129,7 +130,9 @@ impl EncoderWorker {
         let source_path = source.path.to_str().ok_or_else(|| io::Error::other("Source path is not valid UTF-8"))?;
         let output_path = job.output.to_str().ok_or_else(|| io::Error::other("Output path is not valid UTF-8"))?;
         let audio_reader = ffmpeg::format::input(&source_path).map_err(|e| failure("Open source audio", e))?;
-        let source_frame_rate = audio_reader.stream(source.video_stream_index as usize).ok_or_else(|| io::Error::other("Selected video stream no longer exists"))?.avg_frame_rate();
+        let source_video = audio_reader.stream(source.video_stream_index as usize).ok_or_else(|| io::Error::other("Selected video stream no longer exists"))?;
+        let source_frame_rate = source_video.avg_frame_rate();
+        let display_matrix = display_matrix(&source_video.parameters());
         let target_frame_rate = job.target_fps.map_or(source_frame_rate, |fps| (fps as i32, 1).into());
         // Exclusive creation also protects the source, hard links, and existing exports.
         OpenOptions::new().write(true).create_new(true).open(output_path).map_err(|error| {
@@ -153,7 +156,7 @@ impl EncoderWorker {
             }
             audio_stream_mapping[source_stream.index()] = Some(output_stream.index());
         }
-        Ok(Self { video_encoder: None, output_file, audio_reader, audio_stream_mapping, pending_audio_packet: None, target_frame_rate, settings: job.encoder.clone(), ten_bit })
+        Ok(Self { video_encoder: None, output_file, audio_reader, audio_stream_mapping, pending_audio_packet: None, target_frame_rate, settings: job.encoder.clone(), ten_bit, display_matrix })
     }
 
     fn encode(&mut self, gpu_frame: ffmpeg::frame::Video) -> io::Result<()> {
@@ -200,6 +203,15 @@ impl EncoderWorker {
         if self.ten_bit {
             // hvc1 advertises parameter sets in the MP4 sample entry for compatible HEVC playback.
             unsafe { (*video_stream.parameters().as_mut_ptr()).codec_tag = u32::from_le_bytes(*b"hvc1"); }
+        }
+        if let Some(matrix) = &self.display_matrix {
+            // SAFETY: the new entry is owned by the output stream's parameters and sized for the copy.
+            unsafe {
+                let parameters = &mut *video_stream.parameters().as_mut_ptr();
+                let side_data = ffi::av_packet_side_data_new(&mut parameters.coded_side_data, &mut parameters.nb_coded_side_data, ffi::AVPacketSideDataType::AV_PKT_DATA_DISPLAYMATRIX, matrix.len(), 0);
+                if side_data.is_null() { return Err(io::Error::other("Copy video rotation: out of memory")); }
+                ptr::copy_nonoverlapping(matrix.as_ptr(), (*side_data).data, matrix.len());
+            }
         }
         video_stream.set_time_base(first_frame.time_base);
         video_stream.set_avg_frame_rate(self.target_frame_rate);
@@ -315,6 +327,16 @@ fn prepare_encoder_frame(frame_pool: *mut ffi::AVBufferRef, time_base: ffmpeg::R
     if result.is_err() { let _ = device.synchronize(); }
     result?;
     Ok(gpu_frame)
+}
+
+// Phone videos store orientation as a display matrix instead of rotated pixels.
+fn display_matrix(parameters: &ffmpeg::codec::Parameters) -> Option<Vec<u8>> {
+    // SAFETY: the source stream owns these parameters and their side data for this borrow.
+    unsafe {
+        let native = &*parameters.as_ptr();
+        let side_data = ffi::av_packet_side_data_get(native.coded_side_data, native.nb_coded_side_data, ffi::AVPacketSideDataType::AV_PKT_DATA_DISPLAYMATRIX);
+        side_data.as_ref().map(|data| std::slice::from_raw_parts(data.data, data.size).to_vec())
+    }
 }
 
 fn output_colorspace(transfer: ffi::AVColorTransferCharacteristic) -> ffi::AVColorSpace {

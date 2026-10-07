@@ -206,6 +206,10 @@ impl VideoEnhancementJob {
         if !self.output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("mp4")) {
             return Err(io::Error::other("Choose an .mp4 output file"));
         }
+        // Source audio is copied unchanged, so it must be a codec MP4 players support.
+        if let Some(codec) = source.audio_streams.iter().filter_map(|stream| stream["codec_name"].as_str()).find(|codec| !["aac", "mp3", "ac3", "eac3", "opus", "flac", "alac"].contains(codec)) {
+            return Err(io::Error::other(format!("{codec} audio cannot be copied into MP4. Convert the source audio to AAC first.")));
+        }
         Ok(())
     }
 
@@ -220,6 +224,7 @@ impl VideoEnhancementJob {
         let mut hdr_converter = crate::hdr::TrueHdr::new(self);
         let mut video_encoder = VideoEncoder::new(&source, self)?;
         let mut encoded_frames = 0;
+        let mut first_timestamp_seconds = None;
         let result = (|| {
             let mut encode_frame = |timed_frame: FrameForEncoder<'_>| {
                 if cancelled.load(Ordering::Relaxed) { return Err(io::Error::new(io::ErrorKind::Interrupted, "Export cancelled")); }
@@ -229,7 +234,8 @@ impl VideoEnhancementJob {
                 video_encoder.encode(FrameForEncoder { frame: output_frame, ..timed_frame })?;
                 encoded_frames += 1;
                 let timestamp_seconds = timed_frame.presentation_timestamp as f64 * timed_frame.time_base.0 as f64 / timed_frame.time_base.1 as f64;
-                progress(encoded_frames, timestamp_seconds);
+                // Report time from the first output frame; source timestamps may not start at zero.
+                progress(encoded_frames, timestamp_seconds - *first_timestamp_seconds.get_or_insert(timestamp_seconds));
                 Ok(())
             };
             video_decoder::decode(&source, |decoded_frame| {
@@ -242,7 +248,10 @@ impl VideoEnhancementJob {
             Ok(encoded_frames)
         })();
         frame_rate_enhancer.release_effect();
-        // An interrupted export is kept for diagnosis; it is never reported as complete.
-        result.map_err(|error: io::Error| io::Error::new(error.kind(), format!("{error}. Incomplete output may remain at {}", self.output.display())))
+        if result.is_err() {
+            // The encoder created this file exclusively and has closed it; an MP4 without its trailer is unplayable.
+            let _ = std::fs::remove_file(&self.output);
+        }
+        result
     }
 }

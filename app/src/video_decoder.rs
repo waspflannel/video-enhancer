@@ -77,7 +77,6 @@ fn configure_cuda_decoder(decoder_context: &mut ffmpeg::codec::Context, time_bas
         let decoder_context_ptr = decoder_context.as_mut_ptr();
         (*decoder_context_ptr).get_format = Some(select_cuda_frame_format);
         (*decoder_context_ptr).pkt_timebase = time_base.into();
-        (*decoder_context_ptr).err_recognition = ffi::AV_EF_EXPLODE;
         let result = ffi::av_hwdevice_ctx_create(&mut (*decoder_context_ptr).hw_device_ctx, ffi::AVHWDeviceType::AV_HWDEVICE_TYPE_CUDA, c"0".as_ptr(), ptr::null_mut(), 0);
         if result < 0 {
             return Err(failure("Create NVIDIA CUDA device", ffmpeg::Error::from(result)));
