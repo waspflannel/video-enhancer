@@ -238,7 +238,7 @@ impl VideoEffects {
 fn load_environment(path: &Path, frame: &EnhancedFrame) -> io::Result<EnhancedFrame> {
     let metadata = Parser::new(path).get_video_information()?;
     if metadata.width != metadata.height.saturating_mul(2) { return Err(io::Error::other("Relighting needs a 2:1 equirectangular HDR environment image")); }
-    let decoded = Command::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin/ffmpeg.exe"))
+    let decoded = Command::new(crate::ffmpeg_tool("ffmpeg.exe"))
         .creation_flags(0x08000000).args(["-v", "error", "-i"]).arg(path)
         .args(["-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "gbrpf32le", "pipe:1"])
         .stdin(Stdio::null()).output()?;

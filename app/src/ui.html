@@ -146,7 +146,8 @@ function showViewerError(text){$('viewer-error').textContent=text;$('viewer-erro
 function layoutViewer(){
  const side=$('view-mode').value==='side',width=$('viewport').clientWidth/(side?2:1),height=$('viewport').clientHeight;
  if(!width||!height)return;
- const reference=pair[1]||pair[0],refWidth=reference?.width||videos[1].videoWidth||videos[0].videoWidth,refHeight=reference?.height||videos[1].videoHeight||videos[0].videoHeight;
+ // The element reports displayed dimensions, including rotation metadata; probed sizes are stored dimensions.
+ const referenceVideo=pair[1]?videos[1]:videos[0],reference=pair[1]||pair[0],refWidth=referenceVideo.videoWidth||reference?.width,refHeight=referenceVideo.videoHeight||reference?.height;
  if(!refWidth||!refHeight)return;
  const scale=$('zoom').value==='fit'?Math.min(width/refWidth,height/refHeight):Number($('zoom').value);
  const displayWidth=refWidth*scale,displayHeight=refHeight*scale;

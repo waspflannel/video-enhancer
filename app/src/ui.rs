@@ -273,10 +273,13 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     let mut details = video_details(&video);
                     details["type"] = json!("sample-rendered");
                     details["url"] = json!(url);
-                    rendered_sample = Some(video.path);
-                    Ok(details)
+                    Ok((details, rendered_sample.replace(video.path)))
                 }) {
-                    Ok(details) => emit(details),
+                    Ok((details, previous)) => {
+                        emit(details);
+                        // Only the latest render is shown; a file still held by playback is removed with the session.
+                        if let Some(previous) = previous { let _ = std::fs::remove_file(previous); }
+                    }
                     Err(error) => emit(json!({"type":"sample-error", "message":error})),
                 }
                 if close_when_finished { *control_flow = ControlFlow::Exit; }

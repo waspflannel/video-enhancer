@@ -23,8 +23,10 @@ pub fn load(input: &Path, selection: SampleSelection, workspace: &Path, cancelle
     let directory = tempfile::Builder::new().prefix("clip-").tempdir_in(workspace)?;
     let ten_bit = ["yuv420p10le", "p010le"].contains(&source.pixel_format.as_str());
     let mut command = ffmpeg();
-    command.args(["-ss", &selection.start.to_string()]).arg("-i").arg(input)
-        .args(["-t", &selection.duration.to_string(), "-map", &format!("0:{}", source.video_stream_index), "-map", "0:a?", "-c:v", if ten_bit { "hevc_nvenc" } else { "h264_nvenc" }, "-preset", "p1", "-tune", "lossless", "-pix_fmt", if ten_bit { "p010le" } else { "yuv420p" }, "-fps_mode", "passthrough", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"])
+    // Keep rotation as metadata, as full exports do. Near-lossless constant QP keeps
+    // H.264 in High profile; lossless 4:4:4 Predictive does not play in WebView2.
+    command.args(["-noautorotate", "-ss", &selection.start.to_string()]).arg("-i").arg(input)
+        .args(["-t", &selection.duration.to_string(), "-map", &format!("0:{}", source.video_stream_index), "-map", "0:a?", "-c:v", if ten_bit { "hevc_nvenc" } else { "h264_nvenc" }, "-preset", "p1", "-rc", "constqp", "-qp", "10", "-pix_fmt", if ten_bit { "p010le" } else { "yuv420p" }, "-fps_mode", "passthrough", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"])
         .arg(directory.path().join("source.mp4"));
     run_ffmpeg(command, cancelled)?;
     let clip = Parser::new(directory.path().join("source.mp4")).get_video_information()?;
@@ -41,7 +43,7 @@ pub fn render(mut job: VideoEnhancementJob, clip: &SampleClip, cancelled: &Atomi
 }
 
 fn ffmpeg() -> Command {
-    let mut command = Command::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin/ffmpeg.exe"));
+    let mut command = Command::new(video_enhancer::ffmpeg_tool("ffmpeg.exe"));
     command.creation_flags(0x08000000).args(["-hide_banner", "-loglevel", "error", "-nostdin", "-n"]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped());
     command
 }

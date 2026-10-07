@@ -49,7 +49,7 @@ pub fn download(options: DownloadOptions, cancelled: &AtomicBool, progress: impl
     let mut command = Command::new("yt-dlp");
     command
         .args(["--ignore-config", "--no-quiet", "--no-playlist", "--use-extractors", "youtube", "--no-overwrites", "--windows-filenames", "--newline", "--progress", "--progress-delta", "0.5", "--encoding", "utf-8", "--js-runtimes", "node"])
-        .args(["--ffmpeg-location", concat!(env!("CARGO_MANIFEST_DIR"), "/../tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin")])
+        .args(["--ffmpeg-location", video_enhancer::FFMPEG_BIN])
         .arg("--paths").arg(&directory)
         .args(["--output", "%(title).120B [%(id)s] [%(format_id)s].%(ext)s", "--format", &format_selection, "--merge-output-format", &options.format, "--remux-video", &options.format, "--print", "after_move:DOWNLOAD_FILE:%(filepath)j", "--", url]);
     let source = run_command(command, cancelled, None, &progress)?.ok_or_else(|| io::Error::other("yt-dlp did not report a completed video file"))?;
@@ -59,9 +59,9 @@ pub fn download(options: DownloadOptions, cancelled: &AtomicBool, progress: impl
     let temporary_clip = tempfile::Builder::new().prefix(".clip-").suffix(&format!(".{}", options.format)).tempfile_in(&directory)?.into_temp_path();
     let duration = timings.end - timings.start;
     progress("Download complete. Trimming the selected section…".into());
-    let mut command = Command::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../tools/ffmpeg-N-124279-g0f6ba39122-win64-gpl/bin/ffmpeg.exe"));
+    let mut command = Command::new(video_enhancer::ffmpeg_tool("ffmpeg.exe"));
     command.args(["-hide_banner", "-loglevel", "warning", "-nostdin", "-y", "-ss", &timings.start.to_string()]).arg("-i").arg(&source)
-        .args(["-t", &duration.to_string(), "-map", "0:v:0", "-map", "0:a?", "-c:v", "libx264", "-crf", "18", "-preset", "fast", "-fps_mode", "passthrough", "-c:a", "aac", "-b:a", "192k", "-progress", "pipe:1", "-nostats", "-abort_on", "empty_output"])
+        .args(["-t", &duration.to_string(), "-map", "0:v:0", "-map", "0:a?", "-c:v", "h264_nvenc", "-preset", "p5", "-tune", "hq", "-rc", "vbr", "-cq", "18", "-b:v", "0", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", "-c:a", "aac", "-b:a", "192k", "-progress", "pipe:1", "-nostats", "-abort_on", "empty_output"])
         .arg(&temporary_clip);
     run_command(command, cancelled, Some(duration), &progress)?;
     temporary_clip.persist_noclobber(&output).map_err(|error| error.error)?;

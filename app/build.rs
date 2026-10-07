@@ -3,7 +3,7 @@ use std::{env, fs, path::PathBuf};
 fn main() {
     println!("cargo:rerun-if-env-changed=FFMPEG_DIR");
     let ffmpeg_bin_directory = PathBuf::from(
-        env::var_os("FFMPEG_DIR").expect("Set FFMPEG_DIR; see documents/development.md"),
+        env::var_os("FFMPEG_DIR").expect("Set FFMPEG_DIR; run scripts/setup-media.ps1 and see README.md"),
     )
     .join("bin");
     // Windows loads the shared libraries beside the executable.
