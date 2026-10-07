@@ -96,5 +96,5 @@ globalThis.Enhancements = (() => {
     return overridden;
   }
 
-  return { defaults, groups, builtins, compose, overlaps, sanitizeTemplate };
+  return { defaults, groups, builtins, choices, ranges, compose, overlaps, sanitizeTemplate };
 })();

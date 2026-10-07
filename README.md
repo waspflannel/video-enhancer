@@ -9,8 +9,9 @@ Built with Rust and tested on an RTX 5070.
 - AI upscaling and frame generation.
 - Denoising, deblurring, sharpening, and colour adjustments.
 - Portrait background effects, relighting, and SDR-to-HDR conversion.
-- Separate Full video, Preview, Compare, and Download tabs with a shared video viewer.
-- Synchronized original/enhanced, wipe, and side-by-side views with shared seeking, looping, zoom, and pan.
+- One Studio workspace: a layered enhancement recipe, a timeline with a draggable preview range, and export.
+- Synchronized original/enhanced, split, and side-by-side views with shared seeking, looping, zoom, and pan.
+- Standalone Compare for any two local videos.
 - YouTube downloads with optional start/end times.
 - H.264 or 10-bit HEVC MP4 export with source audio preserved.
 
@@ -45,20 +46,16 @@ The setup script installs the shared FFmpeg build (libraries plus `ffmpeg.exe` a
 
 ## Use
 
-1. Open **Full video** and load a video.
-2. **Add enhancement** from the built-in or saved library, or **Create new enhancement** and choose its adjustments. Set resolution, frame rate and format in **Output**.
-3. Drag the **Preview range** handles to select 1–15 seconds, then choose **Render preview**. The **Preview** tab opens with the clip and enhancement settings. Render again there after changing settings; use **Change range** to return to the full video.
-4. Choose **Original**, **Enhanced**, **Wipe**, or **Side by side**. Use the shared timeline and **Loop** to inspect motion. At **100%** or **200%**, drag the image to pan both views together; zoom uses the enhanced image's pixel dimensions.
-5. Return to **Full video** and choose **Export full video** to save a new MP4. The completed export opens for comparison automatically; **Play export** and **Show in folder** open the saved file. Your original stays untouched.
+1. In **Studio**, choose **Open video…** (or download one from **YouTube** and select **Open in Studio**).
+2. Build the **Recipe** in the right panel. **Add** a built-in preset, one of your saved presets, or a single adjustment such as Noise reduction or Exposure. Each becomes a layer: the switch turns it on or off, selecting its name opens its controls, and × removes it. Double-click a slider to reset it. When two layers set the same adjustment, the later layer wins and the earlier one is marked as overridden.
+3. Choose **Output** resolution, frame rate and format. Higher frame rates use AI frame generation; upscaling detail needs a resolution above 1×. Encoder settings are under **Encoding and frame generation**.
+4. Drag the yellow brackets on the timeline to mark 1–15 seconds (or press **I** and **O** at the playhead), then choose **Render preview**. The viewer switches to **Preview clip** and shows the original and enhanced clip in a split. The status above the buttons turns green when the preview matches the recipe and amber when the recipe or range has changed (**Render changes**).
+5. Choose **Export video…** and pick a new filename. Progress, time left and **Cancel** appear in the strip at the bottom. When the export finishes, **Full video** compares it with the source, and **Play** / **Show in folder** open it. Your original stays untouched.
 
-The **Applied to this video** list shows everything in the current recipe. Add **Noisy footage** and **Clean + colour** to combine noise reduction, colour and sharpening in one processing pass. **Edit** opens a component's controls; they stay collapsed otherwise. Disable or remove a component to restore earlier components' values or the neutral defaults. Overlapping adjustments use the last enabled component's value and are identified in the list.
+If a recipe can't be rendered (for example, SDR to HDR needs HEVC 10-bit output), the panel explains why and offers a one-click fix where there is one. **Save as preset** combines the enabled layers into a reusable preset stored in `%LOCALAPPDATA%\VideoEnhancer\enhancements.json`; existing presets are never overwritten. Opening another video clears the recipe and keeps your presets.
 
-Custom enhancements contain only the adjustments you select. Editing an applied enhancement changes this video's copy; **Save as enhancement** creates a separate reusable template. Saved templates remain available after restarting the app, in `%LOCALAPPDATA%\VideoEnhancer\enhancements.json`. Resetting or loading another source clears the applied list while keeping that library.
+**Compare** plays any two local videos (A and B) on one timeline, with the same split, side-by-side, zoom and pan.
 
-Output settings are shared by the whole recipe. Upscaling detail needs a larger resolution selected in **Output**. Unsupported combinations show a compatibility message instead of silently clearing your adjustments—for example, sharpening needs H.264 SDR or the TrueHDR processing path. A green **Up to date** status means the preview matches your settings; amber **Changes not rendered** keeps the previous preview visible and offers **Render changes**. Restoring the rendered settings returns to green. **Render again** remains available for a manual rerender; buttons show **Rendering…** and are disabled while the preview renders.
+Viewer shortcuts: **Space** plays or pauses, **Left/Right** step one frame, **I/O** set the preview range, **Escape** resets zoom. At **100%** or **200%**, drag the image to pan both videos together; at **Fit** in split view, click or drag anywhere to move the split. Steps use the video's nominal frame rate (a 30 FPS grid when unknown); variable-rate video is not frame-exact. Only one video plays audio at a time. Loop repeats the preview range in **Full video** and the whole clip elsewhere.
 
-**Compare** is a standalone tab for any two local videos, with no enhancement settings. **Download** can open a completed YouTube download directly in **Full video**.
-
-With the viewer focused, **Space** toggles playback, **Left/Right** step through the timeline, and **Escape** resets zoom. Steps use the video's nominal frame rate (a 30 FPS grid for comparison files with unknown rates); variable-rate video is not frame-exact. Only one video plays audio at a time. In **Full video**, Loop repeats the selected preview range; in **Preview** or **Compare**, it repeats the displayed clip.
-
-Playback uses the actual source and result files, without a separate lossy display copy. Browser codec support determines which formats play inside the workspace; use **Open source**, **Open preview**, or **Play export** if needed. HDR playback also needs a compatible player and display.
+Playback uses the actual source and result files, without a separate lossy display copy. Browser codec support determines which formats play inside the app; use the open-in-player button above the viewer, or **Play** after an export, if needed. HDR playback also needs a compatible player and display.

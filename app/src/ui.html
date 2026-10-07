@@ -5,441 +5,1183 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src data:; media-src 'self' blob: https://media.localhost;">
 <title>Video Enhancer</title>
 <style>
-:root{color-scheme:dark;font:13px 'Segoe UI',sans-serif;color:#e9eeeb;background:#121615;--muted:#9ca9a1;--accent:#b7eb89;--line:#303a33}
-*{box-sizing:border-box}body{margin:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}button,input,select{font:inherit}button,select,input[type=number],input[type=url]{border:1px solid #465149;border-radius:5px;background:#252d28;color:inherit;padding:8px 11px}button{cursor:pointer;transition:background .15s}button:hover:enabled{background:#354135}button:disabled,input:disabled,select:disabled{opacity:.45;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,#viewport:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button[aria-pressed=true]{color:var(--accent);border-color:#7c9c62;background:#283522}button.primary,.generate{background:var(--accent);color:#192315;border-color:transparent;font-weight:600}.primary:hover:enabled,.generate:hover:enabled{background:#c8f4a3}[hidden]{display:none!important}
-header{display:flex;align-items:center;gap:26px;flex-shrink:0;height:65px;padding:0 24px;border-bottom:1px solid var(--line)}header strong{font-size:20px;font-weight:600;letter-spacing:-.6px}header strong span{color:var(--accent)}nav{display:flex;gap:4px}nav button{border:0;background:transparent;color:var(--muted)}nav button[aria-current=page]{color:var(--accent);background:#283522}.local{margin-left:auto;color:var(--muted);font-size:11px;letter-spacing:1px}
-main{display:grid;grid-template-columns:minmax(0,1fr) 365px;flex:1;min-height:0}.viewer{min-width:0;min-height:0;display:flex;flex-direction:column;padding:20px 24px;gap:14px}.source-bar{display:flex;align-items:center;gap:12px;min-height:38px}.source-info{min-width:0;flex:1}#name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metadata{display:flex;gap:13px;color:var(--muted);font-size:11px;margin-top:5px}.viewer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.viewer-toolbar label{color:var(--muted);font-size:11px}.viewer-toolbar select{padding:6px 8px;margin-left:4px}.view-options{display:flex;align-items:center;gap:10px}
-#viewport{position:relative;flex:1;min-height:200px;overflow:hidden;background:#080b09;border:1px solid #242c26;touch-action:none;--wipe:50%;user-select:none}.pane{position:absolute;inset:0;overflow:hidden}.pane video{position:absolute;left:50%;top:50%;max-width:none;object-fit:contain;pointer-events:none}.pane-label{position:absolute;top:14px;padding:5px 8px;background:#101611cb;color:#cbd6ce;font-size:10px;letter-spacing:1px;z-index:2;pointer-events:none}#label-original{left:14px}#label-enhanced{right:14px}#viewport[data-mode=wipe] #pane-enhanced{clip-path:inset(0 0 0 var(--wipe))}#viewport[data-mode=side] .pane{width:50%}#viewport[data-mode=side] #pane-enhanced{left:50%;border-left:1px solid var(--line)}#viewport[data-mode=original] #pane-enhanced,#viewport[data-mode=original] #label-enhanced{display:none}#viewport[data-mode=enhanced] #pane-original,#viewport[data-mode=enhanced] #label-original{display:none}
-#wipe-handle{position:absolute;top:0;bottom:0;left:var(--wipe);width:24px;transform:translateX(-50%);padding:0;border:0;border-radius:0;background:transparent;cursor:ew-resize;touch-action:none;z-index:3}#wipe-handle:before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:#e1eddbb0}#wipe-handle:after{content:'↔';position:absolute;left:0;top:50%;width:24px;height:38px;display:grid;place-items:center;border:1px solid #829b74;border-radius:4px;background:#253122;color:#def6ca}
-#viewer-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:12px;text-align:center;padding:24px}#viewer-empty svg{width:52px;height:52px;color:#819277}#viewer-empty h1{font-size:21px;font-weight:500;color:#dce7df;margin:6px 0 0}#viewer-empty p{max-width:350px;margin:0;line-height:1.6}#viewer-error{position:absolute;left:20px;right:20px;bottom:18px;z-index:4;background:#201c19e8;color:#ffc5b6;padding:12px;white-space:pre-line;font-size:12px;line-height:1.5}
-.transport{display:flex;align-items:center;gap:8px}.transport button{min-width:36px;padding:7px 10px}.transport input{flex:1;min-width:70px}.timecode{font:11px Consolas,monospace;color:#c0cbc3;white-space:nowrap}.transport label{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}input[type=range]{accent-color:var(--accent);cursor:pointer}input[type=checkbox]{accent-color:var(--accent)}.viewer-note{color:var(--muted);font-size:11px;line-height:1.5;min-height:16px}.preview-range{border-top:1px solid var(--line);padding-top:13px}.range-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.range-heading strong{font-size:12px;font-weight:500}.range-heading output{font:11px Consolas,monospace;color:var(--muted)}.range-track{height:30px;position:relative;margin:6px 3px}.range-track:before{content:'';position:absolute;left:0;right:0;top:13px;height:4px;background:#303a33}.range-fill{position:absolute;top:12px;height:6px;left:var(--start,0%);right:calc(100% - var(--end,100%));background:#8eae6d}.range-track input{position:absolute;inset:0;width:100%;margin:0;background:transparent;appearance:none;pointer-events:none}.range-track input::-webkit-slider-runnable-track{background:transparent;height:6px}.range-track input::-webkit-slider-thumb{appearance:none;pointer-events:auto;cursor:ew-resize;height:22px;width:11px;border:2px solid #d5ebbc;background:#60784e;border-radius:2px;margin-top:-8px}.range-actions{display:flex;align-items:center;gap:10px}.range-actions .helper{flex:1;margin:0}.range-actions button{white-space:nowrap}.compare-files{display:flex;gap:16px;flex-wrap:wrap;padding-bottom:3px}.compare-files label{font-size:11px;color:var(--muted);flex:1;min-width:160px}.compare-files input{display:block;width:100%;font-size:11px;margin-top:6px}.result-actions{display:flex;gap:8px;flex-wrap:wrap}
-.workspace{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid var(--line);background:#171d19;padding:20px}.intro{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.intro h2{font-size:15px;font-weight:600;margin:0}.settings-wrap{overflow:auto;flex:1;min-height:0;padding-right:7px}fieldset{border:0;padding:0;margin:0;min-width:0}fieldset.locked{opacity:.5}.section{padding:17px 0;border-bottom:1px solid var(--line)}.section:first-child{padding-top:0}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px}.section-title h3,summary{font-size:12px;font-weight:600;margin:0}.section-title small{font-size:10px;color:var(--muted)}summary{cursor:pointer}details[open]>summary{margin-bottom:14px}.row,.sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.row+.row,.row+.sliders,.sliders+.row,.sliders+.sliders{margin-top:15px}.field{display:block;font-size:11px;color:var(--muted);min-width:0}.field select,.field input[type=number],.field input[type=color]{display:block;width:100%;margin-top:7px;font-size:12px}.field select{padding:8px 5px}.field input[type=color]{height:34px;background:#252d28;border:1px solid #465149}.slider-head{display:flex;justify-content:space-between;gap:5px;font-size:11px;margin-bottom:5px}.slider-head output{font-variant-numeric:tabular-nums;color:var(--accent)}.sliders input{width:100%;margin:7px 0 0;height:4px}.helper{font-size:11px;line-height:1.55;color:var(--muted);margin:11px 0 0}.check{display:flex;align-items:center;gap:7px;font-size:11px;margin:12px 0}.section fieldset{margin-top:14px}.section fieldset:disabled{opacity:.5}.asset-picker{display:flex;gap:7px;align-items:center;margin-top:12px;flex-wrap:wrap}.asset-picker button{font-size:11px}.asset-name{font-size:10px;color:var(--muted);overflow-wrap:anywhere}.footer{border-top:1px solid var(--line);padding-top:15px;margin-top:8px;display:flex;flex-direction:column;gap:11px}.summary{font-size:11px;color:var(--muted)}.footer .generate{width:100%;padding:11px}
-.download-page{flex:1;min-height:0;overflow:auto;padding:30px}.page-content{max-width:640px;margin:0 auto}.eyebrow{color:var(--accent);font-size:10px;letter-spacing:1.4px}.download-page h1{font-size:25px;font-weight:500}.download-page p{color:var(--muted);line-height:1.6}.download-page .field{margin-top:18px}.download-page input[type=url],.download-page input[type=number]{width:100%;margin-top:7px}.download-actions{display:flex;gap:10px;margin-top:22px}.job-status{display:flex;align-items:center;gap:16px;flex-shrink:0;border-top:1px solid var(--line);padding:10px 24px;background:#171d19}.job-message{flex:1;min-width:0}#status{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-height:58px;overflow:auto}#status.error{color:#ffb8ae}progress{width:100%;height:4px;accent-color:var(--accent);display:block;margin-bottom:6px}.comparison-mode{grid-template-columns:1fr}.comparison-mode>.workspace{display:none}
-@media(max-width:1100px){main{grid-template-columns:minmax(0,1fr) 320px}.viewer{padding:15px;gap:11px}.workspace{padding:16px}.transport{gap:5px}.transport .timecode{font-size:10px}.view-options{gap:6px}.metadata{gap:8px}.range-actions{flex-wrap:wrap}}@media(max-width:760px){body{overflow:auto;height:auto;min-height:100vh}header{padding:0 14px;gap:12px}.local{display:none}main{display:flex;flex-direction:column}.viewer{min-height:660px}.workspace{border-left:0;border-top:1px solid var(--line)}.settings-wrap{overflow:visible}.transport{flex-wrap:wrap}.comparison-mode>.viewer{min-height:700px}.row,.sliders{gap:16px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
-.component-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.component-actions button{font-size:11px}.applied-enhancement{padding:12px 0;border-bottom:1px solid var(--line)}.component-row{display:flex;gap:8px;align-items:flex-start}.component-row input{margin:4px 0 0}.component-info{flex:1;min-width:0}.component-info strong{font-size:12px;font-weight:500;overflow-wrap:anywhere}.component-info small{display:block;font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px}.component-row button{font-size:10px;padding:5px 7px}.component-overlap{font-size:10px;line-height:1.5;color:#d8bd85;margin:6px 0 0}.component-editor{margin-top:14px;padding-left:20px}.component-editor h3{font-size:12px;font-weight:500;margin:0 0 12px}.component-panel{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}.component-panel h4{font-size:11px;color:var(--muted);font-weight:500;margin:14px 0 8px}.enhancement-library{display:grid;gap:6px}.enhancement-library button{text-align:left}.enhancement-library strong{display:block;font-size:12px;font-weight:500}.enhancement-library small{display:block;font-size:10px;color:var(--muted);line-height:1.5;margin-top:3px}.adjustment-groups{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0}.adjustment-groups label{display:flex;gap:6px;align-items:center;font-size:11px}.field input[type=text]{display:block;width:100%;min-width:0;margin-top:7px;padding:8px;border:1px solid #465149;border-radius:5px;background:#252d28;color:inherit}.error{color:#ffb8ae!important;white-space:pre-line}
-.render-status[data-state=current]{color:var(--accent)}.render-status[data-state=stale]{color:#e5bc70}
-</style>
-<header><strong>Video Enhancer<span>.</span></strong><nav aria-label="Workspace"><button id="nav-full" data-page="full" aria-controls="main" aria-current="page">Full video</button><button id="nav-sample" data-page="sample" aria-controls="main">Preview</button><button id="nav-files" data-page="files" aria-controls="main">Compare</button><button id="nav-download" data-page="download" aria-controls="download-page">Download</button></nav><span class="local">LOCAL · NVIDIA</span></header>
-<section id="download-page" class="download-page" aria-labelledby="download-title" hidden>
-  <div class="page-content youtube">
-    <div class="eyebrow">DOWNLOAD</div><h1 id="download-title">Download from YouTube</h1>
-    <p>Download a source, then open it in your workspace.</p>
-    <form id="download-form">
-      <fieldset id="download-settings" aria-label="YouTube download options">
-        <label class="field">Video link<input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off" spellcheck="false"></label>
-        <div class="row">
-          <label class="field">Max resolution<select id="download-height"><option value="0">Best</option><option value="360">360p</option><option value="480">480p</option><option value="720">720p</option><option value="1080" selected>1080p</option><option value="1440">1440p</option><option value="2160">2160p</option></select></label>
-          <label class="field">Max frame rate<select id="download-fps"><option value="0">Best</option><option value="30">30 FPS</option><option value="60">60 FPS</option></select></label>
-        </div>
-        <label class="field">Format<select id="download-format"><option value="mp4">MP4 · H.264</option><option value="mkv">MKV · best SDR</option></select></label>
-        <p class="helper">Audio included. Downloads the best available within your limits. MP4 works with the enhancer; higher resolutions may need MKV.</p>
-        <label class="check"><input id="download-specific-timings" type="checkbox">Specific timings</label>
-        <fieldset id="download-timings" class="row" disabled aria-label="Clip timings">
-          <label class="field">Start · seconds<input id="download-start" type="number" min="0" step="0.001" value="0" required></label>
-          <label class="field">End · seconds<input id="download-end" type="number" min="0" step="0.001" placeholder="60" required></label>
-        </fieldset>
-        <p class="helper">Downloads the source, then saves this section at the selected resolution, frame rate and format. Exact cuts re-encode video and audio at high quality.</p>
-      </fieldset>
-      <div class="download-actions"><button id="download" class="generate" type="submit">Download video</button><button id="download-load" type="button">Load video</button></div>
-    </form>
-    <p class="helper">Saved in youtube-videos. Open your download directly when it finishes.</p>
-  </div>
-</section>
-<main id="main">
-<section class="viewer" aria-label="Video workspace">
-  <div id="source-bar" class="source-bar"><div class="source-info"><div id="name">No video loaded</div><div class="metadata"><span id="dimensions">—</span><span id="fps">—</span><span id="duration">—</span><span id="audio">—</span></div></div><button id="load">Load video</button></div>
-  <div id="preview-heading" class="source-bar" hidden><div class="source-info"><strong>Preview</strong><p id="preview-description" class="helper">Choose a range in Full video to prepare a preview.</p></div><button id="change-range">Change range</button></div>
-  <div id="comparison-heading" hidden><strong>Compare videos</strong><p class="helper">Choose two local videos to inspect on a shared timeline.</p></div>
-  <div id="comparison-files" class="compare-files" hidden><label>Video A<input id="comparison-file-1" type="file" accept="video/*"></label><label>Video B<input id="comparison-file-2" type="file" accept="video/*"></label><button id="comparison-clear">Clear files</button></div>
-  <div class="viewer-toolbar"><div class="view-options"><label>View<select id="view-mode" aria-label="Comparison view"><option value="original">Original</option><option value="enhanced">Enhanced</option><option value="wipe">Wipe</option><option value="side">Side by side</option></select></label><label>Zoom<select id="zoom" aria-label="Viewer zoom"><option value="fit">Fit</option><option value="1">100%</option><option value="2">200%</option></select></label><button id="reset-view" title="Reset zoom and pan">Reset</button></div></div>
-  <div id="viewport" data-mode="original" tabindex="0" aria-label="Video viewer. Space to play, left and right arrows to step. Drag to pan when zoomed.">
-    <div class="pane" id="pane-original"><video id="video-original" playsinline preload="auto" aria-label="Original video"></video></div>
-    <div class="pane" id="pane-enhanced"><video id="video-enhanced" playsinline preload="auto" muted aria-label="Enhanced video"></video></div>
-    <span class="pane-label" id="label-original" hidden>ORIGINAL</span><span class="pane-label" id="label-enhanced" hidden>ENHANCED</span>
-    <button id="wipe-handle" role="slider" aria-label="Comparison wipe" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" hidden></button>
-    <div id="viewer-empty"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="5" y="9" width="38" height="30" rx="3" stroke="currentColor" stroke-width="1.3"/><path d="m20 17 12 7-12 7V17Z" fill="currentColor"/></svg><h1 id="viewer-empty-title">Your video, in detail.</h1><p id="viewer-empty-text">Load a video. Try a short preview and compare the result before exporting.</p><button id="empty-load" class="primary">Load video</button></div>
-    <div id="viewer-error" role="status" hidden></div>
-  </div>
-  <div class="transport" role="group" aria-label="Playback controls"><button id="play" aria-label="Play" disabled>Play</button><button id="step-back" aria-label="Step back" title="Previous timeline step" disabled>‹</button><button id="step-forward" aria-label="Step forward" title="Next timeline step" disabled>›</button><input id="seek" type="range" min="0" max="1" step="0.001" value="0" aria-label="Playback position" disabled><output id="timecode" class="timecode">0:00.000 / 0:00.000</output><label title="Loop the selected preview range in Full video, or the whole displayed preview"><input id="loop" type="checkbox">Loop</label><button id="mute" aria-label="Mute audio" aria-pressed="false" disabled>Sound</button></div>
-  <div class="viewer-note" id="viewer-note">Native video playback · source files stay untouched.</div>
-  <fieldset id="preview-range" class="preview-range" disabled><div class="range-heading"><strong>Preview range</strong><output id="range-label">Select up to 15 seconds</output><button id="range-here" title="Start a preview at the playhead">Start here</button></div><div class="range-track" id="range-track"><div class="range-fill"></div><input id="sample-start" type="range" min="0" max="15" step="0.001" value="0" aria-label="Preview start"><input id="sample-end" type="range" min="0" max="15" step="0.001" value="5" aria-label="Preview end"></div><div class="range-actions"><p class="helper render-status" id="sample-status" role="status">Drag the range handles, then render your settings.</p><button id="sample-render" class="primary" disabled>Render preview</button></div></fieldset>
-  <div id="preview-actions" class="range-actions" hidden><p id="preview-status" class="helper render-status" role="status">Prepare a preview from Full video.</p><button id="sample-rerender" class="primary" disabled>Render preview</button></div>
-  <div class="result-actions"><button id="open-source" disabled>Open source</button><button id="sample-external" hidden>Open preview</button><button id="open-output" hidden>Play export</button><button id="show-output" hidden>Show in folder</button></div>
-</section>
-<section class="workspace" aria-label="Enhancement settings"><div class="intro"><h2>Enhancements</h2><button id="reset" disabled>Reset</button></div><div class="settings-wrap"><fieldset id="settings" disabled class="locked" aria-label="Video enhancement settings">
-  <section class="section"><div class="section-title"><h3>Applied to this video</h3><small id="component-count">None</small></div>
-    <div id="applied-enhancements"></div><p id="components-empty" class="helper">Add an enhancement to start. Output settings stay separate.</p>
-    <p class="helper">Later enabled enhancements override shared adjustments.</p><div class="component-actions"><button id="add-enhancement">Add enhancement</button><button id="create-enhancement">Create new enhancement</button></div>
-    <p id="upscale-note" class="helper" hidden>Choose a larger resolution in Output to use upscaling detail.</p>
-    <p id="library-status" class="helper" role="status">Loading saved enhancements...</p><button id="retry-library" hidden>Retry saved library</button>
-    <section id="enhancement-library" class="component-panel" hidden><div class="section-title"><h3>Add enhancement</h3><button id="close-library">Close</button></div><h4>Built in</h4><div id="builtin-library" class="enhancement-library"></div><h4>Saved enhancements</h4><div id="saved-library" class="enhancement-library"></div></section>
-    <section id="custom-builder" class="component-panel" hidden><div class="section-title"><h3>Create new enhancement</h3><button id="cancel-custom">Cancel</button></div><label class="field">Name<input id="custom-name" type="text" maxlength="120" placeholder="My enhancement"></label><p class="helper">Choose only the adjustments this enhancement should control.</p><div id="custom-groups" class="adjustment-groups"></div><button id="create-custom" class="primary">Create enhancement</button></section>
-    <div id="editor-home" hidden><div id="component-editor" class="component-editor" hidden><label class="field">Name for this video<input id="component-name" type="text" maxlength="120"></label><p class="helper">Changes affect this video's copy. Save a new enhancement to reuse them.</p>
-<section class="section" id="edit-group-upscale" hidden><h3>Upscaling detail</h3>      <div class="row"><label class="field">Upscale method<select id="upscale_method"><option value="vsr">Video Super Resolution</option><option value="lightweight">Lightweight Upscale</option></select></label><label class="field">VSR quality<select id="quality"><optgroup label="Standard"><option value="0">Bicubic · no AI</option><option value="1">Low · fastest</option><option value="2">Medium</option><option value="3">High</option><option value="4" selected>Ultra · most detail</option></optgroup><optgroup label="High bitrate"><option value="16">High bitrate · low</option><option value="17">High bitrate · medium</option><option value="18">High bitrate · high</option><option value="19">High bitrate · ultra</option></optgroup><optgroup label="Streaming"><option value="21">Streaming · medium</option><option value="23">Streaming · ultra</option></optgroup></select></label></div>
-      <div class="sliders" id="upscale-controls"></div><p class="helper">Choose a larger resolution in Output to use upscaling detail.</p></section>
-<section class="section" id="edit-group-denoise" hidden><h3>Noise reduction</h3><div class="sliders" id="denoise-controls"></div><label class="field">VSR denoise quality<select id="denoise_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label></section>
-<section class="section" id="edit-group-deblur" hidden><h3>Deblur</h3><div class="sliders" id="deblur-controls"></div><label class="field">VSR deblur quality<select id="deblur_quality"><option value="0">Low · gentle</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select></label></section>
-<section class="section" id="edit-group-sharpen" hidden><h3>Sharpening</h3><div class="sliders" id="sharpen-controls"></div><p class="helper">Too much sharpening can create halos.</p></section>
-<section class="section" id="edit-group-contrast" hidden><h3>Contrast</h3><div class="sliders" id="contrast-controls"></div></section>
-<section class="section" id="edit-group-vibrance" hidden><h3>Vibrance</h3><div class="sliders" id="vibrance-controls"></div></section>
-<section class="section" id="edit-group-saturation" hidden><h3>Saturation</h3><div class="sliders" id="saturation-controls"></div></section>
-<section class="section" id="edit-group-exposure" hidden><h3>Exposure</h3><div class="sliders" id="exposure-controls"></div></section>
-<section class="section" id="edit-group-warmth" hidden><h3>Warmth</h3><div class="sliders" id="warmth-controls"></div></section>
-<section class="section" id="edit-group-temporal" hidden><h3>Temporal denoising</h3><label class="field" style="margin-top:17px">Temporal denoising · sources up to 1920 × 1080<select id="temporal_denoise"><option value="">Off</option><option value="0">Weak</option><option value="1">Strong</option></select></label></section>
-<section class="section" id="edit-group-hdr" hidden><h3>SDR to HDR</h3><label class="check"><input id="hdr_enabled" type="checkbox">Convert SDR to HDR10</label><fieldset id="hdr-settings" aria-label="TrueHDR settings" disabled><div class="sliders" id="hdr-controls"></div><label class="check"><input id="hdr_debanding" type="checkbox" checked>Use TrueHDR debanding</label></fieldset><p class="helper">Uses the SDK's 8-bit SDR input and exports 10-bit HEVC HDR10. Requires an HDR display for correct playback. Debanding is part of this conversion; it cannot recover detail lost to source compression.</p></section>
-<section class="section" id="edit-group-portrait" hidden><h3>Portrait background</h3><div class="row"><label class="field">Background effect<select id="portrait_mode"><option value="off">Off</option><option value="blur">Blur background</option><option value="replace">Replace with colour</option><option value="mask">Export person mask</option></select></label><label class="field">Segmentation quality<select id="segmentation_mode"><option value="0">Quality · keep chairs</option><option value="1">Performance · keep chairs</option><option value="2">Quality · remove chairs</option><option value="3">Performance · remove chairs</option></select></label></div><div class="sliders" id="portrait-controls"></div><label class="field" style="margin-top:17px">Replacement colour<input id="background_color" type="color" value="#00b140"></label><p class="helper">Designed for people in sources at least 512 × 288. Mask export saves a grayscale video with white foreground and black background.</p></section>
-<section class="section" id="edit-group-relighting" hidden><h3>Portrait relighting</h3><div class="row"><label class="field">Relighting effect<select id="relighting_mode"><option value="off">Off</option><option value="relighting">Relighting</option><option value="aigs">Relighting + HDR background</option></select></label><label class="field">Quality<select id="relighting_quality"><option value="0">Quality</option><option value="1" selected>Performance</option><option value="2">Quality + HDRI blur</option><option value="3">Performance + HDRI blur</option></select></label></div><div class="asset-picker"><button id="choose-hdri" type="button">Choose HDR environment</button><button id="clear-hdri" type="button" disabled>Clear</button><span class="asset-name" id="hdri-name">No environment selected</span></div><fieldset id="relighting-settings" aria-label="Relighting settings" disabled><div class="sliders" id="relighting-controls"></div><label class="check"><input id="environment_background" type="checkbox">Use HDR environment as the background</label></fieldset><p class="helper">Uses the selected HDR environment to light the person. The combined SDK effect uses the HDR environment background; its blur modes blur that background. Choose Relighting to preserve the source backdrop or apply a portrait background effect. Sources must be at least 512 × 288. Use either the environment background or a portrait background effect; disable one before rendering.</p></section>
-    <div class="component-actions"><button id="save-as-enhancement">Save as enhancement</button><button id="close-component">Done</button></div>
-    <div id="save-enhancement-panel" class="component-panel" hidden><label class="field">New library name<input id="save-enhancement-name" type="text" maxlength="120"></label><div class="component-actions"><button id="save-enhancement" class="primary">Save new enhancement</button><button id="cancel-save-enhancement">Cancel</button></div></div>
-    </div></div>
-  </section>
-    <section class="section"><div class="section-title"><h3>Output</h3><small>Preserve aspect ratio</small></div>
-      <div class="row"><label class="field">Resolution<select id="scale"><option value="1">Original resolution</option><option value="1.3333333333333333">1⅓× resolution</option><option value="1.5">1.5× resolution</option><option value="2">2× resolution</option><option value="3">3× resolution</option><option value="4">4× resolution</option></select></label><label class="field">Frame rate<select id="target_fps"><option value="">Original FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select></label></div>
-      <p class="helper">Higher FPS uses NVIDIA AI frame generation. Maximum output: 4096 pixels per side.</p>
-      <details style="margin-top:17px"><summary>Frame generation & encoding</summary><div class="row"><label class="field">Frame generation quality<select id="frame_quality"><option value="0">Low</option><option value="1" selected>Medium</option><option value="2">High</option></select></label><label class="field">Output encoding<select id="output_encoding"><option value="h264">H.264 · 8-bit SDR</option><option value="hevc10">HEVC · 10-bit</option></select></label></div>
-      <label class="check"><input id="detect_scene_changes" type="checkbox" checked>Detect scene changes before generating frames</label>
-      <div class="row"><label class="field">Encoder preset<select id="encoder_preset"><option value="1">P1 · fastest</option><option value="2">P2</option><option value="3">P3</option><option value="4" selected>P4 · balanced</option><option value="5">P5</option><option value="6">P6</option><option value="7">P7 · best compression</option></select></label><label class="field">Encoder quality · 0–51<input id="encoder_quality" type="number" min="0" max="51" step="1" value="19" required></label></div><p class="helper">Encoder quality 1–51: lower retains more detail and uses more space. 0 selects automatic quality. 10-bit output preserves finer colour steps; it does not recover missing source detail.</p></details>
-    </section>
+/* Neutral grey surround, as in a grading suite: no tint biases how colour reads in the viewer. */
+:root{
+  color-scheme:dark;
+  --rail:#1c1d1f;--surround:#27282a;--panel:#2f3033;--raised:#393a3e;--hover:#45464b;--line:#4a4b50;--line-soft:#3a3b3f;--well:#1a1b1d;
+  --text:#ececed;--muted:#a4a5aa;--faint:#78797f;
+  --signal:#f4c430;--signal-ink:#201a06;--signal-soft:rgba(244,196,48,.15);
+  --tally:#ff5a4e;--ok:#5ccf8f;--warn:#f2a93b;
+  --display:"Bahnschrift","Segoe UI Variable Display","Segoe UI",sans-serif;
+  --label:"Bahnschrift SemiCondensed","Bahnschrift","Segoe UI",sans-serif;
+  --body:"Segoe UI Variable Text","Segoe UI",sans-serif;
+  --panel-w:clamp(330px,28vw,400px);
+  font:13.5px/1.45 var(--body);color:var(--text);background:var(--surround);
+}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;overflow:hidden;background:var(--surround)}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled,select:disabled,input:disabled{cursor:default;opacity:.42}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.i{width:18px;height:18px;flex:none}
+h1,h2,h3,h4,p{margin:0}
 
-  <p id="compatibility-errors" class="helper error" role="status" hidden></p>
-</fieldset></div><div class="footer"><span class="summary" id="summary">Waiting for a video</span><button id="generate" class="generate" disabled>Export full video →</button></div></section>
-</main>
-<footer id="job-status" class="job-status" hidden><div class="job-message"><progress id="progress" max="1" value="0" hidden></progress><div id="status" role="status" aria-live="polite"></div></div><button id="cancel" hidden>Cancel</button></footer>
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 14px;border-radius:7px;border:1px solid var(--line);background:var(--raised);font-weight:500;white-space:nowrap}
+.btn:hover:enabled{background:var(--hover)}
+.btn.primary{background:var(--signal);border-color:var(--signal);color:var(--signal-ink);font-weight:600}
+.btn.primary:hover:enabled{background:#ffd451}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover:enabled{background:var(--raised);color:var(--text)}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px;border-radius:6px}
+.btn.lg{height:44px;padding:0 22px;font-size:15px;border-radius:9px}
+.icon-btn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:7px;border:0;background:transparent;color:var(--muted)}
+.icon-btn:hover:enabled{background:var(--raised);color:var(--text)}
+.icon-btn.sm{width:26px;height:26px}.icon-btn.sm .i{width:15px;height:15px}
+.icon-btn[aria-pressed=true]{color:var(--signal)}
+.link{border:0;background:none;padding:0;color:var(--signal);text-decoration:underline;text-underline-offset:3px}
+
+/* Segmented controls */
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--well)}
+.seg button{height:28px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.seg button:hover:enabled{color:var(--text)}
+.seg button[aria-pressed=true]{background:var(--raised);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+
+/* Form controls */
+select,input[type=text],input[type=url],input[type=number],.text{height:32px;padding:0 10px;border-radius:6px;border:1px solid var(--line);background:var(--well);min-width:0}
+select{appearance:none;padding-right:28px;background:var(--well) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a4a5aa' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") no-repeat right 7px center/15px}
+input[type=color]{width:46px;height:28px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--well)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;margin:0;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,#55565c 0 var(--a,0%),var(--signal) var(--a,0%) var(--b,0%),#55565c var(--b,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;background:#f1f1f1;box-shadow:0 0 0 3px rgba(0,0,0,.28)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--signal)}
+.switch{appearance:none;flex:none;position:relative;width:30px;height:18px;margin:0;border-radius:9px;background:#56575d;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#e8e8e8;transition:transform .15s}
+.switch:checked{background:var(--signal)}
+.switch:checked::after{transform:translateX(12px);background:var(--signal-ink)}
+
+.eyebrow{font:500 11.5px/1 var(--label);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.note{color:var(--muted);font-size:12.5px}
+.error-text{color:#ff9a90;font-size:12.5px;white-space:pre-line}
+
+/* App frame */
+.app{display:grid;grid-template-columns:76px minmax(0,1fr) var(--panel-w);grid-template-rows:minmax(0,1fr) auto;height:100vh}
+.rail{grid-row:1/3;display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:14px 8px;background:var(--rail);border-right:1px solid #111}
+.mark{width:30px;height:30px;margin:0 auto 18px;border-radius:7px;background:linear-gradient(90deg,#6d6e73 0 46%,transparent 46% 54%,var(--signal) 54%)}
+.rail button{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 0 8px;border:0;border-radius:8px;background:transparent;color:var(--faint);font:500 11px/1 var(--label);letter-spacing:.08em;text-transform:uppercase}
+.rail button .i{width:22px;height:22px}
+.rail button:hover{color:var(--text);background:#26272a}
+.rail button[aria-current=page]{color:var(--text)}
+.rail button[aria-current=page]::before{content:"";position:absolute;left:-8px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--signal)}
+.rail-foot{margin-top:auto;text-align:center;font:500 10px/1.4 var(--label);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+
+/* Welcome */
+.welcome{grid-column:2/4;grid-row:1;display:grid;place-items:center;padding:32px;overflow:auto}
+.welcome-inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:56px;align-items:center;max-width:1080px;width:100%}
+.welcome h1{margin:14px 0 14px;font:300 46px/1.05 var(--display);letter-spacing:-.01em}
+.welcome .lede{max-width:430px;color:var(--muted);font-size:15px}
+.welcome-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 34px}
+.loading-line{display:flex;align-items:center;gap:12px;margin:28px 0 34px;font:400 16px var(--display)}
+.spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--signal);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px;counter-reset:step}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:2px 10px;counter-increment:step;color:var(--muted)}
+.steps li::before{content:counter(step);grid-row:1/3;display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--line);border-radius:50%;font:500 12px var(--label);color:var(--text)}
+.steps b{color:var(--text);font-weight:600}
+.fine{margin-top:26px;font:500 11px var(--label);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.hero-frame{width:100%;height:auto;border-radius:10px;box-shadow:0 30px 60px -20px rgba(0,0,0,.6);display:block}
+
+/* Stage */
+.stage{grid-column:2;grid-row:1;display:flex;flex-direction:column;min-width:0;min-height:0;padding:14px 18px 0}
+body[data-page=compare] .stage{grid-column:2/4}
+.stage-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.spacer{flex:1}
+.slots{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.slot{display:inline-flex;align-items:center;gap:9px;max-width:300px;height:34px;padding:0 12px 0 5px;border:1px dashed var(--line);border-radius:8px;cursor:pointer;color:var(--muted)}
+.slot:hover{border-color:var(--muted);color:var(--text)}
+.slot:focus-within{outline:2px solid var(--signal);outline-offset:2px}
+.slot b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;background:var(--raised);color:var(--text);font:600 12px var(--label)}
+.slot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot.filled{border-style:solid;color:var(--text)}
+.slot input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+
+#viewport{position:relative;flex:1;min-height:180px;overflow:hidden;border-radius:8px;background:#000;box-shadow:0 0 0 1px #111}
+#viewport.pannable{cursor:grab}#viewport.pannable:active{cursor:grabbing}
+.pane{position:absolute;inset:0;overflow:hidden}
+.pane video{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:none;background:#000}
+#viewport[data-mode=original] #pane-b,#viewport[data-mode=enhanced] #pane-a{display:none}
+#viewport[data-mode=wipe] #pane-b{clip-path:inset(0 0 0 var(--wipe,50%))}
+#viewport[data-mode=side] .pane{right:50%}
+#viewport[data-mode=side] #pane-b{left:50%;right:0;border-left:2px solid var(--surround)}
+.tag{position:absolute;top:12px;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 9px;border-radius:5px;background:rgba(10,10,11,.72);font:500 11px/1 var(--label);letter-spacing:.1em;text-transform:uppercase;pointer-events:none}
+#tag-a{left:12px}#tag-b{right:12px;color:var(--signal)}
+#viewport[data-mode=side] #tag-b{right:auto;left:calc(50% + 12px)}
+#wipe{position:absolute;top:0;bottom:0;left:var(--wipe,50%);width:30px;margin-left:-15px;cursor:ew-resize;touch-action:none;border:0;background:none;padding:0}
+#wipe::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:2px;background:var(--signal)}
+#wipe::after{content:"";position:absolute;left:4px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px rgba(0,0,0,.35)}
+.stage-empty{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:10px;padding:24px;text-align:center;background:var(--well)}
+.stage-empty h2{font:400 22px var(--display)}
+.stage-empty p{max-width:380px;color:var(--muted)}
+.stage-empty .row{display:flex;gap:8px;margin-top:6px}
+.viewer-error{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);max-width:80%;padding:9px 14px;border-radius:7px;background:rgba(80,20,16,.92);color:#ffd9d4}
+.hint{position:absolute;left:12px;bottom:12px;max-width:60%;padding:5px 9px;border-radius:5px;background:rgba(10,10,11,.72);color:var(--muted);font-size:12px;pointer-events:none}
+
+/* Timeline: the preview range is marked with yellow in/out brackets, as in an edit suite. */
+.deck{padding:14px 0 12px}
+.timeline{position:relative;height:34px;border-radius:6px;cursor:pointer;touch-action:none;background:repeating-linear-gradient(to right,rgba(255,255,255,.1) 0 1px,transparent 1px 10%) left bottom/100% 7px no-repeat,var(--well)}
+.timeline[aria-disabled=true]{cursor:default;opacity:.5}
+.tl-played{position:absolute;left:0;top:0;bottom:0;border-radius:6px 0 0 6px;background:rgba(255,255,255,.07);pointer-events:none}
+.tl-range{position:absolute;top:0;bottom:0;border-block:2px solid var(--signal);background:var(--signal-soft);cursor:grab}
+.tl-range:active{cursor:grabbing}
+.tl-handle{position:absolute;top:-3px;bottom:-3px;width:9px;background:var(--signal);cursor:ew-resize;border:0;padding:0}
+.tl-handle::after{content:"";position:absolute;top:50%;left:3px;width:3px;height:12px;margin-top:-6px;border-radius:2px;background:rgba(0,0,0,.35)}
+#tl-in{left:-9px;border-radius:5px 0 0 5px}#tl-out{right:-9px;border-radius:0 5px 5px 0}
+.tl-head{position:absolute;top:-5px;bottom:-3px;width:2px;margin-left:-1px;background:#fff;pointer-events:none}
+.tl-head::before{content:"";position:absolute;top:0;left:-4px;border:5px solid transparent;border-top:6px solid #fff;border-bottom:0}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:10px}
+.transport .play{width:40px;height:40px;border-radius:50%;background:var(--text);color:var(--surround)}
+.transport .play:hover:enabled{background:#fff;color:var(--surround)}
+.timecode{margin:0 12px 0 10px;font:400 16px var(--display);font-variant-numeric:tabular-nums}
+.timecode span{color:var(--faint)}
+.range-readout{display:flex;align-items:center;gap:12px;padding-left:14px;border-left:1px solid var(--line-soft);font:500 12px var(--label);letter-spacing:.06em;color:var(--muted);font-variant-numeric:tabular-nums}
+.range-readout b{color:var(--signal);font-weight:500}
+
+/* Activity strip */
+.activity{grid-column:2/4;grid-row:2;display:flex;align-items:center;gap:16px;padding:10px 18px;background:var(--rail);border-top:1px solid #111}
+.tally{width:9px;height:9px;flex:none;border-radius:50%;background:var(--tally);box-shadow:0 0 10px var(--tally);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.act-text{display:flex;flex-direction:column;min-width:0;flex:0 1 auto;max-width:45%}
+.act-text b{font:500 14px var(--display)}
+.act-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12.5px}
+.act-bar{position:relative;flex:1;height:4px;overflow:hidden;border-radius:2px;background:#3a3b3f}
+.act-bar i{position:absolute;inset:0 auto 0 0;background:var(--signal);transition:width .2s}
+.act-bar.indeterminate i{width:30%!important;animation:slide 1.2s ease-in-out infinite}
+@keyframes slide{from{left:-30%}to{left:100%}}
+.act-pct{min-width:42px;text-align:right;font:500 13px var(--display);font-variant-numeric:tabular-nums}
+
+/* Panel */
+.panel{grid-column:3;grid-row:1;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid #1d1e20}
+.source-card{display:flex;align-items:flex-start;gap:12px;padding:16px 18px 14px;border-bottom:1px solid var(--line-soft)}
+.source-card div{min-width:0;flex:1}
+.source-card h2{margin:6px 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 16px var(--display)}
+.source-card p{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.panel-scroll{flex:1;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+.block{padding:16px 18px 18px;border-bottom:1px solid var(--line-soft)}
+.block-head{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.block-head h3{font:500 12.5px/1 var(--label);letter-spacing:.14em;text-transform:uppercase}
+.block-head .count{color:var(--faint);font-size:12px;margin-left:4px}
+
+.layers{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.layer{border:1px solid var(--line-soft);border-radius:9px;background:var(--raised)}
+.layer.open{border-color:#5d5e64;background:#36373b}
+.layer.off .layer-title{opacity:.5}
+.layer-head{display:flex;align-items:center;gap:10px;padding:8px 6px 8px 12px}
+.layer-title{display:flex;flex-direction:column;align-items:flex-start;flex:1;min-width:0;padding:2px 0;border:0;background:none;text-align:left}
+.layer-title b{display:flex;align-items:center;gap:6px;max-width:100%;font-weight:600}
+.layer-title b span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer-title b .i{width:14px;height:14px;color:var(--faint);transition:transform .15s}
+.layer.open .layer-title b .i{transform:rotate(180deg)}
+.layer-title small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px}
+.layer-warn{margin:-2px 12px 8px 52px;color:var(--warn);font-size:12px}
+.layer-body{display:grid;gap:14px;padding:6px 14px 14px;border-top:1px solid var(--line-soft)}
+.ctl-group{display:grid;gap:12px}
+.ctl-group h4{margin-top:4px;font:500 11.5px/1 var(--label);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ctl{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px}
+.ctl>label,.ctl>.ctl-label{color:var(--text);font-size:12.5px}
+.ctl select,.ctl input[type=text]{grid-column:1/3}
+.ctl-range output{font:400 13px var(--display);font-variant-numeric:tabular-nums;color:var(--muted)}
+.ctl-range input{grid-column:1/3}
+.ctl-inline select,.ctl-inline input{grid-column:auto}
+.ctl-file{grid-template-columns:auto 1fr auto auto}
+.file-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12.5px;text-align:right}
+.ctl-note{color:var(--faint);font-size:12px}
+
+.layers-empty{padding:16px;border:1px dashed var(--line);border-radius:9px;text-align:center}
+.layers-empty p{color:var(--muted);margin-bottom:10px}
+.preset-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:12px}
+
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.choices#out-fps{grid-template-columns:repeat(4,minmax(0,1fr))}.choices#out-encoding{grid-template-columns:repeat(2,minmax(0,1fr))}
+.choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:7px 9px;border:1px solid var(--line-soft);border-radius:7px;background:var(--well);text-align:left}
+.choice b{font:500 14px/1.1 var(--display)}
+.choice small{color:var(--faint);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.choice:hover:enabled{border-color:var(--line)}
+.choice[aria-pressed=true]{border-color:var(--signal);background:var(--signal-soft)}
+.choice[aria-pressed=true] small{color:var(--muted)}
+.field-label{margin-bottom:7px;color:var(--muted);font-size:12.5px}
+details.advanced summary{cursor:pointer;color:var(--muted);font-size:12.5px;list-style:none;display:flex;align-items:center;gap:6px}
+details.advanced summary::-webkit-details-marker{display:none}
+details.advanced summary .i{width:14px;height:14px;transition:transform .15s}
+details.advanced[open] summary .i{transform:rotate(180deg)}
+details.advanced .ctl-group{margin-top:12px}
+
+.panel-foot{display:grid;gap:10px;padding:14px 18px 16px;border-top:1px solid #1d1e20;background:#2a2b2e}
+.issues{display:grid;gap:8px;margin:0;padding:10px 12px;list-style:none;border-radius:8px;border:1px solid rgba(242,169,59,.35);background:rgba(242,169,59,.08)}
+.issues li{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.issues li p{flex:1}
+.done{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center;padding:10px 12px;border-radius:8px;background:rgba(92,207,143,.1);border:1px solid rgba(92,207,143,.3)}
+.done p{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.done p b{color:var(--ok);font-weight:600}
+.done div{display:flex;gap:6px}
+.preview-state{display:flex;align-items:flex-start;gap:8px;color:var(--muted);font-size:12.5px}
+.preview-state::before{content:"";flex:none;width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--faint)}
+.preview-state[data-state=current]::before{background:var(--ok)}
+.preview-state[data-state=stale]::before{background:var(--warn)}
+.preview-state[data-state=busy]::before{background:var(--tally)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions .btn{height:40px}
+
+/* YouTube */
+.youtube{grid-column:2/4;grid-row:1;overflow:auto;padding:56px 32px}
+.yt-inner{max-width:640px;margin:0 auto}
+.yt-inner h1{margin:12px 0 8px;font:300 38px/1.1 var(--display)}
+.yt-inner>p{color:var(--muted);font-size:14.5px}
+.yt-form{display:grid;gap:18px;margin-top:30px}
+.yt-url{height:50px;padding:0 16px;font-size:15px;border-radius:9px}
+.yt-options{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.field{display:grid;gap:6px;color:var(--muted);font-size:12.5px}
+.field select,.field input{color:var(--text)}
+.toggle-row{display:flex;align-items:center;gap:10px;cursor:pointer}
+.yt-times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.yt-result{display:flex;align-items:center;gap:14px;margin-top:26px;padding:14px 16px;border-radius:9px;background:rgba(92,207,143,.1);border:1px solid rgba(92,207,143,.3)}
+.yt-result p{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--muted);font-size:12.5px}
+.yt-result b{display:block;color:var(--ok);font-weight:600;font-size:13.5px}
+
+/* Menus, dialogs, toasts */
+.menu{position:fixed;z-index:20;width:330px;max-height:min(560px,calc(100vh - 40px));overflow-y:auto;padding:8px;border:1px solid var(--line);border-radius:11px;background:#333438;box-shadow:0 24px 50px -10px rgba(0,0,0,.65)}
+.menu h4{margin:10px 8px 6px;font:500 11px/1 var(--label);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.menu-item{display:flex;flex-direction:column;align-items:flex-start;width:100%;padding:8px 10px;border:0;border-radius:7px;background:none;text-align:left}
+.menu-item:hover,.menu-item:focus-visible{background:var(--hover);outline:none}
+.menu-item small{color:var(--muted);font-size:12px}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.menu-grid .menu-item{padding:7px 10px}
+.menu .note{padding:4px 10px 8px}
+dialog{width:min(440px,calc(100vw - 40px));padding:22px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);box-shadow:0 30px 60px -10px rgba(0,0,0,.7)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog h2{font:400 21px var(--display);margin-bottom:8px}
+dialog form{display:grid;gap:14px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px}
+.toasts{position:fixed;z-index:30;right:calc(var(--panel-w) + 30px);bottom:120px;display:grid;gap:8px;width:min(400px,calc(100vw - 140px))}
+body:not([data-page=studio]) .toasts{right:30px}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:11px 8px 11px 14px;border-radius:9px;border:1px solid var(--line);border-left:3px solid var(--muted);background:#36373b;box-shadow:0 14px 30px -8px rgba(0,0,0,.6);animation:enter .18s ease-out}
+.toast p{flex:1;min-width:0;padding-top:3px;white-space:pre-line;overflow-wrap:anywhere}
+.toast.error{border-left-color:var(--tally)}.toast.success{border-left-color:var(--ok)}
+@keyframes enter{from{opacity:0;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}
+@media (max-width:1100px){.welcome-inner{grid-template-columns:1fr;gap:28px}.hero{order:-1;max-width:520px}.welcome h1{font-size:38px}}
+</style>
+<body data-page="studio">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 12.5 9 5 9-5"/><path d="m3 17 9 5 9-5"/></symbol>
+  <symbol id="i-compare" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 2.5v19"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l11-6.8a.8.8 0 0 0 0-1.4l-11-6.8A.8.8 0 0 0 8 5.2Z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1" fill="currentColor"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6.5v11L9.5 12 17 6.5Z" fill="currentColor"/><path d="M6.5 6v12"/></symbol>
+  <symbol id="i-forward" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6.5v11l7.5-5.5L7 6.5Z" fill="currentColor"/><path d="M17.5 6v12"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m17 3 3 3-3 3"/><path d="M4 11.5V10a4 4 0 0 1 4-4h12"/><path d="m7 21-3-3 3-3"/><path d="M20 12.5V14a4 4 0 0 1-4 4H4"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4Z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></symbol>
+  <symbol id="i-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4Z"/><path d="m16 9.5 5 5m0-5-5 5"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6.5 6.5 11 11m0-11-11 11"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></symbol>
+</svg>
+
+<div class="app">
+  <nav class="rail" aria-label="Sections">
+    <div class="mark" aria-hidden="true"></div>
+    <button data-page="studio" aria-current="page"><svg class="i"><use href="#i-layers"/></svg>Studio</button>
+    <button data-page="compare"><svg class="i"><use href="#i-compare"/></svg>Compare</button>
+    <button data-page="youtube"><svg class="i"><use href="#i-download"/></svg>YouTube</button>
+    <div class="rail-foot">GPU<br>local</div>
+  </nav>
+
+  <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+    <div class="welcome-inner">
+      <div>
+        <p class="eyebrow">Video Enhancer · NVIDIA RTX</p>
+        <h1 id="welcome-title">Open a video<br>to start.</h1>
+        <p class="lede">Stack enhancements, check them on a short clip, then export a new MP4 with the original audio. Your source file is never changed.</p>
+        <div id="welcome-actions" class="welcome-actions">
+          <button id="open" class="btn primary lg">Open video…</button>
+          <button id="welcome-youtube" class="btn ghost lg">Download from YouTube</button>
+        </div>
+        <div id="welcome-loading" class="loading-line" hidden><span class="spinner"></span>Reading video…</div>
+        <ol class="steps">
+          <li><b>Build a recipe</b>Add presets or single adjustments as layers.</li>
+          <li><b>Preview a clip</b>Render up to 15 seconds and compare it with the original.</li>
+          <li><b>Export</b>Save the full video as a new file.</li>
+        </ol>
+        <p class="fine">H.264 · HEVC · AV1 &nbsp;/&nbsp; 8- or 10-bit SDR</p>
+      </div>
+      <svg class="hero hero-frame" viewBox="0 0 480 300" aria-hidden="true">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#253049"/><stop offset=".55" stop-color="#a86c55"/><stop offset=".8" stop-color="#e6ad6f"/></linearGradient>
+          <filter id="rough" x="0" y="0" width="100%" height="100%"><feGaussianBlur stdDeviation="2.4" result="soft"/><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="4"/><feColorMatrix type="saturate" values="0" result="grain"/><feComposite in="soft" in2="grain" operator="arithmetic" k2=".9" k3=".16" k4="-.03"/></filter>
+          <clipPath id="left"><rect width="240" height="300"/></clipPath>
+          <clipPath id="right"><rect x="240" width="240" height="300"/></clipPath>
+          <g id="scene">
+            <rect width="480" height="300" fill="url(#sky)"/>
+            <circle cx="300" cy="170" r="34" fill="#ffd98a"/>
+            <path d="M0 200 70 150l60 30 70-55 90 70 60-35 130 60v80H0Z" fill="#3b2f3d"/>
+            <path d="M0 240 90 205l110 25 110-30 170 45v55H0Z" fill="#1d1a24"/>
+            <path d="M330 300v-60h4v-18h3v18h4v60" fill="#121016"/>
+          </g>
+        </defs>
+        <use href="#scene" clip-path="url(#left)" filter="url(#rough)"/>
+        <use href="#scene" clip-path="url(#right)"/>
+        <rect x="239" width="2" height="300" fill="#f4c430"/>
+        <circle cx="240" cy="150" r="11" fill="#f4c430"/>
+        <g font-family="Bahnschrift SemiCondensed,Bahnschrift,sans-serif" font-size="11" letter-spacing="1.3">
+          <rect x="12" y="12" width="74" height="21" rx="4" fill="rgba(10,10,11,.72)"/><text x="21" y="26.5" fill="#ececed">ORIGINAL</text>
+          <rect x="384" y="12" width="84" height="21" rx="4" fill="rgba(10,10,11,.72)"/><text x="393" y="26.5" fill="#f4c430">ENHANCED</text>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <main id="stage" class="stage" hidden>
+    <div class="stage-bar">
+      <div id="view-tabs" class="seg" role="group" aria-label="Show">
+        <button data-view="full" aria-pressed="true">Full video</button>
+        <button data-view="preview" aria-pressed="false">Preview clip</button>
+      </div>
+      <div id="compare-slots" class="slots" hidden>
+        <label class="slot" id="slot-0"><input type="file" accept="video/*" id="file-0"><b>A</b><span>Choose video…</span></label>
+        <label class="slot" id="slot-1"><input type="file" accept="video/*" id="file-1"><b>B</b><span>Choose video…</span></label>
+        <button id="compare-clear" class="btn ghost sm">Clear</button>
+      </div>
+      <div class="spacer"></div>
+      <div id="modes" class="seg" role="group" aria-label="Viewer">
+        <button data-mode="original">Original</button>
+        <button data-mode="enhanced">Enhanced</button>
+        <button data-mode="wipe">Split</button>
+        <button data-mode="side">Side by side</button>
+      </div>
+      <div id="zooms" class="seg" role="group" aria-label="Zoom">
+        <button data-zoom="fit" title="Fit (Esc)">Fit</button>
+        <button data-zoom="1">100%</button>
+        <button data-zoom="2">200%</button>
+      </div>
+      <button id="open-external" class="icon-btn" title="Open in your video player"><svg class="i"><use href="#i-external"/></svg></button>
+    </div>
+    <div id="viewport" tabindex="0" data-mode="original" aria-label="Video viewer. Space plays, arrow keys step, I and O set the preview range.">
+      <div class="pane" id="pane-a"><video id="video-a" playsinline preload="auto"></video></div>
+      <div class="pane" id="pane-b"><video id="video-b" playsinline preload="auto" muted></video></div>
+      <span class="tag" id="tag-a" hidden></span><span class="tag" id="tag-b" hidden></span>
+      <button id="wipe" role="slider" aria-label="Split position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" hidden></button>
+      <div id="hint" class="hint" hidden></div>
+      <div id="viewer-error" class="viewer-error" role="status" hidden></div>
+      <div id="stage-empty" class="stage-empty" hidden></div>
+    </div>
+    <div class="deck">
+      <div id="timeline" class="timeline" role="slider" tabindex="0" aria-label="Playback position" aria-valuemin="0">
+        <div id="tl-played" class="tl-played"></div>
+        <div id="tl-range" class="tl-range" hidden>
+          <button id="tl-in" class="tl-handle" role="slider" aria-label="Preview start (I)" tabindex="0"></button>
+          <button id="tl-out" class="tl-handle" role="slider" aria-label="Preview end (O)" tabindex="0"></button>
+        </div>
+        <div id="tl-head" class="tl-head"></div>
+      </div>
+      <div class="transport">
+        <button id="play" class="icon-btn play" aria-label="Play (Space)" title="Play (Space)"><svg class="i"><use href="#i-play"/></svg></button>
+        <button id="step-back" class="icon-btn" aria-label="Previous frame" title="Previous frame (←)"><svg class="i"><use href="#i-back"/></svg></button>
+        <button id="step-forward" class="icon-btn" aria-label="Next frame" title="Next frame (→)"><svg class="i"><use href="#i-forward"/></svg></button>
+        <output id="timecode" class="timecode">0:00.00 <span>/ 0:00.00</span></output>
+        <div id="range-readout" class="range-readout" hidden>
+          <span>IN <b id="in-time">0:00.00</b></span><span>OUT <b id="out-time">0:00.00</b></span><span id="range-length"></span>
+        </div>
+        <div class="spacer"></div>
+        <button id="loop" class="icon-btn" aria-pressed="false" title="Loop"><svg class="i"><use href="#i-loop"/></svg></button>
+        <button id="mute" class="icon-btn" aria-pressed="false" aria-label="Mute" title="Mute"><svg class="i"><use href="#i-sound"/></svg></button>
+      </div>
+    </div>
+  </main>
+
+  <aside id="panel" class="panel" aria-label="Enhancement settings" hidden>
+    <header class="source-card">
+      <div><p class="eyebrow">Source</p><h2 id="source-name"></h2><p id="source-meta"></p></div>
+      <button id="replace" class="btn sm">Replace…</button>
+    </header>
+    <div class="panel-scroll">
+      <section class="block" aria-labelledby="recipe-title">
+        <div class="block-head">
+          <h3 id="recipe-title">Recipe</h3><span id="layer-count" class="count"></span>
+          <div class="spacer"></div>
+          <button id="save-preset" class="btn ghost sm">Save as preset</button>
+          <button id="add-layer" class="btn sm" aria-haspopup="true"><svg class="i"><use href="#i-plus"/></svg>Add</button>
+        </div>
+        <ol id="layers" class="layers"></ol>
+        <div id="layers-empty" class="layers-empty">
+          <p>Start with a preset</p>
+          <div id="preset-chips" class="preset-chips"></div>
+          <button id="add-single" class="link">or add a single adjustment</button>
+        </div>
+      </section>
+      <section class="block" aria-labelledby="output-title">
+        <div class="block-head"><h3 id="output-title">Output</h3><span id="output-summary" class="count"></span></div>
+        <p class="field-label">Resolution</p><div id="out-scale" class="choices"></div>
+        <p class="field-label">Frame rate <span class="note">· higher rates use AI frame generation</span></p><div id="out-fps" class="choices"></div>
+        <p class="field-label">Format</p><div id="out-encoding" class="choices"></div>
+        <details class="advanced">
+          <summary>Encoding and frame generation <svg class="i"><use href="#i-chevron"/></svg></summary>
+          <div class="ctl-group">
+            <div class="ctl ctl-inline"><label for="encoder_preset">Encoder speed</label><select id="encoder_preset"><option value="1">P1 · fastest</option><option value="2">P2</option><option value="3">P3</option><option value="4">P4 · balanced</option><option value="5">P5</option><option value="6">P6</option><option value="7">P7 · smallest file</option></select></div>
+            <div class="ctl ctl-inline"><label for="encoder_quality">Quality level · 0 = auto</label><input id="encoder_quality" type="number" min="0" max="51" step="1" style="width:76px"></div>
+            <p class="ctl-note">Lower quality levels keep more detail and make larger files.</p>
+            <div class="ctl ctl-inline"><label for="frame_quality">Frame generation quality</label><select id="frame_quality"><option value="0">Low</option><option value="1">Medium</option><option value="2">High</option></select></div>
+            <div class="ctl ctl-inline"><label for="detect_scene_changes">Detect scene cuts</label><input id="detect_scene_changes" type="checkbox" class="switch"></div>
+            <p id="frame-note" class="ctl-note">Frame generation settings apply when the frame rate is above the source.</p>
+          </div>
+        </details>
+      </section>
+    </div>
+    <footer class="panel-foot">
+      <ul id="issues" class="issues" hidden></ul>
+      <div id="export-done" class="done" hidden>
+        <p><b>Export saved</b><br><span id="done-detail"></span></p>
+        <div><button id="play-export" class="btn sm">Play</button><button id="show-export" class="btn sm">Show in folder</button></div>
+      </div>
+      <p id="preview-state" class="preview-state" role="status"></p>
+      <div class="actions">
+        <button id="render" class="btn">Render preview</button>
+        <button id="export" class="btn primary">Export video…</button>
+      </div>
+    </footer>
+  </aside>
+
+  <section id="youtube" class="youtube" aria-labelledby="youtube-title" hidden>
+    <div class="yt-inner">
+      <p class="eyebrow">YouTube</p>
+      <h1 id="youtube-title">Download a video to enhance</h1>
+      <p>Saves the best version within your limits, with audio, to the youtube-videos folder.</p>
+      <form id="yt-form" class="yt-form" novalidate>
+        <input id="yt-url" class="yt-url" type="url" placeholder="Paste a YouTube link" aria-label="YouTube link" required autocomplete="off" spellcheck="false">
+        <div class="yt-options">
+          <label class="field">Highest resolution<select id="yt-height"><option value="0">Best available</option><option value="360">360p</option><option value="480">480p</option><option value="720">720p</option><option value="1080" selected>1080p</option><option value="1440">1440p</option><option value="2160">2160p</option></select></label>
+          <label class="field">Highest frame rate<select id="yt-fps"><option value="0">Best available</option><option value="30">30 fps</option><option value="60">60 fps</option></select></label>
+          <label class="field">File type<select id="yt-format"><option value="mp4">MP4 · H.264</option><option value="mkv">MKV · best SDR</option></select></label>
+        </div>
+        <p class="note">MP4 suits most videos. Choose MKV for 1440p and above, where YouTube rarely offers H.264.</p>
+        <label class="toggle-row"><input id="yt-trim" type="checkbox" class="switch">Download only part of the video</label>
+        <div id="yt-times" class="yt-times" hidden>
+          <label class="field">From<input id="yt-start" type="text" placeholder="0:00" value="0:00"></label>
+          <label class="field">To<input id="yt-end" type="text" placeholder="1:30"></label>
+        </div>
+        <p id="yt-error" class="error-text" hidden></p>
+        <div><button id="yt-go" class="btn primary lg" type="submit">Download</button></div>
+      </form>
+      <div id="yt-result" class="yt-result" hidden>
+        <p><b>Download saved</b><span id="yt-path"></span></p>
+        <button id="yt-open" class="btn primary">Open in Studio</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="activity" class="activity" role="status" hidden>
+    <span class="tally"></span>
+    <div class="act-text"><b id="act-title"></b><span id="act-detail"></span></div>
+    <div id="act-bar" class="act-bar"><i id="act-fill"></i></div>
+    <span id="act-pct" class="act-pct"></span>
+    <button id="cancel" class="btn sm">Cancel</button>
+  </div>
+</div>
+
+<div id="add-menu" class="menu" role="menu" hidden></div>
+<div id="toasts" class="toasts"></div>
+<dialog id="save-dialog" aria-labelledby="save-title">
+  <form id="save-form">
+    <h2 id="save-title">Save recipe as a preset</h2>
+    <p class="note">Combines the enabled layers into one preset you can add to any video. Existing presets are never overwritten.</p>
+    <label class="field">Preset name<input id="save-name" type="text" maxlength="120"></label>
+    <p id="save-error" class="error-text" hidden></p>
+    <div class="dialog-actions"><button type="button" id="save-cancel" class="btn ghost">Cancel</button><button id="save-confirm" type="submit" class="btn primary">Save preset</button></div>
+  </form>
+</dialog>
+
 <script src="enhancements.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const send = (command, extra={}) => window.ipc.postMessage(JSON.stringify({command,...extra}));
-let source=null, busy=false, downloading=false;
-let components=[], editingId=null, nextComponentId=1, savedTemplates=[], pendingTemplates=null, libraryLoaded=false;
-const componentRows=new Map(), customGroupInputs=new Map();
-let sampleSelection=null, sampleMedia=null, enhancedMedia=null, exportMedia=null, renderedJob=null, renderingJob=null, pendingJob=null;
-let sampleBusy=false, sampleMessage='';
-let viewerKind='full', pair=[null,null], comparisonFiles=[null,null], playing=false, playRevision=0, pan={x:0,y:0};
-const viewerStates={};
-let restoreTime=0;
-const videos=[$('video-original'),$('video-enhanced')];
-const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
-const timeText=seconds=>{seconds=Math.max(0,seconds||0);return `${Math.floor(seconds/60)}:${(seconds%60).toFixed(3).padStart(6,'0')}`;};
-function activeVideos(){return $('view-mode').value==='original'?[videos[0]]:$('view-mode').value==='enhanced'?[videos[1]]:videos;}
-function masterVideo(){return activeVideos().at(-1);}
-function viewerDuration(){const times=activeVideos().map(video=>video.duration).filter(Number.isFinite);return times.length?Math.min(...times):0;}
-function pauseViewer(){playing=false;playRevision++;for(const video of videos){video.pause();video.playbackRate=1;}$('play').textContent='Play';$('play').setAttribute('aria-label','Play');}
-function seekViewer(time){const duration=viewerDuration();time=clamp(time,0,Math.max(0,duration-.001));restoreTime=time;for(const video of videos)if(video.readyState&&Number.isFinite(video.duration))video.currentTime=Math.min(time,Math.max(0,video.duration-.001));updateTimeline(time);}
-function loopBounds(){return viewerKind==='full'&&source&&$('loop').checked?[Number($('sample-start').value),Math.min(Number($('sample-end').value),viewerDuration())]:[0,viewerDuration()];}
-async function playViewer(){
- if(!viewerDuration())return;
- const [start,end]=loopBounds();if(masterVideo().currentTime>=end-.02||($('loop').checked&&masterVideo().currentTime<start))seekViewer(start);
- const revision=++playRevision;playing=true;$('play').textContent='Pause';$('play').setAttribute('aria-label','Pause');updateAudio();
- try{await Promise.all(activeVideos().map(video=>video.play()));if(revision!==playRevision&&!playing)for(const video of videos)video.pause();}
- catch(error){if(revision===playRevision){pauseViewer();if(error.name!=='AbortError')showViewerError('Playback could not start. '+error.message);}}
+const E = Enhancements, D = E.defaults;
+const send = (command, extra = {}) => window.ipc.postMessage(JSON.stringify({ command, ...extra }));
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+function el(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text != null) node.textContent = text; return node; }
+function icon(name) { const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); svg.setAttribute('class', 'i'); svg.setAttribute('aria-hidden', 'true'); use.setAttribute('href', '#i-' + name); svg.append(use); return svg; }
+function setIcon(button, name) { button.querySelector('use').setAttribute('href', '#i-' + name); }
+const clock = seconds => { seconds = Math.max(0, seconds || 0); const minutes = Math.floor(seconds / 60); return `${minutes}:${(seconds - minutes * 60).toFixed(2).padStart(5, '0')}`; };
+function parseClock(text) { const parts = text.trim().split(':'); if (!text.trim() || parts.length > 3 || parts.some(part => part.trim() === '' || !Number.isFinite(Number(part)))) return NaN; return parts.reduce((total, part) => total * 60 + Number(part), 0); }
+
+// ---------- Adjustment metadata: labels and formatting; ranges and choices come from enhancements.js ----------
+const QUALITY4 = { 0: 'Low', 1: 'Medium', 2: 'High', 3: 'Ultra' };
+const FIELDS = {
+  upscale_method: { label: 'Method', options: { vsr: 'Video Super Resolution', lightweight: 'Lightweight' } },
+  quality: { label: 'Model', options: { 0: 'Bicubic · no AI', 1: 'Standard · low', 2: 'Standard · medium', 3: 'Standard · high', 4: 'Standard · ultra', 16: 'High bitrate · low', 17: 'High bitrate · medium', 18: 'High bitrate · high', 19: 'High bitrate · ultra', 21: 'Streaming · medium', 23: 'Streaming · ultra' } },
+  upscale_strength: { label: 'Strength', step: .05, format: 'percent' },
+  denoise: { label: 'Strength', step: .05, format: 'percent' }, denoise_quality: { label: 'Quality', options: QUALITY4 },
+  deblur: { label: 'Strength', step: .05, format: 'percent' }, deblur_quality: { label: 'Quality', options: QUALITY4 },
+  sharpening: { label: 'Amount', step: .05 },
+  contrast: { label: 'Contrast', step: .01, format: 'delta' }, vibrance: { label: 'Vibrance', step: .01, format: 'signed' },
+  saturation: { label: 'Saturation', step: .01, format: 'delta' }, exposure: { label: 'Exposure', step: .05, format: 'ev' },
+  warmth: { label: 'Warmth', step: .01, format: 'signed' },
+  temporal_denoise: { label: 'Strength', options: { '': 'Off', 0: 'Weak', 1: 'Strong' } },
+  hdr_enabled: { label: 'Convert to HDR10' }, hdr_contrast: { label: 'Contrast', step: 1, format: 'int' },
+  hdr_saturation: { label: 'Saturation', step: 1, format: 'int' }, hdr_middle_gray: { label: 'Middle grey', step: 1, format: 'int' },
+  hdr_max_luminance: { label: 'Peak brightness', step: 10, format: 'nits' }, hdr_debanding: { label: 'Reduce banding' },
+  portrait_mode: { label: 'Background', options: { off: 'Off', blur: 'Blur', replace: 'Solid colour', mask: 'Person mask (black and white)' } },
+  segmentation_mode: { label: 'Person detection', options: { 0: 'Quality · keep chairs', 1: 'Fast · keep chairs', 2: 'Quality · remove chairs', 3: 'Fast · remove chairs' } },
+  blur_strength: { label: 'Blur amount', step: .05, format: 'percent' }, background_color: { label: 'Colour' },
+  relighting_mode: { label: 'Effect', options: { off: 'Off', relighting: 'Relight person', aigs: 'Relight with HDR backdrop' } },
+  hdri: { label: 'Environment' },
+  relighting_quality: { label: 'Quality', options: { 0: 'Quality', 1: 'Performance', 2: 'Quality · blur backdrop', 3: 'Performance · blur backdrop' } },
+  relighting_pan: { label: 'Rotation', step: 1, format: 'degrees' }, relighting_field_of_view: { label: 'Field of view', step: 1, format: 'degrees' },
+  relighting_foreground_gain: { label: 'Person brightness', step: .05, format: 'times' }, relighting_background_gain: { label: 'Backdrop brightness', step: .05, format: 'times' },
+  relighting_specularity: { label: 'Shine', step: .05, format: 'percent' }, relighting_blur_strength: { label: 'Backdrop blur', step: .05 },
+  environment_background: { label: 'Use environment as backdrop' },
+};
+const GROUP_NOTES = {
+  upscale: 'Above 1× output resolution this adds upscaled detail; at 1× it cleans compression artefacts.',
+  sharpen: 'High amounts can cause halos around edges.',
+  temporal: 'Works on videos up to 1920 × 1080.',
+  hdr: 'Exports HEVC 10-bit HDR10. View it on an HDR display.',
+  portrait: 'Works on people in videos of at least 512 × 288.',
+  relighting: 'Lights the person with an HDR environment image (.hdr, .exr or .pfm).',
+};
+// Single adjustments start with a visible effect rather than a neutral no-op.
+const STARTERS = { denoise: { denoise: .2, denoise_quality: 1 }, deblur: { deblur: .15, deblur_quality: 1 }, sharpen: { sharpening: .2 }, temporal: { temporal_denoise: 0 }, hdr: { hdr_enabled: true }, portrait: { portrait_mode: 'blur' }, relighting: { relighting_mode: 'relighting' } };
+const groupOf = Object.fromEntries(E.groups.flatMap(group => group.fields.map(field => [field, group])));
+
+function formatValue(field, value) {
+  const meta = FIELDS[field];
+  if (field === 'hdri') return value ? value.split(/[\\/]/).pop() : 'No image';
+  if (typeof D[field] === 'boolean') return value ? 'On' : 'Off';
+  if (meta.options) return meta.options[value];
+  if (field === 'background_color') return value.toUpperCase();
+  const sign = number => number > 0 ? '+' : number < 0 ? '−' : '';
+  switch (meta.format) {
+    case 'percent': return Math.round(value * 100) + '%';
+    case 'delta': { const delta = Math.round((value - 1) * 100); return sign(delta) + Math.abs(delta) + '%'; }
+    case 'signed': { const amount = Math.round(value * 100); return sign(amount) + Math.abs(amount); }
+    case 'ev': return sign(value) + Math.abs(value).toFixed(2) + ' EV';
+    case 'degrees': return Math.round(value) + '°';
+    case 'times': return value.toFixed(2) + '×';
+    case 'nits': return Math.round(value) + ' nits';
+    case 'int': return String(Math.round(value));
+    default: return value.toFixed(2);
+  }
 }
-function updateAudio(){for(const video of videos)video.muted=video!==masterVideo()||$('mute').getAttribute('aria-pressed')==='true';}
-function updateTimeline(time=masterVideo().currentTime){const duration=viewerDuration();$('seek').max=duration||1;$('seek').value=time||0;$('seek').setAttribute('aria-valuetext',timeText(time));$('timecode').textContent=`${timeText(time)} / ${timeText(duration)}`;}
-function animateViewer(){
- // ponytail: native media clocks need drift correction; use decoded frames if exact frame synchronization is required.
- if(playing){const master=masterVideo(),[start,end]=loopBounds();if(master.currentTime>=end-.01){if($('loop').checked){seekViewer(start);playViewer();}else{pauseViewer();}}else{
-  for(const video of activeVideos())if(video!==master&&!video.seeking){const drift=master.currentTime-video.currentTime;if(Math.abs(drift)>.06)video.currentTime=master.currentTime;else video.playbackRate=1+clamp(drift*.5,-.03,.03);}
- }updateTimeline();}
- requestAnimationFrame(animateViewer);
+function fieldName(field) { const group = groupOf[field]; return group.fields.length > 1 ? `${group.label} ${FIELDS[field].label.toLowerCase()}` : group.label; }
+function fieldHidden(field, settings) {
+  const relight = settings.relighting_mode !== 'off', combined = settings.relighting_mode === 'aigs';
+  switch (field) {
+    case 'quality': return settings.upscale_method !== 'vsr';
+    case 'denoise_quality': return settings.denoise === 0;
+    case 'deblur_quality': return settings.deblur === 0;
+    case 'blur_strength': return settings.portrait_mode !== 'blur';
+    case 'background_color': return settings.portrait_mode !== 'replace';
+    case 'relighting_mode': return false;
+    case 'relighting_quality': case 'relighting_specularity': return !combined;
+    case 'relighting_blur_strength': return !combined || settings.relighting_quality < 2;
+    case 'relighting_field_of_view': case 'relighting_background_gain': return !relight || !settings.environment_background;
+  }
+  if (field.startsWith('relighting_') || field === 'hdri' || field === 'environment_background') return !relight;
+  if (field.startsWith('hdr_') && field !== 'hdr_enabled') return !settings.hdr_enabled;
+  return false;
 }
-function showViewerError(text){$('viewer-error').textContent=text;$('viewer-error').hidden=!text;}
-function layoutViewer(){
- const side=$('view-mode').value==='side',width=$('viewport').clientWidth/(side?2:1),height=$('viewport').clientHeight;
- if(!width||!height)return;
- // The element reports displayed dimensions, including rotation metadata; probed sizes are stored dimensions.
- const referenceVideo=pair[1]?videos[1]:videos[0],reference=pair[1]||pair[0],refWidth=referenceVideo.videoWidth||reference?.width,refHeight=referenceVideo.videoHeight||reference?.height;
- if(!refWidth||!refHeight)return;
- const scale=$('zoom').value==='fit'?Math.min(width/refWidth,height/refHeight):Number($('zoom').value);
- const displayWidth=refWidth*scale,displayHeight=refHeight*scale;
- pan.x=clamp(pan.x,-Math.max(0,(displayWidth-width)/2),Math.max(0,(displayWidth-width)/2));pan.y=clamp(pan.y,-Math.max(0,(displayHeight-height)/2),Math.max(0,(displayHeight-height)/2));
- for(const video of videos){video.style.width=`${displayWidth}px`;video.style.height=`${displayHeight}px`;video.style.transform=`translate(-50%,-50%) translate(${pan.x}px,${pan.y}px)`;}
- $('viewport').style.cursor=$('zoom').value==='fit'?'default':'grab';
+// "Deblur 15%, Medium quality": each adjustment group with its changed values; a layer named after its only group omits the label.
+function templateSummary(settings, name = '') {
+  const all = { ...D, ...settings }, groups = E.groups.filter(group => group.fields.some(field => Object.hasOwn(settings, field)));
+  return groups.map(group => {
+    const present = group.fields.filter(field => Object.hasOwn(settings, field) && !fieldHidden(field, all)), changed = present.filter(field => settings[field] !== D[field]);
+    const values = (changed.length ? changed : present.slice(0, 1)).map(field => FIELDS[field].label === 'Quality' ? `${formatValue(field, settings[field])} quality` : formatValue(field, settings[field])).join(', ');
+    return groups.length === 1 && group.label === name.trim() ? values : `${group.label} ${values}`;
+  }).join(' · ');
 }
-function updateViewer(){
- const mode=$('view-mode').value;$('viewport').dataset.mode=mode;
- for(const option of $('view-mode').options)option.disabled=option.value==='original'?!pair[0]:option.value==='enhanced'?!pair[1]:!pair.every(Boolean);
- const labels=viewerKind==='files'?['Video A','Video B']:['Original','Enhanced'];
- for(const [index,video] of videos.entries()){video.setAttribute('aria-label',labels[index]+' video');$(index?'label-enhanced':'label-original').textContent=labels[index].toUpperCase();$('view-mode').options[index].textContent=labels[index];}
- $('wipe-handle').hidden=mode!=='wipe'||!pair[1];$('label-original').hidden=!pair[0];$('label-enhanced').hidden=!pair[1];$('viewer-empty').hidden=pair.some(Boolean);
- $('viewer-empty-title').textContent=viewerKind==='sample'?(sampleBusy?'Preparing preview…':'No preview yet'):viewerKind==='files'?'Compare local videos':'Your video, in detail.';
- $('viewer-empty-text').textContent=viewerKind==='sample'?(sampleBusy?sampleMessage:'Choose a short range in Full video, then render it with your settings.'):viewerKind==='files'?'Choose Video A and Video B above to compare them with one set of playback controls.':'Load a video. Try a short preview and compare the result before exporting.';
- $('empty-load').textContent=viewerKind==='sample'?'Go to Full video':viewerKind==='files'?'Choose Video A':'Load video';$('empty-load').hidden=viewerKind==='sample'&&sampleBusy;
- const ready=activeVideos().every(video=>video.readyState>0&&!video.error)&&viewerDuration()>0;
- for(const id of ['play','step-back','step-forward','seek','mute'])$(id).disabled=!ready;
- $('zoom').disabled=!pair.some(Boolean);$('reset-view').disabled=!pair.some(Boolean);
- const rate=pair[videos.indexOf(masterVideo())]?.fps||30;
- for(const id of ['step-back','step-forward'])$(id).title=`${rate.toFixed(3)} FPS timeline steps${pair[videos.indexOf(masterVideo())]?.fps?' (nominal for variable-rate video)':' (rate unknown; 30 FPS grid)'}`;
- let note=viewerKind==='sample'?(sampleMedia?`Preview at source ${timeText(sampleSelection.start)} · Native source and output; no display transcode.`:'Render a selected range to inspect the result here.'):viewerKind==='files'?'Comparison uses a shared time axis. Unknown frame rates step on a 30 FPS grid.':'Native source and export playback · Drag to pan at 100% or 200%.';
- if(pair.some(media=>media?.hdr))note+=' HDR needs compatible playback and a display; use Open preview or Play export for external playback.';
- else if(pair.some(media=>media?.pixel_format?.includes('10')||media?.ten_bit))note+=' 10-bit HEVC playback depends on installed codec support.';
- $('viewer-note').textContent=note;updateAudio();updateTimeline();layoutViewer();
+
+// ---------- App state ----------
+let page = 'studio', view = 'full', source = null, busy = false, loadingVideo = false, stopping = false;
+let layers = [], openLayer = null, nextLayer = 1, savedPresets = [], libraryLoaded = false, libraryError = '', pendingPresets = null;
+let output = {}, range = { start: 0, end: 5 };
+let sampleRange = null, sampleMedia = null, enhancedMedia = null, exportMedia = null, renderedJob = null, renderingJob = null, pendingJob = null, sampleBusy = false;
+let compareFiles = [null, null];
+const layerControls = new Map();
+const OUTPUT_FIELDS = ['scale', 'target_fps', 'frame_quality', 'detect_scene_changes', 'output_encoding', 'encoder_preset', 'encoder_quality'];
+
+function currentSettings() { return { ...E.compose(layers), ...output }; }
+function buildJob() {
+  const s = currentSettings();
+  return {
+    resolution_scale: s.scale, upscale_method: s.upscale_method, upscale_quality: s.quality, upscale_strength: s.upscale_strength, target_fps: s.target_fps || null,
+    enhancements: { denoise: s.denoise, denoise_quality: s.denoise_quality, deblur: s.deblur, deblur_quality: s.deblur_quality, sharpening: s.sharpening, contrast: s.contrast, vibrance: s.vibrance, saturation: s.saturation, exposure: s.exposure, warmth: s.warmth },
+    frame_generation: { quality: s.frame_quality, detect_scene_changes: s.detect_scene_changes }, output_encoding: s.output_encoding, encoder: { preset: s.encoder_preset, quality: s.encoder_quality },
+    temporal_denoise: s.temporal_denoise === '' ? null : s.temporal_denoise,
+    hdr: { enabled: s.hdr_enabled, contrast: s.hdr_contrast, saturation: s.hdr_saturation, middle_gray: s.hdr_middle_gray, max_luminance: s.hdr_max_luminance, debanding: s.hdr_debanding },
+    portrait: { mode: s.portrait_mode, segmentation_mode: s.segmentation_mode, blur_strength: s.blur_strength, background_color: s.background_color.slice(1).match(/../g).map(hex => parseInt(hex, 16)) },
+    relighting: { mode: s.relighting_mode, hdri: s.hdri, quality: s.relighting_quality, pan: s.relighting_pan, field_of_view: s.relighting_field_of_view, foreground_gain: s.relighting_foreground_gain, background_gain: s.relighting_background_gain, specularity: s.relighting_specularity, blur_strength: s.relighting_blur_strength, environment_background: s.environment_background },
+  };
 }
-function showPair(original,enhanced,state=null){
- pauseViewer();pair=[original,enhanced];showViewerError('');pan=state?{...state.pan}:{x:0,y:0};$('zoom').value=state?.zoom||'fit';restoreTime=state?.time||0;$('loop').checked=state?.loop||false;setWipe(state?.wipe??50);
- for(const [index,video] of videos.entries()){video.removeAttribute('src');video.load();if(pair[index])video.src=pair[index].url;}
- $('view-mode').value=state?.mode||(enhanced?(original?'wipe':'enhanced'):'original');updateViewer();
+function findIssues(s) {
+  const issues = [], portrait = s.portrait_mode !== 'off', relight = s.relighting_mode !== 'off';
+  if (s.hdr_enabled && s.output_encoding !== 'hevc10') issues.push({ text: 'SDR to HDR exports HEVC 10-bit.', fix: ['Use HEVC', () => setOutput('output_encoding', 'hevc10')] });
+  if (s.output_encoding === 'hevc10' && !s.hdr_enabled && (s.temporal_denoise !== '' || portrait || relight || s.sharpening !== 0 || (s.upscale_method === 'lightweight' && s.scale > 1)))
+    issues.push({ text: 'HEVC 10-bit can’t use sharpening, temporal denoising, portrait effects or lightweight upscaling.', fix: ['Use H.264', () => setOutput('output_encoding', 'h264')] });
+  if ((source.width < 512 || source.height < 288) && (portrait || relight)) issues.push({ text: `Portrait effects need a video of at least 512 × 288. This one is ${source.width} × ${source.height}. Turn those layers off.` });
+  if (s.temporal_denoise !== '' && (source.height < 80 || source.height > 1080 || source.width > 1920)) issues.push({ text: 'Temporal denoising works on videos up to 1920 × 1080. Turn that layer off.' });
+  if (relight) {
+    if (!s.hdri) issues.push({ text: 'Choose an environment image in the relighting layer.' });
+    if (s.environment_background && portrait) issues.push({ text: 'Use either the relighting backdrop or a portrait background, not both.' });
+    if (s.relighting_mode === 'aigs' && !s.environment_background) issues.push({ text: 'Relight with HDR backdrop needs “Use environment as backdrop” turned on.' });
+  }
+  return issues;
 }
-for(const [index,video] of videos.entries()){
- video.onloadedmetadata=()=>{if(pair[index]){pair[index].width ||= video.videoWidth;pair[index].height ||= video.videoHeight;}if(restoreTime&&Number.isFinite(video.duration))video.currentTime=Math.min(restoreTime,Math.max(0,video.duration-.001));updateViewer();};
- video.onseeked=()=>{if(!playing)updateTimeline();};
- video.onended=()=>{if(playing){if($('loop').checked){seekViewer(loopBounds()[0]);playViewer();}else pauseViewer();}};
- video.onerror=()=>{if(!pair[index])return;pauseViewer();const label=viewerKind==='files'?(index?'Video B':'Video A'):(index?'Enhanced video':'Original video');showViewerError(`${label} cannot play here. Use an external player or a browser-supported format such as H.264 MP4. No display transcode has been applied.`);updateViewer();};
- video.onwaiting=()=>{if(playing&&activeVideos().includes(video)){playRevision++;for(const other of activeVideos())other.pause();}};
- video.oncanplay=()=>{if(playing&&activeVideos().every(item=>item.readyState>=3)&&activeVideos().some(item=>item.paused))playViewer();};
+
+// ---------- Viewer ----------
+const videos = [$('video-a'), $('video-b')];
+const LABELS = { full: ['Original', 'Export'], preview: ['Original', 'Enhanced'], compare: ['A', 'B'] };
+let stageKind = null, pair = [null, null], mode = 'original', zoom = 'fit', pan = { x: 0, y: 0 }, wipe = 50, looping = false, muted = false, playing = false, playRevision = 0, restoreTime = 0;
+const stageStates = {};
+function shownVideos() { return mode === 'original' ? [videos[0]] : mode === 'enhanced' ? [videos[1]] : videos; }
+function masterVideo() { return shownVideos().at(-1); }
+function viewerLength() { const times = shownVideos().map(video => video.duration).filter(Number.isFinite); return times.length ? Math.min(...times) : 0; }
+function rangeActive() { return stageKind === 'full' && source && source.duration >= 1; }
+function loopBounds() { return rangeActive() && looping ? [range.start, Math.min(range.end, viewerLength())] : [0, viewerLength()]; }
+function pause() { playing = false; playRevision++; for (const video of videos) { video.pause(); video.playbackRate = 1; } setIcon($('play'), 'play'); $('play').setAttribute('aria-label', 'Play (Space)'); }
+function seek(time) {
+  time = clamp(time, 0, Math.max(0, viewerLength() - .001)); restoreTime = time;
+  for (const video of videos) if (video.readyState && Number.isFinite(video.duration)) video.currentTime = Math.min(time, Math.max(0, video.duration - .001));
+  drawTimeline(time);
+}
+async function play() {
+  if (!viewerLength()) return;
+  const [start, end] = loopBounds(), time = masterVideo().currentTime;
+  if (time >= end - .02 || (looping && time < start)) seek(start);
+  const revision = ++playRevision; playing = true; setIcon($('play'), 'pause'); $('play').setAttribute('aria-label', 'Pause (Space)'); syncAudio();
+  try { await Promise.all(shownVideos().map(video => video.play())); if (revision !== playRevision && !playing) for (const video of videos) video.pause(); }
+  catch (error) { if (revision === playRevision) { pause(); if (error.name !== 'AbortError') viewerError('Playback could not start. ' + error.message); } }
+}
+function step(direction) { pause(); const rate = pair[videos.indexOf(masterVideo())]?.fps || 30; seek((Math.round(masterVideo().currentTime * rate) + direction) / rate); }
+function syncAudio() { for (const video of videos) video.muted = muted || video !== masterVideo(); }
+function tick() {
+  // ponytail: native media clocks need drift correction; use decoded frames if exact frame sync is required.
+  if (playing) {
+    const master = masterVideo(), [start, end] = loopBounds();
+    if (master.currentTime >= end - .01) { if (looping) { seek(start); play(); } else pause(); }
+    else for (const video of shownVideos()) if (video !== master && !video.seeking) { const drift = master.currentTime - video.currentTime; if (Math.abs(drift) > .06) video.currentTime = master.currentTime; else video.playbackRate = 1 + clamp(drift * .5, -.03, .03); }
+    drawTimeline();
+  }
+  requestAnimationFrame(tick);
+}
+function drawTimeline(time = masterVideo().currentTime) {
+  const length = viewerLength(), percent = length ? clamp(time / length, 0, 1) * 100 : 0;
+  $('tl-head').style.left = percent + '%'; $('tl-played').style.width = percent + '%';
+  $('timecode').firstChild.textContent = clock(time) + ' '; $('timecode').lastChild.textContent = '/ ' + clock(length);
+  $('timeline').setAttribute('aria-valuemax', String(length)); $('timeline').setAttribute('aria-valuenow', String(time || 0)); $('timeline').setAttribute('aria-valuetext', clock(time));
+  if (rangeActive() && length) { $('tl-range').style.left = range.start / length * 100 + '%'; $('tl-range').style.width = (range.end - range.start) / length * 100 + '%'; }
+}
+function viewerError(text) { $('viewer-error').textContent = text; $('viewer-error').hidden = !text; }
+function layoutViewer() {
+  const viewport = $('viewport'), side = mode === 'side', width = viewport.clientWidth / (side ? 2 : 1), height = viewport.clientHeight;
+  if (!width || !height) return;
+  // Element sizes include rotation metadata; probed sizes are stored dimensions.
+  const referenceVideo = pair[1] ? videos[1] : videos[0], reference = pair[1] || pair[0], referenceWidth = referenceVideo.videoWidth || reference?.width, referenceHeight = referenceVideo.videoHeight || reference?.height;
+  if (!referenceWidth || !referenceHeight) return;
+  const scale = zoom === 'fit' ? Math.min(width / referenceWidth, height / referenceHeight) : Number(zoom), displayWidth = referenceWidth * scale, displayHeight = referenceHeight * scale;
+  const maxX = Math.max(0, (displayWidth - width) / 2), maxY = Math.max(0, (displayHeight - height) / 2);
+  pan = { x: clamp(pan.x, -maxX, maxX), y: clamp(pan.y, -maxY, maxY) };
+  for (const video of videos) { video.style.width = displayWidth + 'px'; video.style.height = displayHeight + 'px'; video.style.transform = `translate(-50%,-50%) translate(${pan.x}px,${pan.y}px)`; }
+  viewport.classList.toggle('pannable', zoom !== 'fit');
+}
+function setWipe(value) { wipe = clamp(value, 0, 100); $('viewport').style.setProperty('--wipe', wipe + '%'); $('wipe').setAttribute('aria-valuenow', String(Math.round(wipe))); }
+function mediaFor(kind) { return kind === 'preview' ? [sampleMedia, enhancedMedia] : kind === 'compare' ? compareFiles : [source, exportMedia]; }
+function showStage(kind) {
+  if (stageKind) stageStates[stageKind] = { pair, time: masterVideo().readyState ? masterVideo().currentTime : restoreTime, mode, zoom, pan: { ...pan }, wipe, loop: looping };
+  stageKind = kind;
+  const media = mediaFor(kind), state = stageStates[kind], keep = state && state.pair.every((item, index) => item === media[index]) ? state : null;
+  pause(); pair = [...media]; viewerError('');
+  pan = keep ? { ...keep.pan } : { x: 0, y: 0 }; zoom = keep?.zoom || 'fit'; restoreTime = keep?.time || 0; looping = keep?.loop || false; setWipe(keep?.wipe ?? 50);
+  for (const [index, video] of videos.entries()) { video.removeAttribute('src'); video.load(); if (pair[index]) video.src = pair[index].url; }
+  mode = keep?.mode || (pair[1] ? (pair[0] ? 'wipe' : 'enhanced') : 'original');
+  updateViewer();
+}
+function updateViewer() {
+  const labels = LABELS[stageKind] || LABELS.full, both = pair.every(Boolean);
+  $('viewport').dataset.mode = mode;
+  for (const button of $('modes').children) {
+    const value = button.dataset.mode;
+    button.disabled = value === 'original' ? !pair[0] : value === 'enhanced' ? !pair[1] : !both;
+    button.setAttribute('aria-pressed', String(value === mode));
+    if (value === 'original') button.textContent = labels[0]; else if (value === 'enhanced') button.textContent = labels[1];
+  }
+  for (const button of $('zooms').children) { button.disabled = !pair.some(Boolean); button.setAttribute('aria-pressed', String(button.dataset.zoom === zoom)); }
+  for (const [index, tag] of [$('tag-a'), $('tag-b')].entries()) {
+    tag.textContent = stageKind === 'compare' && pair[index] ? `${labels[index]} · ${pair[index].name}` : labels[index];
+    tag.hidden = !pair[index] || mode === (index ? 'original' : 'enhanced');
+  }
+  $('wipe').hidden = mode !== 'wipe' || !both;
+  const ready = shownVideos().every(video => video.readyState > 0 && !video.error) && viewerLength() > 0;
+  for (const id of ['play', 'step-back', 'step-forward', 'loop', 'mute']) $(id).disabled = !ready;
+  $('timeline').setAttribute('aria-disabled', String(!ready));
+  $('loop').setAttribute('aria-pressed', String(looping)); $('loop').title = rangeActive() ? 'Loop the preview range' : 'Loop';
+  $('mute').setAttribute('aria-pressed', String(muted)); setIcon($('mute'), muted ? 'muted' : 'sound'); $('mute').setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+  $('tl-range').hidden = !rangeActive(); $('range-readout').hidden = !rangeActive();
+  $('open-external').hidden = stageKind === 'compare' || (stageKind === 'preview' && !sampleMedia);
+  $('open-external').disabled = busy;
+  $('open-external').title = stageKind === 'preview' ? 'Open the preview in your video player' : 'Open the source in your video player';
+  $('hint').textContent = pair.some(media => media?.hdr) ? 'HDR may look washed out here. Open it in your player on an HDR display.' : pair.some(media => media?.pixel_format?.includes('10')) ? '10-bit playback depends on your installed codecs.' : '';
+  $('hint').hidden = !$('hint').textContent;
+  renderStageEmpty(); syncAudio(); drawRange(); drawTimeline(); layoutViewer();
+}
+function renderStageEmpty() {
+  const empty = $('stage-empty');
+  let title = '', text = '', actions = [];
+  if (stageKind === 'preview' && !pair.some(Boolean)) {
+    if (sampleBusy) { title = 'Preparing your preview clip'; text = 'The clip opens here as soon as it’s ready.'; }
+    else { title = 'No preview yet'; text = 'Mark a range with the yellow brackets on the Full video timeline, then select Render preview.'; actions = [['Back to full video', () => setView('full')]]; }
+  } else if (stageKind === 'compare' && !pair.some(Boolean)) {
+    title = 'Compare any two videos'; text = 'Choose a video for A and B. They share one timeline, zoom and split.';
+    actions = [['Choose video A', () => $('file-0').click()], ['Choose video B', () => $('file-1').click()]];
+  }
+  empty.hidden = !title;
+  if (!title || empty.dataset.key === title) return;
+  empty.dataset.key = title; empty.replaceChildren();
+  if (sampleBusy) empty.append(el('span', 'spinner'));
+  empty.append(el('h2', null, title), el('p', null, text));
+  if (actions.length) { const row = el('div', 'row'); for (const [label, run] of actions) { const button = el('button', 'btn', label); button.onclick = run; row.append(button); } empty.append(row); }
+}
+for (const [index, video] of videos.entries()) {
+  video.onloadedmetadata = () => { if (pair[index]) { pair[index].width ||= video.videoWidth; pair[index].height ||= video.videoHeight; } if (restoreTime && Number.isFinite(video.duration)) video.currentTime = Math.min(restoreTime, Math.max(0, video.duration - .001)); updateViewer(); };
+  video.onseeked = () => { if (!playing) drawTimeline(); };
+  video.onended = () => { if (playing) { if (looping) { seek(loopBounds()[0]); play(); } else pause(); } };
+  video.onerror = () => { if (!pair[index]) return; pause(); viewerError(`${(LABELS[stageKind] || LABELS.full)[index]} can’t play here. Open it in your video player, or use a format such as H.264 MP4.`); updateViewer(); };
+  video.onwaiting = () => { if (playing && shownVideos().includes(video)) { playRevision++; for (const other of shownVideos()) other.pause(); } };
+  video.oncanplay = () => { if (playing && shownVideos().every(item => item.readyState >= 3) && shownVideos().some(item => item.paused)) play(); };
 }
 new ResizeObserver(layoutViewer).observe($('viewport'));
-$('play').onclick=()=>playing?pauseViewer():playViewer();
-$('seek').oninput=()=>{pauseViewer();seekViewer(Number($('seek').value));};
-function stepViewer(direction){pauseViewer();const rate=pair[videos.indexOf(masterVideo())]?.fps||30;seekViewer((Math.round(masterVideo().currentTime*rate)+direction)/rate);}
-$('step-back').onclick=()=>stepViewer(-1);$('step-forward').onclick=()=>stepViewer(1);
-$('mute').onclick=()=>{const muted=$('mute').getAttribute('aria-pressed')!=='true';$('mute').setAttribute('aria-pressed',String(muted));$('mute').setAttribute('aria-label',muted?'Unmute audio':'Mute audio');$('mute').textContent=muted?'Muted':'Sound';updateAudio();};
-$('view-mode').onchange=()=>{const time=Number($('seek').value);pauseViewer();updateViewer();seekViewer(time);};
-$('zoom').onchange=()=>{pan={x:0,y:0};layoutViewer();};$('reset-view').onclick=()=>{$('zoom').value='fit';pan={x:0,y:0};layoutViewer();};
-function setWipe(value){value=clamp(value,0,100);$('viewport').style.setProperty('--wipe',value+'%');$('wipe-handle').setAttribute('aria-valuenow',String(Math.round(value)));}
-$('wipe-handle').onpointerdown=event=>{event.preventDefault();event.stopPropagation();$('wipe-handle').setPointerCapture(event.pointerId);};
-$('wipe-handle').onpointermove=event=>{if($('wipe-handle').hasPointerCapture(event.pointerId)){const rect=$('viewport').getBoundingClientRect();setWipe((event.clientX-rect.left)/rect.width*100);}};
-$('wipe-handle').onkeydown=event=>{let value=Number($('wipe-handle').getAttribute('aria-valuenow'));if(event.key==='ArrowLeft')value-=2;else if(event.key==='ArrowRight')value+=2;else if(event.key==='Home')value=0;else if(event.key==='End')value=100;else return;event.preventDefault();event.stopPropagation();setWipe(value);};
-let drag=null;
-$('viewport').onpointerdown=event=>{if(event.target.closest('button')||$('zoom').value==='fit')return;drag={x:event.clientX,y:event.clientY,pan:{...pan}};$('viewport').setPointerCapture(event.pointerId);};
-$('viewport').onpointermove=event=>{if(drag){pan={x:drag.pan.x+event.clientX-drag.x,y:drag.pan.y+event.clientY-drag.y};layoutViewer();}};
-$('viewport').onlostpointercapture=()=>{drag=null;};
-$('viewport').onkeydown=event=>{if(event.target!==$('viewport'))return;if(event.key===' '){event.preventDefault();if(!$('play').disabled)$('play').click();}else if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();if(!$('step-forward').disabled)stepViewer(event.key==='ArrowRight'?1:-1);}else if(event.key==='Escape')$('reset-view').click();};
-$('change-range').onclick=()=>showPage('full');
-for(const index of [0,1])$(`comparison-file-${index+1}`).onchange=event=>{const file=event.target.files[0];if(!file)return;pauseViewer();if(comparisonFiles[index])URL.revokeObjectURL(comparisonFiles[index].url);comparisonFiles[index]={url:URL.createObjectURL(file),name:file.name};showPage('files');};
-$('comparison-clear').onclick=()=>{pauseViewer();for(const [index,media] of comparisonFiles.entries()){if(media)URL.revokeObjectURL(media.url);$(`comparison-file-${index+1}`).value='';}comparisonFiles=[null,null];showPage('files');};
-requestAnimationFrame(animateViewer);
-const specs = [
-  ['denoise','VSR denoise',0,1,0.05,'denoise-controls'],['deblur','VSR deblur',0,1,0.05,'deblur-controls'],['sharpening','Sharpening',0,2,0.05,'sharpen-controls'],
-  ['contrast','Contrast',0.5,1.5,0.01,'contrast-controls'],['vibrance','Vibrance',-1,1,0.01,'vibrance-controls'],['saturation','Saturation',0,2,0.01,'saturation-controls'],['exposure','Exposure',-2,2,0.05,'exposure-controls'],['warmth','Warmth',-1,1,0.01,'warmth-controls']
-];
-const advancedSpecs = [
-  ['upscale_strength','Upscale strength',0,1,0.05,'upscale-controls'],
-  ['hdr_contrast','HDR contrast',0,200,1,'hdr-controls'],['hdr_saturation','HDR saturation',0,200,1,'hdr-controls'],['hdr_middle_gray','Middle gray',10,100,1,'hdr-controls'],['hdr_max_luminance','Peak luminance · nits',400,2000,10,'hdr-controls'],
-  ['blur_strength','Background blur',0,1,0.05,'portrait-controls'],
-  ['relighting_pan','Environment pan · °',-180,180,1,'relighting-controls'],['relighting_field_of_view','Field of view · °',1,179,1,'relighting-controls'],['relighting_foreground_gain','Foreground gain',0,4,0.05,'relighting-controls'],['relighting_background_gain','Background gain',0,4,0.05,'relighting-controls'],['relighting_specularity','Specularity',0,1,0.05,'relighting-controls'],['relighting_blur_strength','Relighting background blur',0,2,0.05,'relighting-controls']
-];
-const defaults=Enhancements.defaults;
-const outputFields=['scale','target_fps','frame_quality','detect_scene_changes','output_encoding','encoder_preset','encoder_quality'];
-for(const [id,label,min,max,step,group] of [...specs,...advancedSpecs]){
- const wrapper=document.createElement('div');
- wrapper.innerHTML=`<div class="slider-head"><label for="${id}">${label}</label><output id="${id}-value" for="${id}"></output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
- $(group).append(wrapper);
- $(id).addEventListener('input',()=>displayValue(id));
-}
-function displayValue(id){const value=Number($(id).value);$(id+'-value').textContent=id==='exposure'?`${value.toFixed(2)} EV`:Number($(id).step)>=1?String(value):value.toFixed(2);}
-function readSetting(id){const control=$(id);return control.type==='checkbox'?control.checked:typeof defaults[id]==='number'||(['target_fps','temporal_denoise'].includes(id)&&control.value!=='')?Number(control.value):control.value;}
-function currentSettings(){const settings=Enhancements.compose(components);for(const id of outputFields)settings[id]=readSetting(id);return settings;}
-function selectedComponent(){return components.find(component=>component.id===editingId);}
-function fieldLabel(id){return [...specs,...advancedSpecs].find(spec=>spec[0]===id)?.[1]||({quality:'VSR quality',upscale_method:'Upscale method',denoise_quality:'Denoise quality',deblur_quality:'Deblur quality',temporal_denoise:'Temporal denoising',hdr_enabled:'HDR conversion',hdr_debanding:'HDR debanding',portrait_mode:'Portrait background',segmentation_mode:'Segmentation quality',background_color:'Background colour',relighting_mode:'Relighting',relighting_quality:'Relighting quality',hdri:'HDR environment',environment_background:'Environment background'})[id]||id;}
-function settingText(id,value){if(id==='hdri')return value?value.split(/[\\/]/).pop():'None';if(typeof value==='boolean')return value?'On':'Off';const control=$(id);if(control.tagName==='SELECT')return [...control.options].find(option=>option.value===String(value))?.textContent||String(value);return String(value);}
-function componentSummary(settings){return Enhancements.groups.filter(group=>group.fields.some(field=>Object.hasOwn(settings,field))).map(group=>{const field=group.fields.find(field=>Object.hasOwn(settings,field)&&settings[field]!==defaults[field])||group.fields.find(field=>Object.hasOwn(settings,field));return `${fieldLabel(field)}: ${settingText(field,settings[field])}`;}).join(' · ');}
-function setLibraryStatus(text,error=false){$('library-status').textContent=text;$('library-status').classList.toggle('error',error);}
-function updateAppliedSummaries(){
- const overlaps=Enhancements.overlaps(components);
- for(const component of components){const row=componentRows.get(component.id);if(!row)continue;row.name.textContent=component.name;row.enabled.setAttribute('aria-label',`Enable ${component.name}`);row.edit.setAttribute('aria-label',`Edit ${component.name}`);row.remove.setAttribute('aria-label',`Remove ${component.name}`);row.summary.textContent=componentSummary(component.settings);row.overlap.textContent=overlaps[component.id].length?'Overridden later: '+overlaps[component.id].map(fieldLabel).join(', '):'';row.overlap.hidden=!row.overlap.textContent;}
- $('component-count').textContent=components.length?`${components.filter(component=>component.enabled).length} enabled`:'None';$('components-empty').hidden=components.length>0;
-}
-function refreshComponents(){updateAppliedSummaries();updateState();}
-function renderApplied(){
- const editor=$('component-editor');$('editor-home').append(editor);$('applied-enhancements').replaceChildren();componentRows.clear();
- for(const component of components){
-  const item=document.createElement('div');item.className='applied-enhancement';
-  const row=document.createElement('div');row.className='component-row';
-  const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=component.enabled;enabled.setAttribute('aria-label',`Enable ${component.name}`);enabled.onchange=()=>{component.enabled=enabled.checked;refreshComponents();};
-  const info=document.createElement('div');info.className='component-info';const name=document.createElement('strong'),summary=document.createElement('small'),overlap=document.createElement('p');overlap.className='component-overlap';info.append(name,summary,overlap);
-  const edit=document.createElement('button');edit.textContent=component.id===editingId?'Close':'Edit';edit.setAttribute('aria-expanded',String(component.id===editingId));edit.onclick=()=>editComponent(component.id===editingId?null:component.id);
-  const remove=document.createElement('button');remove.textContent='Remove';remove.setAttribute('aria-label',`Remove ${component.name}`);remove.onclick=()=>removeComponent(component.id);
-  row.append(enabled,info,edit,remove);item.append(row);$('applied-enhancements').append(item);componentRows.set(component.id,{name,summary,overlap,enabled,edit,remove});
-  if(component.id===editingId)item.append(editor);
- }
- editor.hidden=!selectedComponent();updateAppliedSummaries();
-}
-function populateEditor(){
- const component=selectedComponent();if(!component)return;
- $('component-name').value=component.name;const settings={...defaults,...component.settings};
- for(const group of Enhancements.groups){$('edit-group-'+group.id).hidden=!group.fields.some(field=>Object.hasOwn(component.settings,field));for(const id of group.fields){if(id==='hdri')continue;if($(id).type==='checkbox')$(id).checked=settings[id];else $(id).value=settings[id];}}
- for(const [id] of [...specs,...advancedSpecs])displayValue(id);
- $('hdri-name').textContent=settingText('hdri',settings.hdri);$('save-enhancement-panel').hidden=true;updateEditorState();
-}
-function editComponent(id){const previousId=editingId;editingId=id;renderApplied();populateEditor();updateState();if(selectedComponent())$('component-name').focus();else componentRows.get(previousId)?.edit.focus();}
-function addComponent(template){const copy=Enhancements.sanitizeTemplate(template);components.push({id:'enhancement-'+nextComponentId++,name:copy.name,enabled:true,settings:{...copy.settings}});$('enhancement-library').hidden=true;renderApplied();refreshComponents();return components.at(-1);}
-function removeComponent(id){components=components.filter(component=>component.id!==id);if(editingId===id)editingId=null;renderApplied();refreshComponents();}
-function renderLibrary(){
- for(const [id,templates] of [['builtin-library',Enhancements.builtins],['saved-library',savedTemplates]]){
-  $(id).replaceChildren();
-  for(const template of templates){const button=document.createElement('button'),name=document.createElement('strong'),summary=document.createElement('small');name.textContent=template.name;summary.textContent=componentSummary(template.settings);button.append(name,summary);button.onclick=()=>addComponent(template);$(id).append(button);}
-  if(!templates.length){const empty=document.createElement('p');empty.className='helper';empty.textContent=libraryLoaded?'No saved enhancements yet.':'Saved library is not loaded.';$(id).append(empty);}
- }
-}
-function resetSettings(){
- components=[];editingId=null;$('enhancement-library').hidden=true;$('custom-builder').hidden=true;
- for(const id of outputFields){const value=id==='output_encoding'&&['yuv420p10le','p010le'].includes(source?.pixel_format)?'hevc10':defaults[id];if($(id).type==='checkbox')$(id).checked=value;else $(id).value=value;}
- renderApplied();updateState();
-}
-function updateEditorState(){
- const settings={...defaults,...selectedComponent()?.settings},relighting=settings.relighting_mode!=='off',combined=settings.relighting_mode==='aigs';
- $('quality').disabled=settings.upscale_method!=='vsr';$('denoise_quality').disabled=settings.denoise===0;$('deblur_quality').disabled=settings.deblur===0;
- $('blur_strength').disabled=settings.portrait_mode!=='blur';$('background_color').disabled=settings.portrait_mode!=='replace';
- $('relighting_quality').disabled=!combined;$('relighting_specularity').disabled=!combined;$('relighting_blur_strength').disabled=!combined||settings.relighting_quality<2;
- $('relighting-settings').disabled=!relighting;$('choose-hdri').disabled=!relighting;$('clear-hdri').disabled=!settings.hdri;
- $('relighting_field_of_view').disabled=!settings.environment_background;$('relighting_background_gain').disabled=!settings.environment_background;
- $('hdr-settings').disabled=!settings.hdr_enabled;
-}
-function compatibilityErrors(settings=currentSettings()){
- const errors=[],tenBitSdr=settings.output_encoding==='hevc10'&&!settings.hdr_enabled;
- if(settings.hdr_enabled&&settings.output_encoding!=='hevc10')errors.push('SDR to HDR requires HEVC · 10-bit in Output.');
- if(tenBitSdr&&(settings.temporal_denoise!==''||settings.portrait_mode!=='off'||settings.relighting_mode!=='off'||settings.sharpening!==0||(settings.upscale_method==='lightweight'&&settings.scale>1)))errors.push('10-bit SDR cannot use sharpening, temporal denoising, portrait effects or lightweight upscaling. Choose H.264 in Output or disable those enhancements.');
- if(source&&(source.width<512||source.height<288)&&(settings.portrait_mode!=='off'||settings.relighting_mode!=='off'))errors.push('Portrait effects require a source of at least 512 × 288. Disable those enhancements for this video.');
- if(source&&settings.temporal_denoise!==''&&(source.height<80||source.height>1080||source.width>1920))errors.push('Temporal denoising requires a source height of 80–1080 pixels and width up to 1920. Disable it for this video.');
- if(settings.relighting_mode!=='off'){
-  if(!settings.hdri)errors.push('Choose an HDR environment in the relighting enhancement.');
-  if(settings.environment_background&&settings.portrait_mode!=='off')errors.push('Use either the relighting environment background or a portrait background effect. Disable one of them.');
-  if(settings.relighting_mode==='aigs'&&!settings.environment_background)errors.push('Relighting + HDR background requires Use HDR environment as the background in that enhancement.');
- }
- return errors;
-}
-$('add-enhancement').onclick=()=>{$('enhancement-library').hidden=!$('enhancement-library').hidden;$('custom-builder').hidden=true;};
-$('close-library').onclick=()=>{$('enhancement-library').hidden=true;};
-$('create-enhancement').onclick=()=>{$('custom-builder').hidden=false;$('enhancement-library').hidden=true;};
-$('cancel-custom').onclick=()=>{$('custom-builder').hidden=true;};
-for(const group of Enhancements.groups){const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span');input.type='checkbox';input.value=group.id;text.textContent=group.label;label.append(input,text);$('custom-groups').append(label);customGroupInputs.set(group.id,input);}
-$('create-custom').onclick=()=>{
- const settings={};for(const group of Enhancements.groups)if(customGroupInputs.get(group.id).checked)for(const field of group.fields)settings[field]=defaults[field];
- try{const component=addComponent({name:$('custom-name').value,settings});$('custom-builder').hidden=true;$('custom-name').value='';for(const input of customGroupInputs.values())input.checked=false;setLibraryStatus('Enhancement added to this video.');editComponent(component.id);}catch(error){setLibraryStatus(error.message,true);}
-};
-$('component-name').oninput=()=>{const component=selectedComponent();if(component){component.name=$('component-name').value;updateAppliedSummaries();}};
-for(const group of Enhancements.groups)for(const id of group.fields){if(id==='hdri')continue;$(id).addEventListener('input',()=>{const component=selectedComponent();if(!component||!group.fields.some(field=>Object.hasOwn(component.settings,field)))return;component.settings[id]=readSetting(id);updateEditorState();refreshComponents();});}
-$('close-component').onclick=()=>editComponent(null);
-$('save-as-enhancement').onclick=()=>{const component=selectedComponent();if(!component||!libraryLoaded||pendingTemplates)return;$('save-enhancement-name').value=component.name+' copy';$('save-enhancement-panel').hidden=false;};
-$('cancel-save-enhancement').onclick=()=>{$('save-enhancement-panel').hidden=true;};
-$('save-enhancement').onclick=()=>{
- if(!libraryLoaded||pendingTemplates||!selectedComponent())return;
- try{const template=Enhancements.sanitizeTemplate({name:$('save-enhancement-name').value,settings:selectedComponent().settings});if([...Enhancements.builtins,...savedTemplates].some(item=>item.name.toLowerCase()===template.name.toLowerCase()))throw new Error('Choose a new library name. Existing enhancements are never overwritten.');pendingTemplates=[...savedTemplates,template];send('save-enhancement-library',{templates:pendingTemplates});setLibraryStatus('Saving new enhancement…');updateState();}catch(error){setLibraryStatus(error.message,true);}
-};
-$('retry-library').onclick=()=>{setLibraryStatus('Loading saved enhancements…');send('load-enhancement-library');};
-function updateState(){
- const effective=currentSettings(),errors=compatibilityErrors(effective);
- $('settings').disabled=!source||busy;$('settings').classList.toggle('locked',!source);
- for(const id of ['load','download-load','empty-load'])$(id).disabled=busy;
- $('reset').disabled=!source||busy;$('generate').disabled=!source||busy||errors.length>0;$('generate').hidden=viewerKind!=='full';$('cancel').hidden=!busy;
- $('download-settings').disabled=busy;$('download').disabled=busy;$('download-timings').disabled=!$('download-specific-timings').checked;
- $('download').textContent=$('download-specific-timings').checked?'Download clip':'Download video';
- $('preview-range').disabled=!source||busy||!(source.duration>=1);
- $('sample-render').disabled=!source||busy||errors.length>0||!(source.duration>=1);
- $('sample-rerender').disabled=!sampleMedia||busy||errors.length>0;
- $('open-source').disabled=!source||busy;$('open-source').hidden=viewerKind!=='full';
- $('sample-external').hidden=!enhancedMedia||viewerKind!=='sample';$('sample-external').disabled=busy;
- for(const id of ['open-output','show-output']){$(id).hidden=!exportMedia||viewerKind!=='full';$(id).disabled=busy;}
- const settingsRendered=renderedJob===JSON.stringify(buildJob());
- for(const [statusId,buttonId,rangeMatches,emptyText] of [
-  ['sample-status','sample-render',sampleMatchesSelection(),'Drag the range handles to select 1–15 seconds.'],
-  ['preview-status','sample-rerender',true,sampleMedia?'Adjust your settings, then render this preview.':'Choose a range in Full video, then render a preview.']
- ]){
-  const state=sampleBusy?'rendering':enhancedMedia?(settingsRendered&&rangeMatches?'current':'stale'):'empty';
-  $(statusId).dataset.state=state;
-  $(statusId).textContent=sampleBusy?sampleMessage:enhancedMedia?(state==='current'?'Up to date · Preview matches your current settings.':rangeMatches?'Changes not rendered · Showing the previous render.':'Changes not rendered · The selected range differs from this preview.'):sampleMessage||emptyText;
-  $(buttonId).textContent=sampleBusy?'Rendering…':enhancedMedia?(state==='current'?'Render again':'Render changes'):'Render preview';
- }
- $('preview-description').textContent=sampleMedia?`${timeText(sampleSelection.start)} — ${timeText(sampleSelection.start+(sampleMedia.actual_duration||sampleSelection.duration))} of ${source.name}`:'Choose a range in Full video to prepare a preview.';
- $('frame_quality').disabled=!$('target_fps').value;$('detect_scene_changes').disabled=!$('target_fps').value;
- $('compatibility-errors').textContent=errors.join('\n');$('compatibility-errors').hidden=!errors.length;
- $('save-as-enhancement').disabled=!libraryLoaded||!!pendingTemplates;$('save-enhancement').disabled=!libraryLoaded||!!pendingTemplates;$('retry-library').hidden=libraryLoaded;
- $('upscale-note').hidden=effective.scale>1||!components.some(component=>component.enabled&&Enhancements.groups[0].fields.some(field=>Object.hasOwn(component.settings,field)));
- if(source){const format=effective.hdr_enabled?'HDR10':effective.output_encoding==='hevc10'?'10-bit SDR':'SDR';$('summary').textContent=`${Math.round(source.width*effective.scale)} × ${Math.round(source.height*effective.scale)} · ${effective.target_fps||'Original'} FPS · ${format}`;}
- else $('summary').textContent='Waiting for a video';
- updateRangeLabels();
-}
-function displayLoadedVideo(){
- $('name').textContent=source.name;$('dimensions').textContent=`${source.width} × ${source.height}`;$('fps').textContent=source.fps?`${Number(source.fps.toFixed(3))} FPS`:'Variable FPS';$('duration').textContent=source.duration?timeText(source.duration):'Unknown duration';$('audio').textContent=source.audio?`${source.audio} audio track${source.audio>1?'s':''}`:'No audio';
- for(const option of $('scale').options){const width=Math.round(source.width*Number(option.value)),height=Math.round(source.height*Number(option.value));option.disabled=width>4096||height>4096||width%2!==0||height%2!==0||width*source.height!==height*source.width;}
- for(const option of $('target_fps').options)option.disabled=option.value&&Number(option.value)<source.fps;
- for(const id of ['sample-start','sample-end'])$(id).max=source.duration||1;
- $('sample-start').value=0;$('sample-end').value=Math.min(5,source.duration||0);resetSettings();showPage('full');message('Ready. Select a short range to preview your settings.');
-}
-function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('job-status').hidden=!text;}
-function currentSelection(){return {start:Number($('sample-start').value),duration:Number((Number($('sample-end').value)-Number($('sample-start').value)).toFixed(3))};}
-function sampleMatchesSelection(){return sampleSelection&&JSON.stringify(sampleSelection)===JSON.stringify(currentSelection());}
-function updateRangeLabels(){const selection=currentSelection(),duration=source?.duration||1;const end=selection.start+selection.duration;$('range-label').textContent=`${timeText(selection.start)} — ${timeText(end)} · ${selection.duration.toFixed(1)}s`;$('range-track').style.setProperty('--start',clamp(selection.start/duration*100,0,100)+'%');$('range-track').style.setProperty('--end',clamp(end/duration*100,0,100)+'%');$('sample-start').setAttribute('aria-valuetext',timeText(selection.start));$('sample-end').setAttribute('aria-valuetext',timeText(end));}
-function changeRange(changed){
- const duration=source?.duration||1;let start=Number($('sample-start').value),end=Number($('sample-end').value);
- if(changed==='start'){start=clamp(start,0,Math.max(0,duration-1));end=clamp(end,start+1,Math.min(duration,start+15));}else{end=clamp(end,1,duration);start=clamp(start,Math.max(0,end-15),end-1);}
- $('sample-start').value=start;$('sample-end').value=end;
- if(viewerKind==='full'){pauseViewer();seekViewer(changed==='start'?start:end);}
- updateState();
-}
-$('sample-start').oninput=()=>changeRange('start');$('sample-end').oninput=()=>changeRange('end');
-$('range-here').onclick=()=>{const duration=currentSelection().duration;const time=masterVideo().currentTime+(viewerKind==='sample'?(sampleSelection?.start||0):0);$('sample-start').value=clamp(time,0,Math.max(0,source.duration-1));$('sample-end').value=Math.min(source.duration,Number($('sample-start').value)+duration);changeRange('start');};
-function showPage(page){
- viewerStates[viewerKind]={pair,time:masterVideo().readyState?Number($('seek').value):restoreTime,mode:$('view-mode').value,zoom:$('zoom').value,pan:{...pan},wipe:Number($('wipe-handle').getAttribute('aria-valuenow')),loop:$('loop').checked};
- pauseViewer();$('main').hidden=page==='download';$('download-page').hidden=page!=='download';
- for(const button of document.querySelectorAll('nav [data-page]')){if(button.dataset.page===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
- if(page==='download')return;
- viewerKind=page;$('main').classList.toggle('comparison-mode',page==='files');$('source-bar').hidden=page!=='full';$('preview-range').hidden=page!=='full';
- $('preview-heading').hidden=page!=='sample';$('preview-actions').hidden=page!=='sample';$('comparison-heading').hidden=page!=='files';$('comparison-files').hidden=page!=='files';
- const media=page==='sample'?[sampleMedia,enhancedMedia]:page==='files'?comparisonFiles:[source,exportMedia],state=viewerStates[page];
- showPair(...media,state?.pair.every((item,index)=>item===media[index])?state:null);updateState();
-}
-for(const button of document.querySelectorAll('nav [data-page]'))button.onclick=()=>showPage(button.dataset.page);
-$('download-specific-timings').onchange=updateState;
-for(const id of ['download-start','download-end'])$(id).oninput=()=>{$('download-end').setCustomValidity('');};
-$('download-form').onsubmit=event=>{event.preventDefault();if(busy)return;const timings=$('download-specific-timings').checked?{start:Number($('download-start').value),end:Number($('download-end').value)}:null;if(timings&&timings.end<=timings.start){$('download-end').setCustomValidity('End time must be after the start time.');$('download-end').reportValidity();return;}send('download',{options:{url:$('youtube-url').value.trim(),height:Number($('download-height').value),fps:Number($('download-fps').value),format:$('download-format').value,timings}});};
-$('load').onclick=()=>send('load');
-$('empty-load').onclick=()=>{if(viewerKind==='sample')showPage('full');else if(viewerKind==='files')$('comparison-file-1').click();else send('load');};
-$('download-load').onclick=()=>send($('download-load').dataset.ready?'load-downloaded':'load');
-$('reset').onclick=resetSettings;
-for(const id of outputFields)$(id).addEventListener('input',updateState);
-$('choose-hdri').onclick=()=>{if(editingId)send('choose-hdri',{component_id:editingId});};
-$('clear-hdri').onclick=()=>{const component=selectedComponent();if(component){component.settings.hdri=null;$('hdri-name').textContent='No environment selected';updateEditorState();refreshComponents();}};
-$('cancel').onclick=()=>{pendingJob=null;send('cancel');$('cancel').disabled=true;message(downloading?'Stopping download…':'Stopping after the current operation…');};
-function buildJob(){
- const settings=currentSettings(),enhancements=Object.fromEntries(specs.map(([id])=>[id,settings[id]]));
- enhancements.denoise_quality=settings.denoise_quality;enhancements.deblur_quality=settings.deblur_quality;
- return {resolution_scale:settings.scale,upscale_method:settings.upscale_method,upscale_quality:settings.quality,upscale_strength:settings.upscale_strength,target_fps:settings.target_fps||null,enhancements,
-  frame_generation:{quality:settings.frame_quality,detect_scene_changes:settings.detect_scene_changes},output_encoding:settings.output_encoding,encoder:{preset:settings.encoder_preset,quality:settings.encoder_quality},
-  temporal_denoise:settings.temporal_denoise===''?null:settings.temporal_denoise,
-  hdr:{enabled:settings.hdr_enabled,contrast:settings.hdr_contrast,saturation:settings.hdr_saturation,middle_gray:settings.hdr_middle_gray,max_luminance:settings.hdr_max_luminance,debanding:settings.hdr_debanding},
-  portrait:{mode:settings.portrait_mode,segmentation_mode:settings.segmentation_mode,blur_strength:settings.blur_strength,background_color:settings.background_color.slice(1).match(/../g).map(value=>parseInt(value,16))},
-  relighting:{mode:settings.relighting_mode,hdri:settings.hdri,quality:settings.relighting_quality,pan:settings.relighting_pan,field_of_view:settings.relighting_field_of_view,foreground_gain:settings.relighting_foreground_gain,background_gain:settings.relighting_background_gain,specularity:settings.relighting_specularity,blur_strength:settings.relighting_blur_strength,environment_background:settings.environment_background}
- };
-}
-function settingsAreValid(){const quality=$('encoder_quality');if(!quality.checkValidity()){quality.closest('details').open=true;quality.reportValidity();return false;}const errors=compatibilityErrors();if(errors.length){message(errors.join('\n'),true);return false;}return true;}
+requestAnimationFrame(tick);
 
-$('generate').onclick=()=>{if(settingsAreValid()){pauseViewer();send('generate',{job:buildJob()});}};
-function renderPreview(currentClip=false){
- if(busy||(currentClip&&!sampleMedia)||!settingsAreValid())return;
- const job=buildJob(),reuse=currentClip||sampleMatchesSelection();renderingJob=JSON.stringify(job);busy=true;sampleBusy=true;sampleMessage=reuse?'Rendering your settings…':'Preparing your selected range…';
- if(!reuse){sampleSelection=null;sampleMedia=null;enhancedMedia=null;renderedJob=null;}
- pendingJob=reuse?null:job;showPage('sample');
- if(reuse)send('render-sample',{job});else send('load-sample',{selection:currentSelection()});
-}
-$('sample-render').onclick=()=>renderPreview();$('sample-rerender').onclick=()=>renderPreview(true);
-$('sample-external').onclick=()=>send('open-sample');$('open-source').onclick=()=>send('open-source');$('open-output').onclick=()=>send('open-output');$('show-output').onclick=()=>send('show-output');
-window.receive=event=>{
- switch(event.type){
- case 'loading':pauseViewer();source=null;components=[];editingId=null;renderApplied();$('enhancement-library').hidden=true;$('custom-builder').hidden=true;sampleSelection=null;sampleMedia=null;enhancedMedia=null;exportMedia=null;renderedJob=null;pendingJob=null;sampleBusy=false;sampleMessage='';busy=true;delete viewerStates.full;delete viewerStates.sample;showPage('full');$('name').textContent='Reading video…';for(const id of ['dimensions','fps','duration','audio'])$(id).textContent='—';$('progress').hidden=true;message('Reading video information…');break;
- case 'loaded':source=event.source;busy=false;displayLoadedVideo();break;
- case 'sample-loading':busy=true;sampleBusy=true;sampleMessage='Preparing your selected range…';$('cancel').disabled=false;$('progress').hidden=true;showPage('sample');message('Preparing preview…');break;
- case 'sample-loaded':busy=!!pendingJob;sampleBusy=!!pendingJob;sampleMessage=pendingJob?'Rendering your settings…':'';sampleSelection={start:event.start,duration:event.duration};sampleMedia={...event,name:'Original preview'};showPage('sample');if(pendingJob){const job=pendingJob;pendingJob=null;send('render-sample',{job});}else message('Preview range loaded.');break;
- case 'sample-rendering':busy=true;sampleBusy=true;sampleMessage='Rendering your settings…';$('cancel').disabled=false;$('progress').hidden=true;showPage('sample');message('Rendering preview…');break;
- case 'sample-progress':if(!$('cancel').disabled){sampleMessage=`Rendering preview · ${event.frames.toLocaleString()} frames`;message(sampleMessage);}break;
- case 'sample-rendered':busy=false;sampleBusy=false;sampleMessage='';renderedJob=renderingJob;enhancedMedia={...event,name:'Enhanced preview',fps:event.fps||Number($('target_fps').value)||source.fps};showPage('sample');message('Preview ready. Compare the result, then return to Full video to export.');break;
- case 'sample-error':busy=false;sampleBusy=false;pendingJob=null;sampleMessage=event.message;updateViewer();message(event.message,true);break;
- case 'download-started':busy=true;downloading=true;$('cancel').disabled=false;$('progress').hidden=true;message('Connecting to YouTube…');break;
- case 'download-progress':if(!$('cancel').disabled)message(event.message);break;
- case 'downloaded':busy=false;downloading=false;$('download-load').dataset.ready='true';$('download-load').textContent='Open download';message(`Download saved. Open it in your workspace.\n${event.path}`);break;
- case 'download-error':busy=false;downloading=false;message(event.message,true);break;
- case 'hdri-selected':{const component=components.find(component=>component.id===event.component_id);if(component){component.settings.hdri=event.path;if(component.id===editingId){$('hdri-name').textContent=event.name;updateEditorState();}updateAppliedSummaries();}break;}
- case 'enhancement-library':try{savedTemplates=event.templates.map(Enhancements.sanitizeTemplate);libraryLoaded=true;setLibraryStatus('');renderLibrary();}catch(error){libraryLoaded=false;setLibraryStatus('Saved library could not be loaded: '+error.message,true);}break;
- case 'enhancement-library-saved':if(pendingTemplates){savedTemplates=pendingTemplates;pendingTemplates=null;setLibraryStatus('New enhancement saved. Existing templates are unchanged.');$('save-enhancement-panel').hidden=true;renderLibrary();}break;
- case 'enhancement-library-error':pendingTemplates=null;setLibraryStatus(event.message,true);break;
- case 'started':busy=true;$('cancel').disabled=false;$('progress').hidden=false;$('progress').removeAttribute('value');message('Preparing GPU processing…');break;
- case 'progress':if(source?.duration)$('progress').value=Math.min(.99,event.seconds/source.duration);if(!$('cancel').disabled)message(`Processing · ${event.frames.toLocaleString()} frames · ${event.elapsed.toFixed(0)}s elapsed`);break;
- case 'finished':busy=false;exportMedia={...event,name:'Export'};$('progress').value=1;showPage('full');message(`Saved ${event.frames.toLocaleString()} frames in ${event.elapsed.toFixed(1)}s.\n${event.output}`);break;
- case 'error':busy=false;pendingJob=null;$('progress').hidden=true;if(!source)$('name').textContent='No video loaded';message(event.message,true);break;
- case 'status':message(event.message);break;
- }
- updateState();
+$('play').onclick = () => playing ? pause() : play();
+$('step-back').onclick = () => step(-1); $('step-forward').onclick = () => step(1);
+$('loop').onclick = () => { looping = !looping; updateViewer(); };
+$('mute').onclick = () => { muted = !muted; updateViewer(); };
+for (const button of $('modes').children) button.onclick = () => { const time = masterVideo().currentTime; pause(); mode = button.dataset.mode; updateViewer(); seek(time); };
+for (const button of $('zooms').children) button.onclick = () => { zoom = button.dataset.zoom; pan = { x: 0, y: 0 }; updateViewer(); };
+$('open-external').onclick = () => send(stageKind === 'preview' ? 'open-sample' : 'open-source');
+$('wipe').onpointerdown = event => { event.preventDefault(); event.stopPropagation(); $('wipe').setPointerCapture(event.pointerId); };
+$('wipe').onpointermove = event => { if ($('wipe').hasPointerCapture(event.pointerId)) { const rect = $('viewport').getBoundingClientRect(); setWipe((event.clientX - rect.left) / rect.width * 100); } };
+$('wipe').onkeydown = event => { const moves = { ArrowLeft: wipe - 2, ArrowRight: wipe + 2, Home: 0, End: 100 }; if (!(event.key in moves)) return; event.preventDefault(); event.stopPropagation(); setWipe(moves[event.key]); };
+let panDrag = null;
+$('viewport').onpointerdown = event => {
+  if (event.target.closest('button,.stage-empty')) return;
+  if (zoom === 'fit') { if (mode === 'wipe' && pair.every(Boolean)) { $('wipe').setPointerCapture(event.pointerId); $('wipe').onpointermove(event); } return; }
+  panDrag = { x: event.clientX, y: event.clientY, pan: { ...pan } }; $('viewport').setPointerCapture(event.pointerId);
 };
-resetSettings();renderLibrary();updateViewer();send('load-enhancement-library');
+$('viewport').onpointermove = event => { if (panDrag) { pan = { x: panDrag.pan.x + event.clientX - panDrag.x, y: panDrag.pan.y + event.clientY - panDrag.y }; layoutViewer(); } };
+$('viewport').onlostpointercapture = () => { panDrag = null; };
+
+// ---------- Timeline and preview range ----------
+function setRange(start, end, changed) {
+  const length = source.duration, round = value => Math.round(value * 100) / 100;
+  start = round(start); end = round(end);
+  if (changed === 'move') { const span = end - start; start = round(clamp(start, 0, length - span)); end = start + span; }
+  else if (changed === 'in') { start = clamp(start, 0, Math.max(0, length - 1)); end = clamp(end, start + 1, Math.min(length, start + 15)); }
+  else { end = clamp(end, Math.min(1, length), length); start = clamp(start, Math.max(0, end - 15), end - 1); }
+  range = { start, end }; seek(changed === 'out' ? end : start); updateState();
+}
+function selection() { return { start: Number(range.start.toFixed(3)), duration: Number((range.end - range.start).toFixed(3)) }; }
+function sampleMatchesRange() { return sampleRange && JSON.stringify(sampleRange) === JSON.stringify(selection()); }
+function drawRange() {
+  if (!source) return;
+  $('in-time').textContent = clock(range.start); $('out-time').textContent = clock(range.end); $('range-length').textContent = (range.end - range.start).toFixed(1) + ' s';
+  for (const [id, value] of [['tl-in', range.start], ['tl-out', range.end]]) { $(id).setAttribute('aria-valuenow', String(value)); $(id).setAttribute('aria-valuetext', clock(value)); }
+  drawTimeline();
+}
+let timelineDrag = null;
+function timeAt(x) { const rect = $('timeline').getBoundingClientRect(); return clamp((x - rect.left) / rect.width, 0, 1) * viewerLength(); }
+$('timeline').onpointerdown = event => {
+  if ($('timeline').getAttribute('aria-disabled') === 'true') return;
+  event.preventDefault(); $('timeline').setPointerCapture(event.pointerId); pause();
+  const handle = event.target.closest('.tl-handle');
+  if (handle) { timelineDrag = { kind: handle.id === 'tl-in' ? 'in' : 'out' }; handle.focus(); }
+  else if (event.target.closest('#tl-range')) timelineDrag = { kind: 'move', x: event.clientX, time: timeAt(event.clientX), ...range, moved: false };
+  else { timelineDrag = { kind: 'seek' }; seek(timeAt(event.clientX)); }
+};
+$('timeline').onpointermove = event => {
+  if (!timelineDrag) return;
+  const time = timeAt(event.clientX), drag = timelineDrag;
+  if (drag.kind === 'seek') seek(time);
+  else if (drag.kind === 'in') setRange(time, range.end, 'in');
+  else if (drag.kind === 'out') setRange(range.start, time, 'out');
+  else { drag.moved ||= Math.abs(event.clientX - drag.x) > 3; if (drag.moved) setRange(drag.start + time - drag.time, drag.end + time - drag.time, 'move'); }
+};
+$('timeline').onpointerup = event => { if (timelineDrag?.kind === 'move' && !timelineDrag.moved) seek(timeAt(event.clientX)); timelineDrag = null; };
+for (const [id, edge] of [['tl-in', 'in'], ['tl-out', 'out']]) $(id).onkeydown = event => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+  event.preventDefault(); event.stopPropagation(); pause();
+  const delta = (event.key === 'ArrowRight' ? 1 : -1) * (event.shiftKey ? 1 : .1);
+  if (edge === 'in') setRange(range.start + delta, range.end, 'in'); else setRange(range.start, range.end + delta, 'out');
+};
+function stageVisible() { return !$('stage').hidden; }
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !$('add-menu').hidden) { closeMenu(); $('add-layer').focus(); return; }
+  if (!stageVisible() || event.ctrlKey || event.altKey || event.metaKey || $('save-dialog').open) return;
+  const target = event.target;
+  if (target.closest('input,select,textarea,.tl-handle,#wipe')) return;
+  if (event.key === ' ') { if (target.closest('button')) return; event.preventDefault(); if (!$('play').disabled) $('play').click(); }
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); if (!$('step-forward').disabled) step(event.key === 'ArrowRight' ? 1 : -1); }
+  else if (event.key === 'Escape') { zoom = 'fit'; pan = { x: 0, y: 0 }; updateViewer(); }
+  else if ((event.key === 'i' || event.key === 'o') && rangeActive() && !$('play').disabled) { pause(); const time = masterVideo().currentTime; if (event.key === 'i') setRange(time, range.end, 'in'); else setRange(range.start, time, 'out'); }
+});
+
+// ---------- Pages ----------
+function go(next) {
+  page = next; document.body.dataset.page = next;
+  for (const button of document.querySelectorAll('.rail [data-page]')) if (button.dataset.page === next) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+  const studio = next === 'studio';
+  $('welcome').hidden = !(studio && !source); $('panel').hidden = !(studio && source); $('youtube').hidden = next !== 'youtube';
+  $('stage').hidden = !(next === 'compare' || (studio && source));
+  $('view-tabs').hidden = !studio; $('compare-slots').hidden = next !== 'compare';
+  closeMenu();
+  if (stageVisible()) showStage(next === 'compare' ? 'compare' : view); else pause();
+  updateState();
+}
+function setView(next) { view = next; if (page === 'studio' && source) showStage(next); updateState(); }
+for (const button of document.querySelectorAll('.rail [data-page]')) button.onclick = () => { if (button.dataset.page !== page) go(button.dataset.page); };
+for (const button of $('view-tabs').children) button.onclick = () => { if (button.dataset.view !== view) setView(button.dataset.view); };
+$('open').onclick = () => send('load'); $('replace').onclick = () => send('load');
+$('welcome-youtube').onclick = () => go('youtube');
+
+// ---------- Compare ----------
+for (const index of [0, 1]) $(`file-${index}`).onchange = event => {
+  const file = event.target.files[0]; if (!file) return;
+  if (compareFiles[index]) URL.revokeObjectURL(compareFiles[index].url);
+  compareFiles[index] = { url: URL.createObjectURL(file), name: file.name };
+  $(`slot-${index}`).classList.add('filled'); $(`slot-${index}`).querySelector('span').textContent = file.name;
+  if (page === 'compare') showStage('compare');
+};
+$('compare-clear').onclick = () => {
+  for (const [index, media] of compareFiles.entries()) { if (media) URL.revokeObjectURL(media.url); $(`file-${index}`).value = ''; $(`slot-${index}`).classList.remove('filled'); $(`slot-${index}`).querySelector('span').textContent = 'Choose video…'; }
+  compareFiles = [null, null]; showStage('compare');
+};
+
+// ---------- Recipe layers ----------
+function addLayer(template, open = false) {
+  const preset = E.sanitizeTemplate(template);
+  const layer = { id: 'layer-' + nextLayer++, name: preset.name, enabled: true, settings: { ...preset.settings } };
+  layers.push(layer); if (open) openLayer = layer.id;
+  renderLayers(); updateState();
+}
+function addAdjustment(group) { addLayer({ name: group.label, settings: { ...Object.fromEntries(group.fields.map(field => [field, D[field]])), ...STARTERS[group.id] } }, true); }
+function renderLayers() {
+  $('layers').replaceChildren(); layerControls.clear();
+  for (const layer of layers) {
+    const item = el('li', 'layer'), head = el('div', 'layer-head'), toggle = el('input', 'switch'), title = el('button', 'layer-title'), name = el('b'), summary = el('small'), remove = el('button', 'icon-btn sm'), warning = el('p', 'layer-warn');
+    const open = layer.id === openLayer;
+    item.classList.toggle('open', open);
+    toggle.type = 'checkbox'; toggle.checked = layer.enabled;
+    toggle.onchange = () => { layer.enabled = toggle.checked; updateState(); };
+    name.append(el('span'), icon('chevron')); title.append(name, summary); title.setAttribute('aria-expanded', String(open));
+    title.onclick = () => { openLayer = open ? null : layer.id; renderLayers(); updateState(); };
+    remove.append(icon('x')); remove.onclick = () => { layers = layers.filter(item => item !== layer); if (open) openLayer = null; renderLayers(); updateState(); };
+    head.append(toggle, title, remove); item.append(head, warning);
+    const controls = [];
+    if (open) item.append(layerBody(layer, controls));
+    $('layers').append(item);
+    layerControls.set(layer.id, { item, toggle, name: name.firstChild, summary, remove, warning, controls });
+    syncLayer(layer);
+  }
+}
+function layerBody(layer, controls) {
+  const body = el('div', 'layer-body'), nameRow = el('div', 'ctl'), nameLabel = el('label', null, 'Layer name'), nameInput = el('input');
+  nameInput.type = 'text'; nameInput.maxLength = 120; nameInput.value = layer.name; nameInput.id = layer.id + '-name'; nameLabel.htmlFor = nameInput.id;
+  nameInput.oninput = () => { layer.name = nameInput.value; syncLayer(layer); };
+  nameRow.append(nameLabel, nameInput);
+  const groups = E.groups.filter(group => group.fields.some(field => Object.hasOwn(layer.settings, field)));
+  for (const group of groups) {
+    const section = el('div', 'ctl-group');
+    if (groups.length > 1) section.append(el('h4', null, group.label));
+    for (const field of group.fields) { const control = fieldControl(layer, field); controls.push(control); section.append(control.row); }
+    if (GROUP_NOTES[group.id]) section.append(el('p', 'ctl-note', GROUP_NOTES[group.id]));
+    body.append(section);
+  }
+  body.append(nameRow);
+  return body;
+}
+function fieldControl(layer, field) {
+  const meta = FIELDS[field], id = `${layer.id}-${field}`, row = el('div', 'ctl'), label = el('label', null, meta.label);
+  const set = value => { layer.settings[field] = value; syncLayer(layer); updateState(); };
+  let show;
+  label.htmlFor = id;
+  if (field === 'hdri') {
+    row.className = 'ctl ctl-file';
+    const name = el('span', 'file-name'), pick = el('button', 'btn sm', 'Choose…'), clear = el('button', 'icon-btn sm');
+    pick.id = id; pick.onclick = () => send('choose-hdri', { component_id: layer.id });
+    clear.append(icon('x')); clear.setAttribute('aria-label', 'Clear environment image'); clear.onclick = () => set(null);
+    row.append(label, name, pick, clear);
+    show = value => { name.textContent = formatValue(field, value); name.title = value || ''; clear.hidden = !value; pick.disabled = busy; };
+  } else if (typeof D[field] === 'boolean') {
+    const input = el('input', 'switch'); input.type = 'checkbox'; input.id = id; input.onchange = () => set(input.checked);
+    row.append(label, input); show = value => { input.checked = value; };
+  } else if (meta.options) {
+    const choices = E.choices[field], select = el('select'); select.id = id;
+    for (const choice of choices) { const option = el('option', null, meta.options[choice]); option.value = String(choice); select.append(option); }
+    select.onchange = () => set(choices[select.selectedIndex]);
+    row.append(label, select); show = value => { select.selectedIndex = choices.indexOf(value); };
+  } else if (field === 'background_color') {
+    const input = el('input'); input.type = 'color'; input.id = id; input.oninput = () => set(input.value);
+    row.append(label, input); show = value => { input.value = value; };
+  } else {
+    const [min, max] = E.ranges[field], input = el('input'), value = el('output');
+    row.className = 'ctl ctl-range'; input.type = 'range'; input.id = id; input.min = min; input.max = max; input.step = meta.step; input.title = 'Double-click to reset';
+    input.oninput = () => set(Number(input.value)); input.ondblclick = () => set(D[field]);
+    row.append(label, value, input);
+    const position = number => (clamp(number, min, max) - min) / (max - min) * 100;
+    show = number => { input.value = number; value.textContent = formatValue(field, number); const neutral = position(D[field]), current = position(number); input.style.setProperty('--a', Math.min(neutral, current) + '%'); input.style.setProperty('--b', Math.max(neutral, current) + '%'); };
+  }
+  return { row, sync: settings => { row.hidden = fieldHidden(field, settings); show(settings[field]); } };
+}
+function syncLayer(layer) {
+  const refs = layerControls.get(layer.id); if (!refs) return;
+  const settings = { ...D, ...layer.settings }, title = layer.name.trim() || 'Untitled layer';
+  refs.name.textContent = title; refs.summary.textContent = templateSummary(layer.settings, layer.name);
+  refs.toggle.setAttribute('aria-label', `Use ${title}`); refs.remove.setAttribute('aria-label', `Remove ${title}`);
+  for (const control of refs.controls) control.sync(settings);
+}
+function syncLayers() {
+  const overridden = E.overlaps(layers);
+  for (const layer of layers) {
+    const refs = layerControls.get(layer.id); if (!refs) continue;
+    refs.item.classList.toggle('off', !layer.enabled);
+    const fields = overridden[layer.id] || [];
+    refs.warning.textContent = fields.length ? 'Overridden by a later layer: ' + [...new Set(fields.map(fieldName))].join(', ') : '';
+    refs.warning.hidden = !fields.length;
+    syncLayer(layer);
+  }
+  $('layers-empty').hidden = layers.length > 0;
+  $('layer-count').textContent = layers.length ? `${layers.filter(layer => layer.enabled).length} of ${layers.length} on` : '';
+}
+
+// ---------- Add menu ----------
+function closeMenu() { $('add-menu').hidden = true; $('add-layer').setAttribute('aria-expanded', 'false'); }
+function menuItem(title, detail, run) { const button = el('button', 'menu-item'), name = el('span', null, title); button.setAttribute('role', 'menuitem'); button.append(name); if (detail) button.append(el('small', null, detail)); button.onclick = () => { closeMenu(); run(); }; return button; }
+function openMenu(anchor) {
+  const menu = $('add-menu'); menu.replaceChildren();
+  menu.append(el('h4', null, 'Presets'));
+  for (const preset of E.builtins) menu.append(menuItem(preset.name, templateSummary(preset.settings), () => addLayer(preset)));
+  menu.append(el('h4', null, 'Your presets'));
+  if (libraryError) { menu.append(el('p', 'note error-text', libraryError)); const retry = menuItem('Try loading again', '', () => { libraryError = ''; send('load-enhancement-library'); }); menu.append(retry); }
+  else if (!savedPresets.length) menu.append(el('p', 'note', libraryLoaded ? 'Presets you save appear here.' : 'Loading…'));
+  for (const preset of savedPresets) menu.append(menuItem(preset.name, templateSummary(preset.settings), () => addLayer(preset)));
+  menu.append(el('h4', null, 'Single adjustments'));
+  const grid = el('div', 'menu-grid'); for (const group of E.groups) grid.append(menuItem(group.label, '', () => addAdjustment(group))); menu.append(grid);
+  menu.hidden = false; anchor.setAttribute('aria-expanded', 'true');
+  const rect = anchor.getBoundingClientRect(), width = menu.offsetWidth;
+  menu.style.left = clamp(rect.right - width, 8, innerWidth - width - 8) + 'px';
+  menu.style.top = Math.min(rect.bottom + 6, innerHeight - menu.offsetHeight - 8) + 'px';
+  menu.querySelector('button').focus();
+}
+$('add-layer').onclick = event => { event.stopPropagation(); if ($('add-menu').hidden) openMenu($('add-layer')); else closeMenu(); };
+$('add-single').onclick = event => { event.stopPropagation(); openMenu($('add-layer')); $('add-menu').querySelector('.menu-grid button').focus(); };
+document.addEventListener('pointerdown', event => { if (!$('add-menu').hidden && !event.target.closest('#add-menu,#add-layer,#add-single')) closeMenu(); });
+for (const preset of E.builtins) { const chip = el('button', 'btn sm', preset.name); chip.title = templateSummary(preset.settings); chip.onclick = () => addLayer(preset); $('preset-chips').append(chip); }
+
+// ---------- Save preset ----------
+function enabledSettings() { return Object.assign({}, ...layers.filter(layer => layer.enabled).map(layer => layer.settings)); }
+function saveError(text) { $('save-error').textContent = text; $('save-error').hidden = !text; }
+$('save-preset').onclick = () => { const named = layers.filter(layer => layer.enabled); $('save-name').value = named.length === 1 ? named[0].name : ''; saveError(''); $('save-confirm').disabled = false; $('save-confirm').textContent = 'Save preset'; $('save-dialog').showModal(); $('save-name').select(); };
+$('save-cancel').onclick = () => $('save-dialog').close();
+$('save-form').onsubmit = event => {
+  event.preventDefault();
+  if (!libraryLoaded || pendingPresets) return;
+  try {
+    const preset = E.sanitizeTemplate({ name: $('save-name').value, settings: enabledSettings() });
+    if ([...E.builtins, ...savedPresets].some(item => item.name.toLowerCase() === preset.name.toLowerCase())) throw new Error('A preset with this name already exists. Choose another name.');
+    pendingPresets = [...savedPresets, preset]; send('save-enhancement-library', { templates: pendingPresets });
+    saveError(''); $('save-confirm').disabled = true; $('save-confirm').textContent = 'Saving…';
+  } catch (error) { saveError(error.message); }
+};
+
+// ---------- Output ----------
+const SCALES = [[1, '1×'], [4 / 3, '1⅓×'], [1.5, '1.5×'], [2, '2×'], [3, '3×'], [4, '4×']];
+function resetOutput() { output = Object.fromEntries(OUTPUT_FIELDS.map(field => [field, D[field]])); if (['yuv420p10le', 'p010le'].includes(source?.pixel_format)) output.output_encoding = 'hevc10'; }
+function setOutput(field, value) { output[field] = value; updateState(); }
+const outputChoices = [];
+function choice(container, value, title, detail, disabled, field) {
+  const button = el('button', 'choice'); button.append(el('b', null, title), el('small', null, detail));
+  button.disabled = disabled; button.onclick = () => setOutput(field, value);
+  container.append(button); outputChoices.push({ button, field, value });
+}
+function buildOutput() {
+  outputChoices.length = 0;
+  for (const id of ['out-scale', 'out-fps', 'out-encoding']) $(id).replaceChildren();
+  for (const [scale, label] of SCALES) {
+    const width = Math.round(source.width * scale), height = Math.round(source.height * scale);
+    choice($('out-scale'), scale, label, `${width} × ${height}`, width > 4096 || height > 4096 || width % 2 !== 0 || height % 2 !== 0 || width * source.height !== height * source.width, 'scale');
+  }
+  choice($('out-fps'), '', 'Source', source.fps ? `${Number(source.fps.toFixed(2))} fps` : 'variable', false, 'target_fps');
+  for (const fps of [30, 60, 120]) choice($('out-fps'), fps, String(fps), 'fps', fps < source.fps, 'target_fps');
+  choice($('out-encoding'), 'h264', 'H.264', '8-bit SDR', false, 'output_encoding');
+  choice($('out-encoding'), 'hevc10', 'HEVC', '10-bit', false, 'output_encoding');
+}
+function renderOutput() {
+  for (const { button, field, value } of outputChoices) button.setAttribute('aria-pressed', String(output[field] === value));
+  $('encoder_preset').value = output.encoder_preset; $('encoder_quality').value = output.encoder_quality; $('frame_quality').value = output.frame_quality; $('detect_scene_changes').checked = output.detect_scene_changes;
+  const generating = output.target_fps !== ''; $('frame_quality').disabled = !generating; $('detect_scene_changes').disabled = !generating; $('frame-note').hidden = generating;
+}
+$('encoder_preset').onchange = () => setOutput('encoder_preset', Number($('encoder_preset').value));
+$('frame_quality').onchange = () => setOutput('frame_quality', Number($('frame_quality').value));
+$('detect_scene_changes').onchange = () => setOutput('detect_scene_changes', $('detect_scene_changes').checked);
+$('encoder_quality').onchange = () => setOutput('encoder_quality', clamp(Math.round(Number($('encoder_quality').value) || 0), 0, 51));
+
+// ---------- Panel state ----------
+function updateState() {
+  for (const button of $('view-tabs').children) { button.setAttribute('aria-pressed', String(button.dataset.view === view)); if (button.dataset.view === 'preview') button.disabled = !sampleMedia && !sampleBusy; }
+  $('open').disabled = busy; $('open-external').disabled = busy;
+  $('welcome-actions').hidden = loadingVideo; $('welcome-loading').hidden = !loadingVideo;
+  $('yt-go').disabled = busy; $('yt-open').disabled = busy;
+  if (!source) return;
+  syncLayers(); renderOutput(); drawRange();
+  const settings = currentSettings(), issues = findIssues(settings), jobKey = JSON.stringify(buildJob()), rangeMatches = sampleMatchesRange();
+  $('source-name').textContent = source.name; $('source-name').title = source.name;
+  $('source-meta').textContent = [`${source.width} × ${source.height}`, source.fps ? `${Number(source.fps.toFixed(3))} fps` : 'Variable frame rate', source.duration ? clock(source.duration) : 'Unknown length', source.audio ? `${source.audio} audio track${source.audio > 1 ? 's' : ''}` : 'No audio'].join(' · ');
+  $('replace').disabled = busy;
+  $('save-preset').disabled = !libraryLoaded || !!pendingPresets || !layers.some(layer => layer.enabled);
+  $('save-preset').title = libraryLoaded ? 'Save the enabled layers as a reusable preset' : 'Your presets haven’t loaded';
+  $('output-summary').textContent = `${Math.round(source.width * settings.scale)} × ${Math.round(source.height * settings.scale)} · ${settings.target_fps || 'source'} fps · ${settings.hdr_enabled ? 'HDR10' : settings.output_encoding === 'hevc10' ? '10-bit' : 'SDR'}`;
+  $('issues').replaceChildren();
+  for (const issue of issues) { const item = el('li'); item.append(el('p', null, issue.text)); if (issue.fix) { const fix = el('button', 'btn sm', issue.fix[0]); fix.onclick = issue.fix[1]; item.append(fix); } $('issues').append(item); }
+  $('issues').hidden = !issues.length;
+  const state = sampleBusy ? 'busy' : enhancedMedia ? (renderedJob === jobKey && rangeMatches ? 'current' : 'stale') : 'none';
+  $('preview-state').dataset.state = state;
+  $('preview-state').textContent = {
+    busy: 'Rendering preview…',
+    none: source.duration >= 1 ? `Preview ${clock(range.start)}–${clock(range.end)} (${(range.end - range.start).toFixed(1)} s). Move the yellow brackets on the timeline to change it.` : 'Previews need a video at least 1 second long with a known length.',
+    current: 'Preview is up to date with this recipe.',
+    stale: rangeMatches ? 'Recipe changed since the last preview.' : 'Range changed since the last preview.',
+  }[state];
+  $('render').textContent = { busy: 'Rendering…', none: 'Render preview', current: 'Render again', stale: 'Render changes' }[state];
+  $('render').disabled = busy || issues.length > 0 || !(source.duration >= 1);
+  $('export').disabled = busy || issues.length > 0;
+  $('export-done').hidden = !exportMedia;
+  if (exportMedia) $('done-detail').textContent = `${exportMedia.name} · ${exportMedia.width} × ${exportMedia.height} · ${exportMedia.frames.toLocaleString()} frames in ${clock(exportMedia.elapsed)}`;
+  for (const id of ['play-export', 'show-export']) $(id).disabled = busy;
+}
+function renderPreview() {
+  if (busy || findIssues(currentSettings()).length) return;
+  const job = buildJob(), reuse = sampleMatchesRange();
+  renderingJob = JSON.stringify(job); busy = true; sampleBusy = true;
+  if (!reuse) { sampleRange = null; sampleMedia = null; enhancedMedia = null; renderedJob = null; }
+  pendingJob = reuse ? null : job;
+  setView('preview');
+  if (reuse) send('render-sample', { job }); else send('load-sample', { selection: selection() });
+}
+$('render').onclick = renderPreview;
+$('export').onclick = () => { if (!busy && !findIssues(currentSettings()).length) { pause(); send('generate', { job: buildJob() }); } };
+$('play-export').onclick = () => send('open-output'); $('show-export').onclick = () => send('show-output');
+
+// ---------- Activity and toasts ----------
+function activity(title, detail = '', progress = null, cancellable = true) {
+  stopping = false; $('activity').hidden = false; $('act-title').textContent = title; progressUpdate(detail, progress);
+  $('cancel').hidden = !cancellable; $('cancel').disabled = false;
+}
+function progressUpdate(detail, progress = null) {
+  if (stopping) return;
+  $('act-detail').textContent = detail; $('act-detail').title = detail;
+  $('act-bar').classList.toggle('indeterminate', progress == null);
+  $('act-fill').style.width = (progress ?? 0) * 100 + '%'; $('act-pct').textContent = progress == null ? '' : Math.floor(progress * 100) + '%';
+}
+function activityDone() { $('activity').hidden = true; stopping = false; }
+$('cancel').onclick = () => { pendingJob = null; send('cancel'); $('cancel').disabled = true; $('act-detail').textContent = 'Stopping…'; stopping = true; };
+function toast(text, kind = 'info', action = null) {
+  const item = el('div', 'toast ' + kind), close = el('button', 'icon-btn sm');
+  item.setAttribute('role', kind === 'error' ? 'alert' : 'status'); item.append(el('p', null, text));
+  if (action) { const button = el('button', 'btn sm', action[0]); button.onclick = () => { item.remove(); action[1](); }; item.append(button); }
+  close.append(icon('x')); close.setAttribute('aria-label', 'Dismiss'); close.onclick = () => item.remove(); item.append(close);
+  $('toasts').append(item); if (kind !== 'error') setTimeout(() => item.remove(), 7000);
+}
+const failure = message => toast(message, /cancel/i.test(message) ? 'info' : 'error');
+
+// ---------- YouTube ----------
+$('yt-trim').onchange = () => { $('yt-times').hidden = !$('yt-trim').checked; };
+$('yt-form').onsubmit = event => {
+  event.preventDefault(); if (busy) return;
+  const error = text => { $('yt-error').textContent = text; $('yt-error').hidden = !text; };
+  if (!$('yt-url').checkValidity()) return error('Paste a full YouTube link, starting with https://');
+  let timings = null;
+  if ($('yt-trim').checked) {
+    timings = { start: parseClock($('yt-start').value), end: parseClock($('yt-end').value) };
+    if (!(timings.start >= 0) || !(timings.end > timings.start)) return error('Enter times as minutes:seconds, such as 1:30, with the end after the start.');
+  }
+  error(''); $('yt-result').hidden = true;
+  send('download', { options: { url: $('yt-url').value.trim(), height: Number($('yt-height').value), fps: Number($('yt-fps').value), format: $('yt-format').value, timings } });
+};
+$('yt-open').onclick = () => send('load-downloaded');
+
+// ---------- Messages from the app ----------
+window.receive = event => {
+  switch (event.type) {
+    case 'loading':
+      pause(); source = null; loadingVideo = true; busy = true; layers = []; openLayer = null; sampleRange = null; sampleMedia = null; enhancedMedia = null; exportMedia = null; renderedJob = null; pendingJob = null; sampleBusy = false;
+      delete stageStates.full; delete stageStates.preview; view = 'full'; go('studio'); break;
+    case 'loaded':
+      source = event.source; loadingVideo = false; busy = false; range = { start: 0, end: Math.min(5, source.duration || 0) }; resetOutput(); buildOutput(); renderLayers(); go('studio'); break;
+    case 'sample-loading': busy = true; sampleBusy = true; activity('Preparing preview clip', 'Cutting the selected range…'); renderStageEmpty(); break;
+    case 'sample-loaded':
+      sampleRange = { start: event.start, duration: event.duration }; sampleMedia = { ...event, name: 'Original clip' };
+      if (pendingJob) { const job = pendingJob; pendingJob = null; send('render-sample', { job }); }
+      else { busy = false; sampleBusy = false; activityDone(); }
+      if (view === 'preview' && page === 'studio') showStage('preview'); break;
+    case 'sample-rendering': busy = true; sampleBusy = true; activity('Rendering preview', 'Starting the GPU…'); break;
+    case 'sample-progress': {
+      const rate = output.target_fps || source.fps, expected = rate && sampleRange ? sampleRange.duration * rate : 0;
+      progressUpdate(`${event.frames.toLocaleString()} frames`, expected ? Math.min(.99, event.frames / expected) : null); return;
+    }
+    case 'sample-rendered':
+      busy = false; sampleBusy = false; renderedJob = renderingJob; activityDone();
+      enhancedMedia = { ...event, name: 'Enhanced clip', fps: event.fps || output.target_fps || source.fps };
+      view = 'preview'; if (page === 'studio') showStage('preview'); break;
+    case 'sample-error':
+      busy = false; sampleBusy = false; pendingJob = null; activityDone(); failure(event.message);
+      if (stageKind === 'preview') updateViewer(); break;
+    case 'download-started': busy = true; $('yt-result').hidden = true; activity('Downloading from YouTube', 'Connecting…'); break;
+    case 'download-progress': { const percent = /(\d+(?:\.\d+)?)%/.exec(event.message); progressUpdate(event.message, percent ? Math.min(.99, Number(percent[1]) / 100) : null); return; }
+    case 'downloaded':
+      busy = false; activityDone();
+      $('yt-path').textContent = event.path; $('yt-result').hidden = false;
+      if (page !== 'youtube') toast('YouTube download saved.', 'success', ['Open in Studio', () => send('load-downloaded')]); break;
+    case 'download-error': busy = false; activityDone(); failure(event.message); break;
+    case 'hdri-selected': {
+      const layer = layers.find(layer => layer.id === event.component_id);
+      if (layer) { layer.settings.hdri = event.path; syncLayer(layer); } break;
+    }
+    case 'enhancement-library':
+      try { savedPresets = event.templates.map(E.sanitizeTemplate); libraryLoaded = true; libraryError = ''; }
+      catch (error) { libraryLoaded = false; libraryError = 'Your saved presets couldn’t be read: ' + error.message; } break;
+    case 'enhancement-library-saved':
+      if (pendingPresets) { const name = pendingPresets.at(-1).name; savedPresets = pendingPresets; pendingPresets = null; $('save-dialog').close(); toast(`Saved preset “${name}”.`, 'success'); } break;
+    case 'enhancement-library-error':
+      if (pendingPresets) { pendingPresets = null; $('save-confirm').disabled = false; $('save-confirm').textContent = 'Save preset'; saveError(event.message); }
+      else libraryError = event.message;
+      break;
+    case 'started': busy = true; activity('Exporting', 'Starting the GPU…', 0); break;
+    case 'progress': {
+      const share = source?.duration ? Math.min(.99, event.seconds / source.duration) : null, left = share > .02 ? event.elapsed * (1 - share) / share : null;
+      progressUpdate(`${event.frames.toLocaleString()} frames · ${clock(event.elapsed).slice(0, -3)} elapsed${left != null ? ` · about ${clock(left).slice(0, -3)} left` : ''}`, share); return;
+    }
+    case 'finished':
+      busy = false; activityDone(); exportMedia = { ...event, name: event.output.split(/[\\/]/).pop() };
+      if (page !== 'studio') toast(`Export saved: ${exportMedia.name}`, 'success', ['Show in folder', () => send('show-output')]);
+      view = 'full'; if (page === 'studio') showStage('full'); break;
+    case 'error':
+      busy = false; pendingJob = null; activityDone(); failure(event.message);
+      if (loadingVideo) { loadingVideo = false; go('studio'); } break;
+    case 'status': $('act-detail').textContent = event.message; return;
+  }
+  updateState();
+  if (stageVisible()) updateViewer();
+};
+go('studio'); send('load-enhancement-library');
 </script>
 </html>
