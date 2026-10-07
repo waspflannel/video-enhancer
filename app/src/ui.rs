@@ -21,7 +21,7 @@ enum AppEvent {
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let preview_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../tools/previews");
+    let preview_root = youtube::directory().join("previews");
     std::fs::create_dir_all(&preview_root)?;
     let preview_workspace = tempfile::Builder::new().prefix("session-").tempdir_in(preview_root)?;
     let page = preview_workspace.path().join("index.html");
