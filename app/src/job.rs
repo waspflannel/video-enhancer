@@ -29,7 +29,7 @@ pub enum UpscaleMethod { #[default] Vsr, Lightweight }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum OutputEncoding { #[default] H264, Hevc10 }
+pub enum OutputEncoding { #[default] H264, Hevc10, Av1 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]

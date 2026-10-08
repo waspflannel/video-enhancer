@@ -625,9 +625,9 @@ function buildJob() {
 }
 function findIssues(s) {
   const issues = [], portrait = s.portrait_mode !== 'off', relight = s.relighting_mode !== 'off';
-  if (s.hdr_enabled && s.output_encoding !== 'hevc10') issues.push({ text: 'SDR to HDR exports HEVC 10-bit.', fix: ['Use HEVC', () => setOutput('output_encoding', 'hevc10')] });
+  if (s.hdr_enabled && s.output_encoding !== 'hevc10') issues.push({ text: 'SDR to HDR exports HEVC 10-bit.', fix: ['Use HEVC', () => setEncoding('hevc10')] });
   if (s.output_encoding === 'hevc10' && !s.hdr_enabled && (s.temporal_denoise !== '' || portrait || relight || s.sharpening !== 0 || (s.upscale_method === 'lightweight' && s.scale > 1)))
-    issues.push({ text: 'HEVC 10-bit can’t use sharpening, temporal denoising, portrait effects or lightweight upscaling.', fix: ['Use H.264', () => setOutput('output_encoding', 'h264')] });
+    issues.push({ text: 'HEVC 10-bit can’t use sharpening, temporal denoising, portrait effects or lightweight upscaling.', fix: ['Use H.264', () => setEncoding('h264')] });
   if ((source.width < 512 || source.height < 288) && (portrait || relight)) issues.push({ text: `Portrait effects need a video of at least 512 × 288. This one is ${source.width} × ${source.height}. Turn those layers off.` });
   if (s.temporal_denoise !== '' && (source.height < 80 || source.height > 1080 || source.width > 1920)) issues.push({ text: 'Temporal denoising works on videos up to 1920 × 1080. Turn that layer off.' });
   if (relight) {
@@ -1007,10 +1007,16 @@ $('save-form').onsubmit = event => {
 const SCALES = [[1, '1×'], [4 / 3, '1⅓×'], [1.5, '1.5×'], [2, '2×'], [3, '3×'], [4, '4×']];
 function resetOutput() { output = Object.fromEntries(OUTPUT_FIELDS.map(field => [field, D[field]])); if (['yuv420p10le', 'p010le'].includes(source?.pixel_format)) output.output_encoding = 'hevc10'; }
 function setOutput(field, value) { output[field] = value; updateState(); }
+// AV1 reaches H.264's default quality at a higher level; keep the default when switching formats.
+const defaultQuality = encoding => encoding === 'av1' ? 22 : D.encoder_quality;
+function setEncoding(value) {
+  if (output.encoder_quality === defaultQuality(output.output_encoding)) output.encoder_quality = defaultQuality(value);
+  setOutput('output_encoding', value);
+}
 const outputChoices = [];
 function choice(container, value, title, detail, disabled, field) {
   const button = el('button', 'choice'); button.append(el('b', null, title), el('small', null, detail));
-  button.disabled = disabled; button.onclick = () => setOutput(field, value);
+  button.disabled = disabled; button.onclick = () => field === 'output_encoding' ? setEncoding(value) : setOutput(field, value);
   container.append(button); outputChoices.push({ button, field, value });
 }
 function buildOutput() {
@@ -1024,6 +1030,7 @@ function buildOutput() {
   for (const fps of [30, 60, 120]) choice($('out-fps'), fps, String(fps), 'fps', fps < source.fps, 'target_fps');
   choice($('out-encoding'), 'h264', 'H.264', '8-bit SDR', false, 'output_encoding');
   choice($('out-encoding'), 'hevc10', 'HEVC', '10-bit', false, 'output_encoding');
+  choice($('out-encoding'), 'av1', 'AV1', 'smaller · RTX 40+', false, 'output_encoding');
 }
 function renderOutput() {
   for (const { button, field, value } of outputChoices) button.setAttribute('aria-pressed', String(output[field] === value));

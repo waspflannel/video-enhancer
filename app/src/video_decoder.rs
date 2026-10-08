@@ -65,7 +65,11 @@ fn open_video_decoder(video_reader: &ffmpeg::format::context::Input, video: &Fil
     let mut decoder_context = ffmpeg::codec::Context::from_parameters(video_stream.parameters()).map_err(|e| failure("Read decoder parameters", e))?;
 
     configure_cuda_decoder(&mut decoder_context, time_base)?;
-    let video_decoder = decoder_context.decoder().open_as(decoder_implementation).and_then(|opened| opened.video()).map_err(|e| failure("Open NVIDIA decoder", e))?;
+    // CUVID weaves interlaced fields by default; progressive sequences ignore this. Keep one frame per source frame.
+    let mut options = ffmpeg::Dictionary::new();
+    options.set("deint", "adaptive");
+    options.set("drop_second_field", "1");
+    let video_decoder = decoder_context.decoder().open_as_with(decoder_implementation, options).and_then(|opened| opened.video()).map_err(|e| failure("Open NVIDIA decoder", e))?;
 
     Ok((video_decoder, time_base))
 }

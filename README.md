@@ -13,7 +13,7 @@ Built with Rust and tested on an RTX 5070.
 - Synchronized original/enhanced, split, and side-by-side views with shared seeking, looping, zoom, and pan.
 - Standalone Compare for any two local videos.
 - YouTube downloads with optional start/end times.
-- H.264 or 10-bit HEVC MP4 export with source audio preserved.
+- H.264, 10-bit HEVC or AV1 MP4 export with source audio preserved. AV1 makes smaller files and needs an RTX 40-series or newer GPU.
 
 ## NVIDIA SDK required
 

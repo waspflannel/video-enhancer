@@ -120,8 +120,10 @@ struct EncoderWorker {
     pending_audio_packet: Option<ffmpeg::Packet>,
     target_frame_rate: ffmpeg::Rational,
     settings: EncoderSettings,
+    encoder_name: &'static str,
     ten_bit: bool,
     display_matrix: Option<Vec<u8>>,
+    hdr_peak_luminance: Option<u32>,
 }
 
 impl EncoderWorker {
@@ -156,7 +158,7 @@ impl EncoderWorker {
             }
             audio_stream_mapping[source_stream.index()] = Some(output_stream.index());
         }
-        Ok(Self { video_encoder: None, output_file, audio_reader, audio_stream_mapping, pending_audio_packet: None, target_frame_rate, settings: job.encoder.clone(), ten_bit, display_matrix })
+        Ok(Self { video_encoder: None, output_file, audio_reader, audio_stream_mapping, pending_audio_packet: None, target_frame_rate, settings: job.encoder.clone(), encoder_name: encoder_name(job.output_encoding), ten_bit, display_matrix, hdr_peak_luminance: job.hdr.enabled.then_some(job.hdr.max_luminance) })
     }
 
     fn encode(&mut self, gpu_frame: ffmpeg::frame::Video) -> io::Result<()> {
@@ -174,7 +176,7 @@ impl EncoderWorker {
     }
 
     fn open_video_encoder(&mut self, first_frame: &FrameForEncoder<'_>) -> io::Result<()> {
-        let encoder_name = if self.ten_bit { "hevc_nvenc" } else { "h264_nvenc" };
+        let encoder_name = self.encoder_name;
         let encoder_implementation = ffmpeg::encoder::find_by_name(encoder_name).ok_or_else(|| io::Error::other(format!("FFmpeg lacks {encoder_name}")))?;
         let mut encoder_context = ffmpeg::codec::Context::new_with_codec(encoder_implementation).encoder().video().map_err(|e| failure("Create NVENC context", e))?;
         let image = first_frame.frame;
@@ -186,6 +188,8 @@ impl EncoderWorker {
         encoder_context.set_aspect_ratio(image.sample_aspect_ratio);
         encoder_context.set_max_b_frames(0);
         encoder_context.set_bit_rate(0);
+        // Without a maximum, FFmpeg keeps the NVENC preset's rate cap (about 20 Mbps for HEVC), overriding cq.
+        encoder_context.set_max_bit_rate(100_000_000);
         encoder_context.set_colorspace(output_colorspace(image.color_transfer).into());
         encoder_context.set_color_range(ffmpeg::color::Range::MPEG);
         encoder_context.set_color_primaries(image.color_primaries.into());
@@ -197,7 +201,8 @@ impl EncoderWorker {
         options.set("rc", "vbr");
         options.set("cq", &self.settings.quality.to_string());
         if self.ten_bit { options.set("profile", "main10"); }
-        let video_encoder = encoder_context.open_with(options).map_err(|e| failure("Open NVIDIA video encoder", e))?;
+        let stage = if encoder_name == "av1_nvenc" { "Open NVIDIA AV1 encoder (needs an RTX 40-series or newer GPU)" } else { "Open NVIDIA video encoder" };
+        let video_encoder = encoder_context.open_with(options).map_err(|e| failure(stage, e))?;
         let mut video_stream = self.output_file.stream_mut(0).unwrap();
         video_stream.set_parameters(&video_encoder);
         if self.ten_bit {
@@ -205,13 +210,13 @@ impl EncoderWorker {
             unsafe { (*video_stream.parameters().as_mut_ptr()).codec_tag = u32::from_le_bytes(*b"hvc1"); }
         }
         if let Some(matrix) = &self.display_matrix {
-            // SAFETY: the new entry is owned by the output stream's parameters and sized for the copy.
-            unsafe {
-                let parameters = &mut *video_stream.parameters().as_mut_ptr();
-                let side_data = ffi::av_packet_side_data_new(&mut parameters.coded_side_data, &mut parameters.nb_coded_side_data, ffi::AVPacketSideDataType::AV_PKT_DATA_DISPLAYMATRIX, matrix.len(), 0);
-                if side_data.is_null() { return Err(io::Error::other("Copy video rotation: out of memory")); }
-                ptr::copy_nonoverlapping(matrix.as_ptr(), (*side_data).data, matrix.len());
-            }
+            add_side_data(&mut video_stream.parameters(), ffi::AVPacketSideDataType::AV_PKT_DATA_DISPLAYMATRIX, matrix)?;
+        }
+        if let Some(peak) = self.hdr_peak_luminance {
+            // HDR10 players tone-map using the mastering display and content light level.
+            let (mastering, light_level) = hdr10_metadata(peak);
+            add_side_data(&mut video_stream.parameters(), ffi::AVPacketSideDataType::AV_PKT_DATA_MASTERING_DISPLAY_METADATA, as_bytes(&mastering))?;
+            add_side_data(&mut video_stream.parameters(), ffi::AVPacketSideDataType::AV_PKT_DATA_CONTENT_LIGHT_LEVEL, as_bytes(&light_level))?;
         }
         video_stream.set_time_base(first_frame.time_base);
         video_stream.set_avg_frame_rate(self.target_frame_rate);
@@ -337,6 +342,46 @@ fn display_matrix(parameters: &ffmpeg::codec::Parameters) -> Option<Vec<u8>> {
         let side_data = ffi::av_packet_side_data_get(native.coded_side_data, native.nb_coded_side_data, ffi::AVPacketSideDataType::AV_PKT_DATA_DISPLAYMATRIX);
         side_data.as_ref().map(|data| std::slice::from_raw_parts(data.data, data.size).to_vec())
     }
+}
+
+fn encoder_name(encoding: OutputEncoding) -> &'static str {
+    match encoding { OutputEncoding::H264 => "h264_nvenc", OutputEncoding::Hevc10 => "hevc_nvenc", OutputEncoding::Av1 => "av1_nvenc" }
+}
+
+fn add_side_data(parameters: &mut ffmpeg::codec::Parameters, kind: ffi::AVPacketSideDataType, data: &[u8]) -> io::Result<()> {
+    // SAFETY: the new entry is owned by the output stream's parameters and sized for the copy.
+    unsafe {
+        let parameters = &mut *parameters.as_mut_ptr();
+        let side_data = ffi::av_packet_side_data_new(&mut parameters.coded_side_data, &mut parameters.nb_coded_side_data, kind, data.len(), 0);
+        if side_data.is_null() { return Err(io::Error::other("Copy video metadata: out of memory")); }
+        ptr::copy_nonoverlapping(data.as_ptr(), (*side_data).data, data.len());
+    }
+    Ok(())
+}
+
+// Layouts from libavutil/mastering_display_metadata.h.
+#[repr(C)]
+struct MasteringDisplayMetadata { primaries: [[ffi::AVRational; 2]; 3], white_point: [ffi::AVRational; 2], min_luminance: ffi::AVRational, max_luminance: ffi::AVRational, has_primaries: i32, has_luminance: i32 }
+
+#[repr(C)]
+struct ContentLightMetadata { max_content_light_level: u32, max_frame_average_light_level: u32 }
+
+/// TrueHDR output: BT.2020 primaries, D65 white, peaking at the requested luminance. MaxFALL 0 means unknown.
+fn hdr10_metadata(peak_luminance: u32) -> (MasteringDisplayMetadata, ContentLightMetadata) {
+    let chromaticity = |x, y| [ffi::AVRational { num: x, den: 50000 }, ffi::AVRational { num: y, den: 50000 }];
+    let mastering = MasteringDisplayMetadata {
+        primaries: [chromaticity(35400, 14600), chromaticity(8500, 39850), chromaticity(6550, 2300)],
+        white_point: chromaticity(15635, 16450),
+        min_luminance: ffi::AVRational { num: 1, den: 10000 },
+        max_luminance: ffi::AVRational { num: peak_luminance as i32, den: 1 },
+        has_primaries: 1, has_luminance: 1,
+    };
+    (mastering, ContentLightMetadata { max_content_light_level: peak_luminance, max_frame_average_light_level: 0 })
+}
+
+fn as_bytes<T>(value: &T) -> &[u8] {
+    // SAFETY: callers pass padding-free repr(C) metadata structs.
+    unsafe { std::slice::from_raw_parts((value as *const T).cast(), size_of::<T>()) }
 }
 
 fn output_colorspace(transfer: ffi::AVColorTransferCharacteristic) -> ffi::AVColorSpace {
